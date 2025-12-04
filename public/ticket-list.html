@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#4f46e5">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ticket List - Acme Corp</title>
+    <link rel="stylesheet" href="css/style.css?v=9">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="vendor/fontawesome/css/all.min.css">
+</head>
+
+<body class="with-sidebar">
+    <div id="navbar"></div>
+
+    <div class="dashboard-container">
+
+
+        <!-- Filter Bar -->
+        <div class="filter-bar">
+            <div class="filter-group">
+                <label for="statusFilter" class="filter-label">Status</label>
+                <select id="statusFilter" class="filter-select">
+                    <option value="All">All Statuses</option>
+                    <option value="Terlapor">Terlapor</option>
+                    <option value="Dikerjakan">Dikerjakan</option>
+                    <option value="Selesai">Selesai</option>
+                    <option value="Pending">Pending</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="priorityFilter" class="filter-label">Priority</label>
+                <select id="priorityFilter" class="filter-select">
+                    <option value="All">All Priorities</option>
+                    <option value="Critical">Critical</option>
+                    <option value="Moderate">Moderate</option>
+                    <option value="Low">Low</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="startDateFilter" class="filter-label">Start Date</label>
+                <input type="date" id="startDateFilter" class="filter-select">
+            </div>
+            <div class="filter-group">
+                <label for="endDateFilter" class="filter-label">End Date</label>
+                <input type="date" id="endDateFilter" class="filter-select">
+            </div>
+            <div class="export-buttons">
+                <button id="exportCsvBtn" class="btn-export btn-csv">Export CSV</button>
+                <button id="exportPdfBtn" class="btn-export btn-pdf">Export PDF</button>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="user-table">
+                <thead>
+                    <tr>
+                        <th data-sort="id" class="sortable-header">ID <i class="fas fa-sort"></i></th>
+                        <th data-sort="aktifitas" class="sortable-header">Aktifitas <i class="fas fa-sort"></i></th>
+                        <th data-sort="subNode" class="sortable-header">Sub-node <i class="fas fa-sort"></i></th>
+                        <th>ODC</th>
+                        <th>Lokasi</th>
+                        <th>PIC</th>
+                        <th data-sort="priority" class="sortable-header">Priority <i class="fas fa-sort"></i></th>
+                        <th data-sort="status" class="sortable-header">Status <i class="fas fa-sort"></i></th>
+                        <th data-sort="createdAt" class="sortable-header">Date <i class="fas fa-sort"></i></th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="ticketTableBody">
+                    <!-- Tickets will be populated here -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination Controls -->
+        <nav aria-label="Ticket list pagination">
+            <ul class="pagination" id="paginationControls">
+                <!-- Pagination items will be injected here -->
+            </ul>
+        </nav>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+    <script src="js/navbar.js"></script>
+    <script src="js/ticket-list.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#4f46e5">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Dashboard</title>
+    <link rel="stylesheet" href="css/style.css?v=9">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="vendor/fontawesome/css/all.min.css">
+</head>
+
+<body class="with-sidebar">
+    <div id="navbar"></div>
+
+    <div class="dashboard-container">
+        <!-- <h1>My Dashboard</h1> -->
+
+        <div class="stats-grid grid-two-col">
+            <!-- Card 1: Recent Tickets -->
+            <div class="stat-card text-left">
+                <h3>Recent Tickets</h3>
+                <div class="table-responsive">
+                    <ul class="activity-list" id="recentTicketsList">
+                        <!-- Populated by JS -->
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Card 2: Recent Activity -->
+            <div class="stat-card text-left">
+                <h3>Recent Activity</h3>
+                <div class="table-responsive">
+                    <ul class="activity-list" id="recentActivityList">
+                        <!-- Populated by JS -->
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/navbar.js"></script>
+    <script src="js/user-dashboard.js"></script>
+</body>
+
+</html>

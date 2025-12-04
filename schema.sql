@@ -1,0 +1,36 @@
+CREATE DATABASE IF NOT EXISTS login_app;
+USE login_app;
+
+CREATE TABLE IF NOT EXISTS users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(255) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    full_name VARCHAR(255) NOT NULL,
+    role VARCHAR(50) DEFAULT 'User',
+    phone VARCHAR(20),
+    photo VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS tickets (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    aktifitas VARCHAR(255) NOT NULL,
+    sub_node VARCHAR(50),
+    odc VARCHAR(50),
+    lokasi VARCHAR(100),
+    pic VARCHAR(255),
+    priority VARCHAR(50),
+    status VARCHAR(50) DEFAULT 'Terlapor',
+    info TEXT,
+    evidence VARCHAR(255),
+    created_by VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS activities (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    description TEXT NOT NULL,
+    username VARCHAR(255) NOT NULL,
+    date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

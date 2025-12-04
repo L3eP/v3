@@ -1,0 +1,15 @@
+{
+    "name": "Acme Corp App",
+    "short_name": "Acme App",
+    "start_url": "/dashboard.html",
+    "display": "standalone",
+    "background_color": "#f3f4f6",
+    "theme_color": "#4f46e5",
+    "icons": [
+        {
+            "src": "images/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}

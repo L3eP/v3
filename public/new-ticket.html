@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#4f46e5">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Ticket - Acme Corp</title>
+    <link rel="stylesheet" href="css/style.css?v=9">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="vendor/fontawesome/css/all.min.css">
+</head>
+
+<body class="with-sidebar">
+    <div id="navbar"></div>
+
+    <div class="dashboard-container">
+        <div class="login-card max-w-600">
+            <h2>Create New Ticket</h2>
+            <form id="newTicketForm">
+                <div class="form-group">
+                    <label for="aktifitas">Aktifitas</label>
+                    <select id="aktifitas" name="aktifitas" required>
+                        <option value="">Select Aktifitas</option>
+                        <option value="PSB">PSB</option>
+                        <option value="Maintenance">Maintenance</option>
+                        <option value="loss">loss</option>
+                        <option value="migrasi">migrasi</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="subNode">Sub-node</label>
+                    <select id="subNode" name="subNode" required>
+                        <option value="">Select Sub-node</option>
+                        <option value="ANJ">ANJ</option>
+                        <option value="SKM">SKM</option>
+                        <option value="JRG">JRG</option>
+                        <option value="DMS">DMS</option>
+                        <option value="SKJ">SKJ</option>
+                        <option value="RKM">RKM</option>
+                        <option value="MBL">MBL</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="odc">ODC</label>
+                    <select id="odc" name="odc" required>
+                        <optgroup label="OLT JRG">
+                            <option value="ODC 1 - rumah p enjel">ODC 1 - rumah p enjel</option>
+                            <option value="ODC 2 - h. Marjan">ODC 2 - h. Marjan</option>
+                            <option value="ODC 3 - depan kubur sekarteja">ODC 3 - depan kubur sekarteja</option>
+                            <option value="ODC 4 - sekarteja">ODC 4 - sekarteja</option>
+                        </optgroup>
+
+                        <optgroup label="OLT SKM">
+                            <option value="ODC 5 - rumah amak unet">ODC 5 - rumah amak unet</option>
+                            <option value="ODC 6 - indomaret sukamulia">ODC 6 - indomaret sukamulia</option>
+                            <option value="ODC 7 - rumah epol">ODC 7 - rumah epol</option>
+                            <option value="ODC 8 - orong piter induk">ODC 8 - orong piter induk</option>
+                        </optgroup>
+
+                        <optgroup label="OLT HNM">
+                            <option value="ODC 9 - BTN Hanum">ODC 9 - BTN Hanum</option>
+                            <option value="ODC 10 - BTN sekar anyar">ODC 10 - BTN sekar anyar</option>
+                            <option value="ODC 11 - BTN sekar anyar">ODC 11 - BTN sekar anyar</option>
+                            <option value="ODC 12 - Anjani">ODC 12 - Anjani</option>
+                        </optgroup>
+
+                        <optgroup label="OLT DMS">
+                            <option value="ODC 13 - rumah pandi">ODC 13 - rumah pandi</option>
+                            <option value="ODC 14 - Rekat lauk">ODC 14 - Rekat lauk</option>
+                        </optgroup>
+
+                        <optgroup label="OLT HIOSO">
+                            <option value="ODC 15 - Gubuk Lauk Masjid">ODC 15 - Gubuk Lauk Masjid</option>
+                        </optgroup>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="lokasi">Lokasi</label>
+                    <input type="text" id="lokasi" name="lokasi" required placeholder="e.g. Server Room A">
+                </div>
+
+                <div class="form-group">
+                    <label for="pic">PIC</label>
+                    <select id="pic" name="pic" required>
+                        <option value="">Select PIC</option>
+                        <!-- Populated dynamically -->
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="priority">Priority</label>
+                    <select id="priority" name="priority" required>
+                        <option value="Low">Low</option>
+                        <option value="Moderate">Moderate</option>
+                        <option value="Critical">Critical</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="status">Status</label>
+                    <select id="status" name="status">
+                        <option value="Terlapor">Terlapor</option>
+                        <option value="Dikerjakan">Dikerjakan</option>
+                        <option value="Selesai">Selesai</option>
+                        <option value="Pending">Pending</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="info">Info</label>
+                    <textarea id="info" name="info" rows="4" required placeholder="Detailed description..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="evidence">Evidence</label>
+                    <input type="file" id="evidence" name="evidence" accept="image/*">
+                </div>
+
+                <button type="submit" class="login-btn">Create Ticket</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Success/Error Modal -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <h3 id="modalTitle">Error</h3>
+            <p id="modalMessage">Something went wrong.</p>
+            <button id="modalOkBtn" class="modal-ok-btn">OK</button>
+        </div>
+    </div>
+
+    <script src="js/navbar.js"></script>
+    <script src="js/new-ticket.js"></script>
+</body>
+
+</html>

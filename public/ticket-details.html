@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#4f46e5">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ticket Details - Acme Corp</title>
+    <link rel="stylesheet" href="css/style.css?v=9">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="vendor/fontawesome/css/all.min.css">
+</head>
+
+<body class="with-sidebar">
+    <div id="navbar"></div>
+
+    <div class="dashboard-container">
+        <div class="details-card">
+            <div class="detail-header">
+                <div>
+                    <h2 id="ticketSubject" class="detail-title">Loading...</h2>
+                    <p id="ticketMeta" class="detail-meta">Created by ... on ...</p>
+                </div>
+                <span id="ticketStatusBadge" class="status-badge">...</span>
+            </div>
+
+            <div class="detail-grid">
+                <div class="detail-item">
+                    <label>Priority</label>
+                    <span id="ticketPriority" class="detail-value">...</span>
+                </div>
+                <div class="detail-item">
+                    <label>Sub-node</label>
+                    <p id="ticketSubNode" class="detail-value">...</p>
+                </div>
+                <div class="detail-item">
+                    <label>ODC</label>
+                    <p id="ticketOdc" class="detail-value">...</p>
+                </div>
+                <div class="detail-item">
+                    <label>Lokasi</label>
+                    <p id="ticketLokasi" class="detail-value">...</p>
+                </div>
+                <div class="detail-item">
+                    <label>PIC</label>
+                    <p id="ticketPic" class="detail-value">...</p>
+                </div>
+            </div>
+
+            <div class="detail-item detail-section">
+                <label>Info</label>
+                <p id="ticketDescription" class="detail-info-box">...</p>
+            </div>
+
+            <div id="evidenceSection" class="detail-item" style="margin-top: 24px; display: none;">
+                <label>Evidence</label>
+                <div style="margin-top: 10px;">
+                    <img id="evidenceImage" src="" alt="Evidence" class="evidence-img">
+                </div>
+            </div>
+
+            <div class="action-buttons">
+                <button id="editTicketBtn" class="btn-primary btn-small">Edit Ticket</button>
+                <a href="ticket-list.html" class="btn-secondary btn-small">Back to List</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div id="editModal" class="modal">
+        <div class="modal-content modal-lg">
+            <h3>Edit Ticket</h3>
+            <form id="editTicketForm">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="editAktifitas">Aktifitas</label>
+                        <select id="editAktifitas" name="aktifitas" required>
+                            <option value="PSB">PSB</option>
+                            <option value="Maintenance">Maintenance</option>
+                            <option value="loss">loss</option>
+                            <option value="migrasi">migrasi</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="editSubNode">Sub-node</label>
+                        <select id="editSubNode" name="subNode" required>
+                            <option value="ANJ">ANJ</option>
+                            <option value="SKM">SKM</option>
+                            <option value="JRG">JRG</option>
+                            <option value="DMS">DMS</option>
+                            <option value="SKJ">SKJ</option>
+                            <option value="RKM">RKM</option>
+                            <option value="MBL">MBL</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="editOdc">ODC</label>
+                        <select id="editOdc" name="odc" required>
+                            <optgroup label="OLT JRG">
+                                <option value="ODC 1 - rumah p enjel">ODC 1 - rumah p enjel</option>
+                                <option value="ODC 2 - h. Marjan">ODC 2 - h. Marjan</option>
+                                <option value="ODC 3 - depan kubur sekarteja">ODC 3 - depan kubur sekarteja</option>
+                                <option value="ODC 4 - sekarteja">ODC 4 - sekarteja</option>
+                            </optgroup>
+
+                            <optgroup label="OLT SKM">
+                                <option value="ODC 5 - rumah amak unet">ODC 5 - rumah amak unet</option>
+                                <option value="ODC 6 - indomaret sukamulia">ODC 6 - indomaret sukamulia</option>
+                                <option value="ODC 7 - rumah epol">ODC 7 - rumah epol</option>
+                                <option value="ODC 8 - orong piter induk">ODC 8 - orong piter induk</option>
+                            </optgroup>
+
+                            <optgroup label="OLT HNM">
+                                <option value="ODC 9 - BTN Hanum">ODC 9 - BTN Hanum</option>
+                                <option value="ODC 10 - BTN sekar anyar">ODC 10 - BTN sekar anyar</option>
+                                <option value="ODC 11 - BTN sekar anyar">ODC 11 - BTN sekar anyar</option>
+                                <option value="ODC 12 - Anjani">ODC 12 - Anjani</option>
+                            </optgroup>
+
+                            <optgroup label="OLT DMS">
+                                <option value="ODC 13 - rumah pandi">ODC 13 - rumah pandi</option>
+                                <option value="ODC 14 - Rekat lauk">ODC 14 - Rekat lauk</option>
+                            </optgroup>
+
+                            <optgroup label="OLT HIOSO">
+                                <option value="ODC 15 - Gubuk Lauk Masjid">ODC 15 - Gubuk Lauk Masjid</option>
+                            </optgroup>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="editLokasi">Lokasi</label>
+                        <input type="text" id="editLokasi" name="lokasi" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="editPic">PIC</label>
+                        <select id="editPic" name="pic" required>
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="editPriority">Priority</label>
+                        <select id="editPriority" name="priority" required>
+                            <option value="Low">Low</option>
+                            <option value="Moderate">Moderate</option>
+                            <option value="Critical">Critical</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="editStatus">Status</label>
+                        <select id="editStatus" name="status">
+                            <option value="Terlapor">Terlapor</option>
+                            <option value="Dikerjakan">Dikerjakan</option>
+                            <option value="Selesai">Selesai</option>
+                            <option value="Pending">Pending</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group form-full-width">
+                        <label for="editInfo">Info</label>
+                        <textarea id="editInfo" name="info" rows="4" required></textarea>
+                    </div>
+
+                    <div class="form-group form-full-width">
+                        <label for="editEvidence">Update Evidence (Optional)</label>
+                        <input type="file" id="editEvidence" name="evidence" accept="image/*">
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                    <button type="button" id="cancelEditBtn" class="modal-ok-btn"
+                        style="background: #9ca3af;">Cancel</button>
+                    <button type="submit" class="modal-ok-btn">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Success/Error Modal -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <h3 id="modalTitle">Error</h3>
+            <p id="modalMessage">Something went wrong.</p>
+            <button id="modalOkBtn" class="modal-ok-btn">OK</button>
+        </div>
+    </div>
+
+    <script src="js/navbar.js"></script>
+    <script src="js/ticket-details.js"></script>
+</body>
+
+</html>

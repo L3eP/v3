@@ -1,0 +1,130 @@
+# Ticketing & Activity Logging System
+
+A robust web application for managing tickets and logging user activities, featuring Role-Based Access Control (RBAC), secure authentication, and a responsive dashboard.
+
+## 🚀 Features
+
+### Authentication & Security
+- **Secure Login/Register**: Session-based authentication with secure cookie management.
+- **Role-Based Access Control (RBAC)**: Distinct 'Admin' and 'User' roles with protected routes.
+- **Security Hardening**:
+    - **Password Encryption**: Passwords are hashed using `bcryptjs` for secure storage.
+    - **Environment Variables**: Sensitive credentials (DB, Session Secret) are strictly loaded from `.env`.
+    - **Secure Headers**: Implemented via `helmet`.
+    - **Rate Limiting**: Protection against brute-force attacks (Global & Login-specific).
+    - **Input Validation**: Comprehensive validation using `express-validator`.
+    - **XSS & IDOR Protection**: Verified resilience against common web vulnerabilities.
+
+### Dashboard & Reporting
+- **Admin Dashboard**:
+    - Real-time statistics (Done, On Progress, Total).
+    - Visual charts (Tickets by Sub-Node).
+    - Recent ticket overview.
+- **User Dashboard**:
+    - Personalized view of recent tickets and activities.
+    - **Global Visibility**: Users can view all recent tickets to stay updated on team activities.
+- **Ticket Management**:
+    - Create, View, and Update tickets.
+    - **Pagination**: Client-side pagination for easy navigation.
+    - **Export**: Download ticket lists as PDF or CSV.
+    - **Filtering**: Filter by Status, Priority, Date, etc.
+
+### User Management
+- **Profile Management**: Update profile details and password.
+- **Admin Controls**: Manage users and assign roles.
+- **Streamlined Creation**: Admins can create multiple users without being logged out.
+
+## 📂 Project Structure
+
+```
+login-app/
+├── middleware/         # Authentication middleware
+├── public/
+│   ├── css/            # Stylesheets
+│   ├── js/             # Client-side scripts
+│   ├── uploads/        # User uploaded files
+│   └── *.html          # HTML Templates
+├── routes/             # API Routes (auth, users, tickets, activities)
+├── scripts/            # Utility and migration scripts
+├── db.js               # Database connection
+├── server.js           # Main application entry point
+└── .env                # Environment variables
+```
+
+## 🛠️ Dependencies
+
+### Backend
+- **Runtime**: Node.js
+- **Framework**: Express.js
+- **Database**: MySQL (via `mysql2`)
+- **Security**: `bcryptjs`, `helmet`, `express-rate-limit`, `express-validator`
+- **Session**: `express-session`
+- **Utilities**: `dotenv`, `multer` (File Uploads)
+
+### Frontend
+- **Styling**: Vanilla CSS (Responsive Design)
+- **Libraries**: `Chart.js` (Visualizations), `jspdf` & `jspdf-autotable` (PDF Export)
+
+## 📦 Deployment Guide
+
+### Prerequisites
+- Node.js (v14 or higher)
+- MySQL Server
+
+### Installation
+
+1.  **Clone the Repository**
+    ```bash
+    git clone <repository-url>
+    cd login-app
+    ```
+
+2.  **Install Dependencies**
+    ```bash
+    npm install
+    ```
+
+3.  **Environment Configuration**
+    - Create a `.env` file in the root directory:
+    ```env
+    DB_HOST=localhost
+    DB_USER=root
+    DB_PASSWORD=your_password
+    DB_NAME=login_db
+    SESSION_SECRET=your_secure_secret
+    PORT=3000
+    ```
+
+4.  **Database Setup**
+    - Create a MySQL database (e.g., `login_db`).
+    - Import the schema:
+        ```bash
+        mysql -u <user> -p <database_name> < schema.sql
+        ```
+    - (Optional) Seed initial data:
+        ```bash
+        node scripts/init-db.js
+        node scripts/seed-tickets.js
+        ```
+
+5.  **Run Migrations (Important)**
+    - If you have existing data with plain-text passwords, run the migration script:
+    ```bash
+    node scripts/migrate-passwords.js
+    ```
+
+6.  **Run the Application**
+    ```bash
+    npm start
+    ```
+    - Access the app at `http://localhost:3000`.
+
+### PWA Features
+- **Installable**: Can be installed as a standalone app on mobile and desktop.
+- **Offline Capable**: Caches static assets for offline access.
+- **Responsive**: Optimized for mobile, tablet, and desktop views.
+
+### Production Notes
+- Set `NODE_ENV=production`.
+- Enable `secure: true` for cookies in `server.js` (requires HTTPS).
+- Use a persistent session store (e.g., Redis) instead of MemoryStore.
