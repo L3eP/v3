@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <span class="role-badge">${user.role}</span>
                 </td>
                 <td>
-                    ${currentUser.role === 'Owner' ? `<button class="btn-small btn-primary" onclick="window.location.href='edit-user.html?username=${user.username}'">Edit</button>` : ''}
+                    ${currentUser.role === 'Owner' ? `<button class="btn-small btn-warning" onclick="window.location.href='edit-user.html?username=${user.username}'">Edit</button>` : ''}
                     ${currentUser.role === 'Owner' ? `<button class="btn-small btn-danger" onclick="deleteUser('${user.username}')">Delete</button>` : ''}
                 </td>
             `;
