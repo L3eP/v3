@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     const logoHTML = companyLogo
-        ? `<img src="${companyLogo}" alt="Logo" style="height: 30px; margin-right: 10px; vertical-align: middle;">`
+        ? `<img src="${companyLogo}" alt="Logo" style="height: 45px; margin-right: 10px; vertical-align: middle;">`
         : `<i class="fas fa-cube"></i>`;
 
     const navbarHTML = `
@@ -133,7 +133,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Reset sizes to start fresh
         nameSpan.style.fontSize = '1.25rem';
-        if (logoImg) logoImg.style.height = '30px';
+        if (logoImg) logoImg.style.height = '45px';
         if (logoIcon) logoIcon.style.fontSize = '1.25rem';
 
         // If sidebar is collapsed, don't resize
@@ -155,7 +155,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // If the text is at min size and still overflowing, we can try shrinking the logo.
 
         if (nameSpan.scrollWidth > nameSpan.clientWidth) {
-            let logoSize = 30; // px for img, or relative for icon
+            let logoSize = 45; // px for img, or relative for icon
             const minLogoSize = 20;
 
             while (nameSpan.scrollWidth > nameSpan.clientWidth && logoSize > minLogoSize) {
