@@ -340,6 +340,21 @@ button,
     background-color: #dc2626;
 }
 
+.btn-warning {
+    background-color: #f59e0b;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.2s;
+}
+
+.btn-warning:hover {
+    background-color: #d97706;
+}
+
 .btn-small {
     padding: 6px 12px;
     font-size: 0.85rem;
@@ -1304,6 +1319,24 @@ body.sidebar-collapsed {
 
 .btn-gray:hover {
     background-color: #4b5563;
+}
+
+.form-.action-buttons {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color);
+}
+
+.action-group-right {
+    display: flex;
+    gap: 12px;
+}
+
+.action-buttons .btn-small i {
+    margin-right: 6px;
 }
 
 .form-actions {
