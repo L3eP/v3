@@ -1346,7 +1346,8 @@ body.sidebar-collapsed {
     border-radius: var(--radius-md);
     border: 1px solid var(--border-color);
     display: block;
-    margin-top: 8px;
+    margin: 8px auto;
+    /* Center horizontally */
 }
 
 .form-actions {
