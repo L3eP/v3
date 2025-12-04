@@ -157,4 +157,19 @@ router.post('/tickets/:id/update', isAuthenticated, upload.single('evidence'), a
     }
 });
 
+// Delete Ticket
+router.delete('/tickets/:id', isAuthenticated, async (req, res) => {
+    const ticketId = parseInt(req.params.id);
+    try {
+        const [result] = await db.query('DELETE FROM tickets WHERE id = ?', [ticketId]);
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: 'Ticket not found' });
+        }
+        res.json({ message: 'Ticket deleted successfully' });
+    } catch (error) {
+        console.error('Delete ticket error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
 module.exports = router;

@@ -322,8 +322,22 @@ button,
 }
 
 .btn-secondary:hover {
-    background-color: var(--bg-color);
-    border-color: var(--input-border);
+    background-color: #e2e8f0;
+}
+
+.btn-danger {
+    background-color: #ef4444;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.2s;
+}
+
+.btn-danger:hover {
+    background-color: #dc2626;
 }
 
 .btn-small {

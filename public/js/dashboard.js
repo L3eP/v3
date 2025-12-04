@@ -38,10 +38,31 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             const response = await fetch('/tickets');
             const tickets = await response.json();
-            window.currentTickets = tickets; // Store for chart updates
+            window.currentTickets = tickets; // Store ALL tickets for search/recent list
 
-            updateStats(tickets);
-            renderChart(tickets);
+            // Filter for Current Month for Stats and Chart
+            const now = new Date();
+            const currentMonth = now.getMonth();
+            const currentYear = now.getFullYear();
+
+            const monthlyTickets = tickets.filter(t => {
+                const d = new Date(t.createdAt);
+                return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+            });
+
+            window.monthlyTickets = monthlyTickets; // Store for chart updates
+
+            updateStats(monthlyTickets);
+            renderChart(monthlyTickets);
+
+            // Recent tickets should probably show ALL recent tickets, not just this month's, 
+            // but the user request specifically said "Card 1 and Card 2". 
+            // Card 3 (Recent Tickets) usually implies global recent.
+            // However, if the user wants "dashboard" to show data per month, maybe they mean everything?
+            // The prompt said "on card 1 and card 2 showing data per month". 
+            // So I will keep renderRecentTickets using the full 'tickets' list or maybe filtered?
+            // "Recent" usually means "latest created", regardless of month, but let's stick to the prompt: "card 1 and card 2".
+            // So Card 3 (Recent) remains untouched (using all tickets).
             renderRecentTickets(tickets);
         } catch (error) {
             console.error('Error loading dashboard data:', error);
@@ -173,8 +194,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const chartSelect = document.getElementById('chartGroupBy');
     if (chartSelect) {
         chartSelect.addEventListener('change', (e) => {
-            if (window.currentTickets) {
-                renderChart(window.currentTickets, e.target.value);
+            if (window.monthlyTickets) {
+                renderChart(window.monthlyTickets, e.target.value);
             }
         });
     }
@@ -189,8 +210,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 currentChartType = 'bar';
                 btnBar.classList.add('active');
                 btnPie.classList.remove('active');
-                if (window.currentTickets && chartSelect) {
-                    renderChart(window.currentTickets, chartSelect.value);
+                if (window.monthlyTickets && chartSelect) {
+                    renderChart(window.monthlyTickets, chartSelect.value);
                 }
             }
         });
@@ -200,8 +221,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 currentChartType = 'pie';
                 btnPie.classList.add('active');
                 btnBar.classList.remove('active');
-                if (window.currentTickets && chartSelect) {
-                    renderChart(window.currentTickets, chartSelect.value);
+                if (window.monthlyTickets && chartSelect) {
+                    renderChart(window.monthlyTickets, chartSelect.value);
                 }
             }
         });

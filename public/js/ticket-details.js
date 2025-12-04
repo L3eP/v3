@@ -150,4 +150,33 @@ document.addEventListener('DOMContentLoaded', async () => {
             showModal('Error', 'An error occurred while updating.');
         }
     });
+
+    // Delete Ticket Logic
+    const deleteBtn = document.getElementById('deleteTicketBtn');
+    if (deleteBtn) {
+        deleteBtn.addEventListener('click', () => {
+            if (confirm('Are you sure you want to delete this ticket? This action cannot be undone.')) {
+                deleteTicket();
+            }
+        });
+    }
+
+    async function deleteTicket() {
+        try {
+            const response = await fetch(`/tickets/${ticketId}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                alert('Ticket deleted successfully.');
+                window.location.href = 'ticket-list.html';
+            } else {
+                const result = await response.json();
+                showModal('Error', result.message || 'Failed to delete ticket');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            showModal('Error', 'An error occurred while deleting.');
+        }
+    }
 });
