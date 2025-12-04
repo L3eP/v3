@@ -30,3 +30,11 @@ yarn-error.log*
 .vscode
 .idea
 .DS_Store
+
+# Backups
+*.sql
+*.bak
+
+# User Uploads
+/public/uploads/*
+!/public/uploads/.gitkeep
