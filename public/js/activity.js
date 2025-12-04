@@ -31,31 +31,53 @@ document.addEventListener('DOMContentLoaded', async () => {
         modal.classList.remove('show');
     });
 
-    function renderTable(activities) {
+    function renderActivityList(activities) {
+        const listContainer = document.getElementById('activityList');
+        const emptyState = document.getElementById('emptyState');
+
+        listContainer.innerHTML = '';
+
         if (activities.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="2" style="text-align: center; padding: 20px;">No activities found</td></tr>';
+            listContainer.classList.add('hidden');
+            emptyState.classList.remove('hidden');
             return;
         }
+
+        listContainer.classList.remove('hidden');
+        emptyState.classList.add('hidden');
 
         // Sort by date descending
         const sorted = [...activities].sort((a, b) => new Date(b.date) - new Date(a.date));
 
-        tableBody.innerHTML = sorted.map(activity => `
-            <tr>
-                <td>${new Date(activity.date).toLocaleString()}</td>
-                <td>${activity.description}</td>
-            </tr>
-        `).join('');
+        sorted.forEach(activity => {
+            const li = document.createElement('li');
+            li.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div class="stat-icon" style="width: 32px; height: 32px; background: #f1f5f9; font-size: 0.9rem; color: var(--text-muted);">
+                        <i class="fas fa-history"></i>
+                    </div>
+                    <div>
+                        <strong style="display: block; color: var(--text-main);">${activity.description}</strong>
+                        <small style="color: var(--text-muted); display: flex; align-items: center; gap: 5px;">
+                            <i class="far fa-calendar-alt"></i> ${new Date(activity.date).toLocaleString()}
+                        </small>
+                    </div>
+                </div>
+            `;
+            listContainer.appendChild(li);
+        });
     }
 
     async function fetchActivities() {
         try {
             const response = await fetch(`/activities?username=${encodeURIComponent(user.username)}`);
             myActivities = await response.json();
-            renderTable(myActivities);
+            renderActivityList(myActivities);
         } catch (error) {
             console.error('Error fetching activities:', error);
-            tableBody.innerHTML = '<tr><td colspan="3" style="color: red; text-align: center;">Failed to load activities</td></tr>';
+            // tableBody.innerHTML = '<tr><td colspan="3" style="color: red; text-align: center;">Failed to load activities</td></tr>';
+            // Just show empty state or alert
+            showModal('Error', 'Failed to load activities', true);
         }
     }
 

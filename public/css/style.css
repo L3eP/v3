@@ -1000,7 +1000,7 @@ body.sidebar-collapsed {
 }
 
 .search-input {
-    padding: 6px 10px 6px 32px;
+    padding: 6px 10px;
     border: 1px solid var(--border-color);
     border-radius: var(--radius-md);
     font-size: 0.85rem;
