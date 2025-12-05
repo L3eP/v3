@@ -68,18 +68,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </a>
                 
                 <a href="ticket-list.html" class="nav-link ${currentPage.includes('ticket-list') ? 'active' : ''}">
-                    <i class="fas fa-list-alt"></i> <span>Tickets</span>
+                    <i class="fas fa-list-alt"></i> <span>Ticket List</span>
+                </a>
+                
+                <a href="new-ticket.html" class="nav-link ${currentPage.includes('new-ticket') ? 'active' : ''}">
+                    <i class="fas fa-plus-circle"></i> <span>New Ticket</span>
                 </a>
 
-                
                 <a href="activity.html" class="nav-link ${currentPage.includes('activity') ? 'active' : ''}">
                     <i class="fas fa-history"></i> <span>Activity</span>
                 </a>
 
-                ${isPrivileged ? `
-                    <a href="user-list.html" class="nav-link ${currentPage.includes('user-list') ? 'active' : ''}">
-                        <i class="fas fa-users"></i> <span>Users</span>
-                    </a>
+                ${user.role === 'Owner' ? `
+                <a href="user-list.html" class="nav-link ${currentPage.includes('user-list') ? 'active' : ''}">
+                    <i class="fas fa-users"></i> <span>User List</span>
+                </a>
+                <a href="register.html" class="nav-link ${currentPage.includes('register') ? 'active' : ''}">
+                    <i class="fas fa-user-plus"></i> <span>Add User</span>
+                </a>
                 ` : ''}
             </nav>
 
@@ -221,11 +227,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
             navigator.serviceWorker.register('/sw.js')
-                .then(registration => {
-                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
-                })
                 .catch(err => {
-                    console.log('ServiceWorker registration failed: ', err);
+                    console.error('ServiceWorker registration failed: ', err);
                 });
         });
     }
