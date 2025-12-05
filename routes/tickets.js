@@ -1,21 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const multer = require('multer');
-const path = require('path');
+const upload = require('../middleware/upload');
 const { body, validationResult } = require('express-validator');
 const { isAuthenticated } = require('../middleware/auth');
-
-// Configure Multer
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, path.join(__dirname, '../public/uploads'))
-    },
-    filename: function (req, file, cb) {
-        cb(null, Date.now() + '-' + file.originalname)
-    }
-});
-const upload = multer({ storage: storage });
 
 // Helper to map DB ticket to Frontend ticket
 const mapTicket = (ticket) => {
@@ -89,6 +77,10 @@ router.post('/tickets', isAuthenticated, upload.single('evidence'), [
 // Get Tickets
 router.get('/tickets', isAuthenticated, async (req, res) => {
     try {
+        // If Admin/Owner/Operator, show all. If Teknisi, show only theirs?
+        // Requirement usually implies Dashboard shows all. Keeping as is for now, but IDOR check is more for specific item access.
+        // However, for strict security, we might want to filter lists too.
+        // For now, we'll keep list open (as per dashboard requirement) but lock down specific actions.
         const [rows] = await db.query('SELECT * FROM tickets ORDER BY created_at DESC');
         const tickets = rows.map(mapTicket);
         res.json(tickets);
@@ -98,7 +90,7 @@ router.get('/tickets', isAuthenticated, async (req, res) => {
     }
 });
 
-// Get Ticket Details
+// Get Ticket Details (IDOR Protected)
 router.get('/tickets/:id', isAuthenticated, async (req, res) => {
     const ticketId = parseInt(req.params.id);
     try {
@@ -106,14 +98,24 @@ router.get('/tickets/:id', isAuthenticated, async (req, res) => {
         if (rows.length === 0) {
             return res.status(404).json({ message: 'Ticket not found' });
         }
-        res.json(mapTicket(rows[0]));
+        const ticket = rows[0];
+
+        // Access Control
+        const isOwner = ticket.created_by === req.session.user.username;
+        const isAdmin = req.session.user.role === 'Owner' || req.session.user.role === 'Operator';
+
+        if (!isOwner && !isAdmin) {
+            return res.status(403).json({ message: 'Forbidden: You do not have permission to view this ticket.' });
+        }
+
+        res.json(mapTicket(ticket));
     } catch (error) {
         console.error('Get ticket details error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });
 
-// Update Ticket
+// Update Ticket (IDOR Protected)
 router.post('/tickets/:id/update', isAuthenticated, upload.single('evidence'), async (req, res) => {
     const ticketId = parseInt(req.params.id);
     const { status, info, pic, priority, subNode, odc, lokasi, aktifitas } = req.body;
@@ -122,6 +124,15 @@ router.post('/tickets/:id/update', isAuthenticated, upload.single('evidence'), a
         const [rows] = await db.query('SELECT * FROM tickets WHERE id = ?', [ticketId]);
         if (rows.length === 0) {
             return res.status(404).json({ message: 'Ticket not found' });
+        }
+        const ticket = rows[0];
+
+        // Access Control
+        const isOwner = ticket.created_by === req.session.user.username;
+        const isAdmin = req.session.user.role === 'Owner' || req.session.user.role === 'Operator';
+
+        if (!isOwner && !isAdmin) {
+            return res.status(403).json({ message: 'Forbidden: You do not have permission to edit this ticket.' });
         }
 
         let query = 'UPDATE tickets SET ';
@@ -157,14 +168,26 @@ router.post('/tickets/:id/update', isAuthenticated, upload.single('evidence'), a
     }
 });
 
-// Delete Ticket
+// Delete Ticket (IDOR Protected)
 router.delete('/tickets/:id', isAuthenticated, async (req, res) => {
     const ticketId = parseInt(req.params.id);
     try {
-        const [result] = await db.query('DELETE FROM tickets WHERE id = ?', [ticketId]);
-        if (result.affectedRows === 0) {
+        // Check existence and ownership first
+        const [rows] = await db.query('SELECT * FROM tickets WHERE id = ?', [ticketId]);
+        if (rows.length === 0) {
             return res.status(404).json({ message: 'Ticket not found' });
         }
+        const ticket = rows[0];
+
+        // Access Control
+        const isOwner = ticket.created_by === req.session.user.username;
+        const isAdmin = req.session.user.role === 'Owner' || req.session.user.role === 'Operator';
+
+        if (!isOwner && !isAdmin) {
+            return res.status(403).json({ message: 'Forbidden: You do not have permission to delete this ticket.' });
+        }
+
+        const [result] = await db.query('DELETE FROM tickets WHERE id = ?', [ticketId]);
         res.json({ message: 'Ticket deleted successfully' });
     } catch (error) {
         console.error('Delete ticket error:', error);

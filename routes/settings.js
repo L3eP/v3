@@ -1,21 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
+const upload = require('../middleware/upload');
 const { isAuthenticated, isAdmin } = require('../middleware/auth');
-
-const multer = require('multer');
 const path = require('path');
-
-// Configure Multer
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, path.join(__dirname, '../public/uploads'))
-    },
-    filename: function (req, file, cb) {
-        cb(null, Date.now() + '-logo-' + file.originalname)
-    }
-});
-const upload = multer({ storage: storage });
 
 // Get Company Name (Public or Authenticated)
 router.get('/settings/company-name', async (req, res) => {

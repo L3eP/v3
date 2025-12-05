@@ -1,21 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const multer = require('multer');
+const upload = require('../middleware/upload');
 const path = require('path');
 const { isAuthenticated, isAdmin, isOwnerOrOperator } = require('../middleware/auth');
 const bcrypt = require('bcryptjs');
-
-// Configure Multer
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, path.join(__dirname, '../public/uploads'))
-    },
-    filename: function (req, file, cb) {
-        cb(null, Date.now() + '-' + file.originalname)
-    }
-});
-const upload = multer({ storage: storage });
 
 // Helper to map DB user to Frontend user
 const mapUser = (user) => {
@@ -30,10 +19,6 @@ const mapUser = (user) => {
         createdAt: user.created_at
     };
 };
-
-// ... (imports)
-
-// ... (imports)
 
 // Update Profile
 router.post('/update-profile', isAuthenticated, upload.single('photo'), async (req, res) => {

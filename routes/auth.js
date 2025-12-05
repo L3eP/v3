@@ -3,20 +3,9 @@ const router = express.Router();
 const { body, validationResult } = require('express-validator');
 const rateLimit = require('express-rate-limit');
 const db = require('../db');
-const multer = require('multer');
+const upload = require('../middleware/upload');
 const path = require('path');
 const { isAuthenticated, isAdmin } = require('../middleware/auth');
-
-// Configure Multer (reused logic, could be extracted to utils)
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, path.join(__dirname, '../public/uploads'))
-    },
-    filename: function (req, file, cb) {
-        cb(null, Date.now() + '-' + file.originalname)
-    }
-});
-const upload = multer({ storage: storage });
 
 const loginLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
@@ -40,8 +29,6 @@ const mapUser = (user) => {
 
 const bcrypt = require('bcryptjs');
 
-// ... (imports remain the same)
-
 // Login
 router.post('/login', loginLimiter, [
     body('username').trim().escape(),
@@ -60,10 +47,6 @@ router.post('/login', loginLimiter, [
         if (!user) {
             return res.status(401).json({ message: 'Login failed: Invalid username or password' });
         }
-
-        // Check if password is hashed (starts with $2a$ or similar)
-        // For migration period, we might need to support both, but the migration script should handle it.
-        // We'll assume migration runs immediately.
 
         const isMatch = await bcrypt.compare(password, user.password);
 
@@ -95,7 +78,16 @@ router.post('/login', loginLimiter, [
     }
 });
 
-// ... (Logout remains the same)
+// Logout
+router.post('/logout', (req, res) => {
+    req.session.destroy((err) => {
+        if (err) {
+            return res.status(500).json({ message: 'Logout failed' });
+        }
+        res.clearCookie('session_cookie_name');
+        res.json({ message: 'Logout successful', redirect: '/index.html' });
+    });
+});
 
 // Register
 router.post('/register', upload.single('photo'), [
@@ -137,7 +129,5 @@ router.post('/register', upload.single('photo'), [
         res.status(500).json({ message: 'Server error' });
     }
 });
-
-
 
 module.exports = router;

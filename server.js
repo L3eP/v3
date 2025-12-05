@@ -93,6 +93,9 @@ app.use((err, req, res, next) => {
     if (err instanceof multer.MulterError) {
         return res.status(400).json({ message: `Upload error: ${err.message}` });
     }
+    if (err.message === 'Only image files (jpeg, jpg, png, gif, webp) are allowed!') {
+        return res.status(400).json({ message: err.message });
+    }
     res.status(500).json({ message: 'Internal Server Error' });
 });
 
