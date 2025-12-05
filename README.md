@@ -19,20 +19,22 @@ A robust web application for managing tickets and logging user activities, featu
 - **Admin Dashboard**:
     - Real-time statistics (Done, On Progress, Total).
     - Visual charts (Tickets by Sub-Node).
-    - Recent ticket overview.
+    - Recent ticket overview with search.
 - **User Dashboard**:
     - Personalized view of recent tickets and activities.
     - **Global Visibility**: Users can view all recent tickets to stay updated on team activities.
 - **Ticket Management**:
-    - Create, View, and Update tickets.
+    - **Unified View**: View and create tickets from a single, streamlined interface.
+    - **Modal-Based Creation**: Create tickets without leaving the list context.
     - **Pagination**: Client-side pagination for easy navigation.
     - **Export**: Download ticket lists as PDF or CSV.
     - **Filtering**: Filter by Status, Priority, Date, etc.
 
 ### User Management
+- **Unified Management**: View and add users from a single interface (Admin/Owner only).
 - **Profile Management**: Update profile details and password.
-- **Admin Controls**: Manage users and assign roles.
-- **Streamlined Creation**: Admins can create multiple users without being logged out.
+- **Streamlined Creation**: Admins can create multiple users via modal without page reloads.
+- **Database Stability**: Optimized connection pooling for high-concurrency environments.
 
 ## 📂 Project Structure
 
@@ -43,7 +45,7 @@ login-app/
 │   ├── css/            # Stylesheets
 │   ├── js/             # Client-side scripts
 │   ├── uploads/        # User uploaded files
-│   └── *.html          # HTML Templates
+│   └── *.html          # HTML Templates (dashboard, ticket-list, user-list, etc.)
 ├── routes/             # API Routes (auth, users, tickets, activities)
 ├── scripts/            # Utility and migration scripts
 ├── db.js               # Database connection
@@ -128,3 +130,13 @@ login-app/
 - Set `NODE_ENV=production`.
 - Enable `secure: true` for cookies in `server.js` (requires HTTPS).
 - Use a persistent session store (e.g., Redis) instead of MemoryStore.
+
+## 🔮 Future Roadmap
+
+We are continuously improving the system. Here are some features planned for future updates:
+
+- **📧 Email Notifications**: Integration with SMTP for real-time email alerts on ticket creation, assignment, and status changes.
+- **🐳 Docker Support**: Containerization using Docker and Docker Compose for simplified deployment and environment consistency.
+- **📊 Advanced Analytics**: Enhanced reporting with custom date ranges, exportable graphs, and deeper insights into team performance.
+- **🌍 Multi-language Support (i18n)**: Internationalization to support multiple languages for a diverse user base.
+- **🚀 CI/CD Integration**: Automated testing and deployment pipelines using GitHub Actions or GitLab CI.
