@@ -2,6 +2,10 @@
 
 A robust web application for managing tickets and logging user activities, featuring Role-Based Access Control (RBAC), secure authentication, and a responsive dashboard.
 
+## 📚 Documentation
+
+For a detailed technical deep-dive into the codebase, architecture, and API endpoints, please refer to the **[Comprehensive Code Documentation](docs/code_documentation.md)**.
+
 ## 🚀 Features
 
 ### Authentication & Security
@@ -128,3 +132,11 @@ login-app/
 - Set `NODE_ENV=production`.
 - Enable `secure: true` for cookies in `server.js` (requires HTTPS).
 - Use a persistent session store (e.g., Redis) instead of MemoryStore.
+
+## 🔮 Future Roadmap
+
+-   **Email Notifications**: Automated emails for ticket updates and password resets.
+-   **Docker Support**: Containerize the application for easier deployment.
+-   **CI/CD Integration**: Automated testing and deployment pipelines.
+-   **Advanced Analytics**: More detailed charts and reporting features.
+-   **Real-time Updates**: Use WebSockets (Socket.io) for live ticket updates without refreshing.
