@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', async () => {
     const userStr = localStorage.getItem('user');
     if (!userStr) {
-        window.location.href = '/index';
+        window.location.href = '/index.html';
         return;
     }
 
@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.fetch = async function (...args) {
         const response = await originalFetch(...args);
         if (response.status === 401) {
-            window.location.href = '/index';
+            window.location.href = '/index.html';
         }
         return response;
     };
@@ -308,7 +308,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     ${statusIcon} ${ticket.status}
                 </span>
             `;
-            li.onclick = () => window.location.href = `/ticket-details?id=${ticket.id}`;
+            li.onclick = () => window.location.href = `/ticket-details.html?id=${ticket.id}`;
             li.style.cursor = 'pointer';
             recentList.appendChild(li);
         });

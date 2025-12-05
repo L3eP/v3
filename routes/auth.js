@@ -73,12 +73,12 @@ router.post('/login', loginLimiter, [
 
             let redirectUrl;
             if (user.role === 'Owner' || user.role === 'Operator') {
-                redirectUrl = '/dashboard';
+                redirectUrl = '/dashboard.html';
             } else if (user.role === 'Teknisi') {
-                redirectUrl = '/activity';
+                redirectUrl = '/activity.html';
             } else {
                 // Fallback
-                redirectUrl = '/user-dashboard';
+                redirectUrl = '/user-dashboard.html';
             }
 
             res.status(200).json({
@@ -131,7 +131,7 @@ router.post('/register', upload.single('photo'), [
             [fullName, username, hashedPassword, phone, userRole, photo]
         );
 
-        res.status(201).json({ message: 'Account created successfully', redirect: '/index' });
+        res.status(201).json({ message: 'Account created successfully', redirect: '/index.html' });
     } catch (error) {
         console.error('Register error:', error);
         res.status(500).json({ message: 'Server error' });

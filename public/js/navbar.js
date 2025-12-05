@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (!user) {
         // Not logged in, redirect to login
-        window.location.href = 'index';
+        window.location.href = 'index.html';
         return;
     }
 
@@ -63,20 +63,21 @@ document.addEventListener('DOMContentLoaded', async () => {
             ` : ''}
             
             <nav class="nav-links">
-                <a href="${(user.role === 'Owner' || user.role === 'Operator') ? 'dashboard' : 'user-dashboard'}" class="nav-link ${currentPage.includes('dashboard') ? 'active' : ''}">
+                <a href="${(user.role === 'Owner' || user.role === 'Operator') ? 'dashboard.html' : 'user-dashboard.html'}" class="nav-link ${currentPage.includes('dashboard') ? 'active' : ''}">
                     <i class="fas fa-tachometer-alt"></i> <span>Dashboard</span>
                 </a>
                 
-                <a href="ticket-list" class="nav-link ${currentPage.includes('ticket-list') ? 'active' : ''}">
+                <a href="ticket-list.html" class="nav-link ${currentPage.includes('ticket-list') ? 'active' : ''}">
                     <i class="fas fa-list-alt"></i> <span>Tickets</span>
                 </a>
+
                 
-                <a href="activity" class="nav-link ${currentPage.includes('activity') ? 'active' : ''}">
+                <a href="activity.html" class="nav-link ${currentPage.includes('activity') ? 'active' : ''}">
                     <i class="fas fa-history"></i> <span>Activity</span>
                 </a>
 
                 ${isPrivileged ? `
-                    <a href="user-list" class="nav-link ${currentPage.includes('user-list') ? 'active' : ''}">
+                    <a href="user-list.html" class="nav-link ${currentPage.includes('user-list') ? 'active' : ''}">
                         <i class="fas fa-users"></i> <span>Users</span>
                     </a>
                 ` : ''}
@@ -93,7 +94,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
                 
                 <div class="dropdown-menu" id="dropdownMenu">
-                    <a href="settings" class="dropdown-item">
+                    <a href="settings.html" class="dropdown-item">
                         <i class="fas fa-cog" style="width: 20px; text-align: center; margin-right: 8px;"></i> Settings
                     </a>
                     <a href="#" class="dropdown-item" id="logoutBtn">

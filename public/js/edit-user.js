@@ -4,14 +4,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     const toast = document.getElementById('toast');
 
     if (!usernameToEdit) {
-        window.location.href = 'user-list';
+        window.location.href = 'user-list.html';
         return;
     }
 
     // Check if Owner
     const currentUser = JSON.parse(localStorage.getItem('user'));
     if (!currentUser || currentUser.role.trim() !== 'Owner') {
-        window.location.href = 'dashboard';
+        window.location.href = 'dashboard.html';
         return;
     }
 
@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (error) {
         console.error('Error fetching user details:', error);
         showToast('Error loading user details');
-        setTimeout(() => window.location.href = 'user-list', 2000);
+        setTimeout(() => window.location.href = 'user-list.html', 2000);
     }
 
     // Handle Form Submission
@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (response.ok) {
                 showToast('User updated successfully');
                 setTimeout(() => {
-                    window.location.href = 'user-list';
+                    window.location.href = 'user-list.html';
                 }, 1500);
             } else {
                 const data = await response.json();

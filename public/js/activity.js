@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const user = JSON.parse(localStorage.getItem('user'));
 
     if (!user) {
-        window.location.href = 'index';
+        window.location.href = 'index.html';
         return;
     }
 
@@ -29,19 +29,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     modalOkBtn.addEventListener('click', () => {
         modal.classList.remove('show');
-    });
-
-    const closeModalBtn = document.getElementById('closeModalBtn');
-    if (closeModalBtn) {
-        closeModalBtn.addEventListener('click', () => {
-            modal.classList.remove('show');
-        });
-    }
-
-    window.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            modal.classList.remove('show');
-        }
     });
 
     function renderActivityList(activities) {
