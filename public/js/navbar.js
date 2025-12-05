@@ -68,12 +68,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </a>
                 
                 <a href="ticket-list.html" class="nav-link ${currentPage.includes('ticket-list') ? 'active' : ''}">
-                    <i class="fas fa-list-alt"></i> <span>Ticket List</span>
+                    <i class="fas fa-list-alt"></i> <span>Tickets</span>
                 </a>
 
-                <a href="new-ticket.html" class="nav-link ${currentPage.includes('new-ticket') ? 'active' : ''}">
-                    <i class="fas fa-plus-circle"></i> <span>New Ticket</span>
-                </a>
                 
                 <a href="activity.html" class="nav-link ${currentPage.includes('activity') ? 'active' : ''}">
                     <i class="fas fa-history"></i> <span>Activity</span>
@@ -82,12 +79,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 ${isPrivileged ? `
                     <a href="user-list.html" class="nav-link ${currentPage.includes('user-list') ? 'active' : ''}">
                         <i class="fas fa-users"></i> <span>Users</span>
-                    </a>
-                ` : ''}
-
-                ${isOwner ? `
-                    <a href="register.html" class="nav-link ${currentPage.includes('register') ? 'active' : ''}">
-                        <i class="fas fa-user-plus"></i> <span>Add User</span>
                     </a>
                 ` : ''}
             </nav>

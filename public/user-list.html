@@ -40,7 +40,13 @@
     <div id="navbar"></div>
 
     <div class="dashboard-container">
-        <!-- <h1>User Management</h1> -->
+        <div class="page-header"
+            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 class="section-title" style="margin-bottom: 0;">User Management</h2>
+            <button id="addUserBtn" class="login-btn" style="width: auto; padding: 10px 20px; display: none;">
+                <i class="fas fa-user-plus"></i> Add User
+            </button>
+        </div>
 
         <div class="table-responsive">
             <table class="user-table">
@@ -60,14 +66,48 @@
         </div>
     </div>
 
-    <!-- Toast Notification -->
-    <div id="toast"
-        style="visibility: hidden; min-width: 250px; margin-left: -125px; background-color: #333; color: #fff; text-align: center; border-radius: 8px; padding: 16px; position: fixed; z-index: 1; left: 50%; bottom: 30px; font-size: 17px;">
-        Role updated successfully
-    </div>
+    <!-- Add User Modal -->
+    <div id="addUserModal" class="modal">
+        <div class="modal-content" style="max-width: 500px; text-align: left;">
+            <span class="close-btn" id="closeAddUserModal">&times;</span>
+            <h2 style="margin-top: 0;">Add New User</h2>
+            <form id="addUserForm" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="fullName">Full Name</label>
+                    <input type="text" id="fullName" name="fullName" placeholder="Enter full name" required>
+                </div>
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" placeholder="Choose a username" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" placeholder="Choose a password" required>
+                </div>
+                <div class="form-group">
+                    <label for="phone">Phone Number</label>
+                    <input type="tel" id="phone" name="phone" placeholder="Enter phone number">
+                </div>
+                <div class="form-group">
+                    <label for="role">Role</label>
+                    <select id="role" name="role">
+                        <option value="Teknisi">Teknisi</option>
+                        <option value="Operator">Operator</option>
+                        <option value="Owner">Owner</option>
+                    </select>
+                </div>
+                <button type="submit" class="login-btn">Create User</button>
+            </form>
+        </div>
 
-    <script src="js/navbar.js"></script>
-    <script src="js/user-list.js?v=1"></script>
+        <!-- Toast Notification -->
+        <div id="toast"
+            style="visibility: hidden; min-width: 250px; margin-left: -125px; background-color: #333; color: #fff; text-align: center; border-radius: 8px; padding: 16px; position: fixed; z-index: 1; left: 50%; bottom: 30px; font-size: 17px;">
+            Role updated successfully
+        </div>
+
+        <script src="js/navbar.js"></script>
+        <script src="js/user-list.js?v=1"></script>
 </body>
 
 </html>

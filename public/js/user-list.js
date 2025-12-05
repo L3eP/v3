@@ -79,5 +79,60 @@ document.addEventListener('DOMContentLoaded', async () => {
         }, 3000);
     }
 
+    // Show Add User button for Owners
+    const addUserBtn = document.getElementById('addUserBtn');
+    if (currentUser.role === 'Owner' && addUserBtn) {
+        addUserBtn.style.display = 'block';
+    }
+
+    // Add User Modal Logic
+    const addUserModal = document.getElementById('addUserModal');
+    const closeAddUserModal = document.getElementById('closeAddUserModal');
+    const addUserForm = document.getElementById('addUserForm');
+
+    if (addUserBtn && addUserModal) {
+        addUserBtn.addEventListener('click', () => {
+            addUserModal.classList.add('show');
+        });
+
+        closeAddUserModal.addEventListener('click', () => {
+            addUserModal.classList.remove('show');
+        });
+
+        window.addEventListener('click', (e) => {
+            if (e.target === addUserModal) {
+                addUserModal.classList.remove('show');
+            }
+        });
+    }
+
+    if (addUserForm) {
+        addUserForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(addUserForm);
+
+            try {
+                const response = await fetch('/register', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showToast('User created successfully!');
+                    addUserModal.classList.remove('show');
+                    addUserForm.reset();
+                    fetchUsers();
+                } else {
+                    showToast(data.message || 'Failed to create user');
+                }
+            } catch (error) {
+                console.error('Error creating user:', error);
+                showToast('Error creating user');
+            }
+        });
+    }
+
     fetchUsers();
 });
