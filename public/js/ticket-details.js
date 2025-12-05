@@ -123,6 +123,29 @@ document.addEventListener('DOMContentLoaded', async () => {
         editModal.classList.remove('show');
     });
 
+    const closeEditModal = document.getElementById('closeEditModal');
+    if (closeEditModal) {
+        closeEditModal.addEventListener('click', () => {
+            editModal.classList.remove('show');
+        });
+    }
+
+    const closeErrorModal = document.getElementById('closeErrorModal');
+    if (closeErrorModal) {
+        closeErrorModal.addEventListener('click', () => {
+            modal.classList.remove('show');
+        });
+    }
+
+    window.addEventListener('click', (e) => {
+        if (e.target === editModal) {
+            editModal.classList.remove('show');
+        }
+        if (e.target === modal) {
+            modal.classList.remove('show');
+        }
+    });
+
     // Handle Update Submission
     editForm.addEventListener('submit', async (e) => {
         e.preventDefault();

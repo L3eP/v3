@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const user = JSON.parse(localStorage.getItem('user'));
 
     if (!user) {
-        window.location.href = 'index.html';
+        window.location.href = 'index';
         return;
     }
 
@@ -45,7 +45,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <td><span class="status-badge ${statusClass}">${ticket.status}</span></td>
                     <td>${date}</td>
                     <td>
-                        <a href="ticket-details.html?id=${ticket.id}" class="action-link">View</a>
+                        <a href="ticket-details?id=${ticket.id}" class="action-link">View</a>
                     </td>
                 </tr>
             `;

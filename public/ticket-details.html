@@ -64,7 +64,7 @@
 
             <div class="action-buttons">
                 <div class="action-group-left">
-                    <a href="ticket-list.html" class="btn-secondary btn-small">
+                    <a href="ticket-list" class="btn-secondary btn-small">
                         <i class="fas fa-arrow-left"></i> Back to List
                     </a>
                 </div>
@@ -83,6 +83,7 @@
     <!-- Edit Modal -->
     <div id="editModal" class="modal">
         <div class="modal-content modal-lg">
+            <span class="close-btn" id="closeEditModal">&times;</span>
             <h3>Edit Ticket</h3>
             <form id="editTicketForm">
                 <div class="form-grid">
@@ -198,6 +199,7 @@
     <!-- Success/Error Modal -->
     <div id="modal" class="modal">
         <div class="modal-content">
+            <span class="close-btn" id="closeErrorModal">&times;</span>
             <h3 id="modalTitle">Error</h3>
             <p id="modalMessage">Something went wrong.</p>
             <button id="modalOkBtn" class="modal-ok-btn">OK</button>

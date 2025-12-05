@@ -1122,6 +1122,31 @@ body.sidebar-collapsed {
     /* Prevent overflow */
     overflow-y: auto;
     /* Scrollable if too tall */
+    position: relative;
+}
+
+.close-btn {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #9ca3af;
+    cursor: pointer;
+    transition: all 0.2s;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background-color: #f3f4f6;
+    line-height: 1;
+}
+
+.close-btn:hover {
+    color: #ef4444;
+    background-color: #fee2e2;
 }
 
 .modal-lg {

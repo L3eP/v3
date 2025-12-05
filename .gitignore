@@ -38,3 +38,6 @@ yarn-error.log*
 # User Uploads
 /public/uploads/*
 !/public/uploads/.gitkeep
+
+.cookies.txt
+ticket_system_backup.sql

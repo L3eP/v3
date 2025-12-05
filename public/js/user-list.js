@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Check if privileged
     const currentUser = JSON.parse(localStorage.getItem('user'));
     if (!currentUser || (currentUser.role !== 'Owner' && currentUser.role !== 'Operator')) {
-        window.location.href = 'dashboard.html';
+        window.location.href = 'dashboard';
         return;
     }
 
@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <span class="role-badge">${user.role}</span>
                 </td>
                 <td>
-                    ${currentUser.role === 'Owner' ? `<button class="btn-small btn-warning" onclick="window.location.href='edit-user.html?username=${user.username}'">Edit</button>` : ''}
+                    ${currentUser.role === 'Owner' ? `<button class="btn-small btn-warning" onclick="window.location.href='edit-user?username=${user.username}'">Edit</button>` : ''}
                     ${currentUser.role === 'Owner' ? `<button class="btn-small btn-danger" onclick="deleteUser('${user.username}')">Delete</button>` : ''}
                 </td>
             `;
