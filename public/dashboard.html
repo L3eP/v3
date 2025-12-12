@@ -138,6 +138,24 @@
                 </div>
             </div>
         </div>
+
+        <!-- Card 4: Activity Log -->
+        <div class="stat-card text-left col-span-full">
+            <div class="card-header-actions">
+                <h3>Activity Log</h3>
+                <div class="header-actions-right">
+                    <select id="activityUserFilter" class="chart-select" style="width: auto;">
+                        <option value="">All Users</option>
+                        <!-- Populated by JS -->
+                    </select>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <ul class="activity-list" id="activityLogList">
+                    <li class="p-4 text-center text-muted">Loading activities...</li>
+                </ul>
+            </div>
+        </div>
     </div>
     </div>
 

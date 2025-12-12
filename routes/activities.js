@@ -44,9 +44,28 @@ router.post('/activities', isAuthenticated, [
 // Get Activities
 router.get('/activities', isAuthenticated, async (req, res) => {
     const { username } = req.query;
+    const user = req.session.user;
 
-    if (req.session.user.role !== 'Admin' && req.session.user.username !== username) {
+    // Allow if:
+    // 1. User is trying to view their own activities
+    // 2. User has 'Owner' or 'Operator' role (can view all)
+    // 3. User has 'Admin' role (legacy check, keeping for safety)
+
+    const isSelf = user.username === username;
+    const isPrivileged = user.role === 'Owner' || user.role === 'Operator' || user.role === 'Admin';
+
+    // If filtering by username, ensure we are allowed to see that user
+    if (username && !isSelf && !isPrivileged) {
         return res.status(403).json({ message: 'Forbidden' });
+    }
+
+    // If NO username is provided (view all), only Privileged users can do that
+    if (!username && !isPrivileged) {
+        // If not privileged, force filter to self? Or return 403?
+        // Usually safer to return 403 or auto-filter. 
+        // Let's auto-filter to self if they try to view all but aren't privileged.
+        // But the current implementation returns 403. Let's stick to 403 for specific "view all" request.
+        return res.status(403).json({ message: 'Forbidden: Access restricted' });
     }
 
     try {

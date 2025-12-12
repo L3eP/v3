@@ -315,4 +315,82 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     fetchTickets();
+    fetchActivities();
+    fetchTeknisiUsers();
+
+    async function fetchTeknisiUsers() {
+        try {
+            const response = await fetch('/users');
+            if (!response.ok) throw new Error('Failed to fetch users');
+            const users = await response.json();
+
+            // Filter for Teknisi only
+            const teknisiUsers = users.filter(u => u.role === 'Teknisi');
+
+            const filterSelect = document.getElementById('activityUserFilter');
+            if (filterSelect) {
+                teknisiUsers.forEach(user => {
+                    const option = document.createElement('option');
+                    option.value = user.username;
+                    option.textContent = user.username; // Or user.fullName if preferred
+                    filterSelect.appendChild(option);
+                });
+
+                filterSelect.addEventListener('change', (e) => {
+                    fetchActivities(e.target.value);
+                });
+            }
+        } catch (error) {
+            console.error('Error loading users for filter:', error);
+        }
+    }
+
+    async function fetchActivities(username = '') {
+        try {
+            let url = '/activities';
+            if (username) {
+                url += `?username=${encodeURIComponent(username)}`;
+            }
+
+            const response = await fetch(url);
+            if (!response.ok) throw new Error('Failed to fetch activities');
+            const activities = await response.json();
+            renderActivityLog(activities);
+        } catch (error) {
+            console.error('Error loading activities:', error);
+            document.getElementById('activityLogList').innerHTML = `<li class="p-4 text-center text-danger">Error loading activities</li>`;
+        }
+    }
+
+    function renderActivityLog(activities) {
+        const activityList = document.getElementById('activityLogList');
+        if (!activities || activities.length === 0) {
+            activityList.innerHTML = `<li class="p-4 text-center text-muted">No recent activity</li>`;
+            return;
+        }
+
+        activityList.innerHTML = '';
+        // Show top 10 activities
+        const recentActivities = activities.slice(0, 10);
+
+        recentActivities.forEach(activity => {
+            const li = document.createElement('li');
+            li.innerHTML = `
+                <div style="display: flex; align-items: start; gap: 12px;">
+                    <div class="stat-icon bg-info-light" style="width: 32px; height: 32px; font-size: 0.9rem;">
+                        <i class="fas fa-user-clock text-info"></i>
+                    </div>
+                    <div>
+                        <strong style="display: block; color: var(--text-main); font-size: 0.95rem;">${activity.description}</strong>
+                         <small style="color: var(--text-muted); display: flex; align-items: center; gap: 5px;">
+                            <i class="fas fa-user-circle"></i> ${activity.username}
+                            <span style="margin: 0 4px;">•</span>
+                            <i class="far fa-clock"></i> ${new Date(activity.date).toLocaleString()}
+                        </small>
+                    </div>
+                </div>
+            `;
+            activityList.appendChild(li);
+        });
+    }
 });

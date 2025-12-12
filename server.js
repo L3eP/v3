@@ -24,6 +24,7 @@ const settingsRoutes = require('./routes/settings');
 
 // Middleware to parse JSON bodies
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Security Middleware
