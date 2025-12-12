@@ -1552,3 +1552,7 @@ body.sidebar-collapsed {
     z-index: 1100;
     /* Highest priority */
 }
+
+.mt-8 {
+    margin-top: 32px !important;
+}
