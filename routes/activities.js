@@ -69,15 +69,15 @@ router.get('/activities', isAuthenticated, async (req, res) => {
     }
 
     try {
-        let query = 'SELECT * FROM activities';
+        let query = 'SELECT a.*, u.role FROM activities a JOIN users u ON a.username = u.username WHERE u.role = "Teknisi"';
         let params = [];
 
         if (username) {
-            query += ' WHERE username = ?';
+            query += ' AND a.username = ?';
             params.push(username);
         }
 
-        query += ' ORDER BY date DESC';
+        query += ' ORDER BY a.date DESC';
 
         const [rows] = await db.query(query, params);
         res.json(rows);

@@ -1,0 +1,107 @@
+{"level":"info","message":"Server running on http://localhost:3000","timestamp":"2025-12-12 16:36:13"}
+{"ip":"::1","level":"info","message":"GET /","timestamp":"2025-12-12 16:36:33","userAgent":"curl/8.7.1"}
+{"ip":"::1","level":"info","message":"GET /dashboard.html","timestamp":"2025-12-12 16:37:34","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /dashboard.html","timestamp":"2025-12-12 16:37:35","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /dashboard.html","timestamp":"2025-12-12 16:37:36","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /favicon.ico","timestamp":"2025-12-12 16:37:43","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /images/icon-512.png","timestamp":"2025-12-12 16:37:43","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /manifest.json","timestamp":"2025-12-12 16:37:44","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /images/icon-512.png","timestamp":"2025-12-12 16:37:44","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /uploads/default.png","timestamp":"2025-12-12 16:37:44","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /uploads/1764677566890-logo-337128_linux_tux_os_penguin_icon.png","timestamp":"2025-12-12 16:37:44","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /manifest.json","timestamp":"2025-12-12 16:37:44","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /uploads/1764677566890-logo-337128_linux_tux_os_penguin_icon.png","timestamp":"2025-12-12 16:37:44","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /uploads/default.png","timestamp":"2025-12-12 16:37:44","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /manifest.json","timestamp":"2025-12-12 16:37:45","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /uploads/1764677566890-logo-337128_linux_tux_os_penguin_icon.png","timestamp":"2025-12-12 16:37:45","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /uploads/default.png","timestamp":"2025-12-12 16:37:45","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /sw.js","timestamp":"2025-12-12 16:37:46","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /dashboard.html","timestamp":"2025-12-12 16:37:47","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /","timestamp":"2025-12-12 16:37:56","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /.well-known/appspecific/com.chrome.devtools.json","timestamp":"2025-12-12 16:37:56","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /css/style.css?v=9","timestamp":"2025-12-12 16:37:56","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /vendor/fontawesome/css/all.min.css","timestamp":"2025-12-12 16:37:56","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /js/script.js","timestamp":"2025-12-12 16:37:56","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /manifest.json","timestamp":"2025-12-12 16:37:56","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /favicon.ico","timestamp":"2025-12-12 16:37:56","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /","timestamp":"2025-12-12 16:37:58","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /sw.js","timestamp":"2025-12-12 16:37:58","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /","timestamp":"2025-12-12 16:37:59","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /","timestamp":"2025-12-12 16:37:59","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /","timestamp":"2025-12-12 16:38:57","userAgent":"curl/8.7.1"}
+{"ip":"::1","level":"info","message":"GET /index.html","timestamp":"2025-12-12 16:39:19","userAgent":"curl/8.7.1"}
+{"level":"info","message":"Server running on http://localhost:3000","timestamp":"2025-12-12 16:40:20"}
+{"ip":"::1","level":"info","message":"GET /.well-known/appspecific/com.chrome.devtools.json","timestamp":"2025-12-12 16:40:30","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /favicon.ico","timestamp":"2025-12-12 16:40:31","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"POST /login","timestamp":"2025-12-12 16:40:35","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /.well-known/appspecific/com.chrome.devtools.json","timestamp":"2025-12-12 16:40:35","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /settings/company-name","timestamp":"2025-12-12 16:40:35","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /settings/company-logo","timestamp":"2025-12-12 16:40:35","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /tickets","timestamp":"2025-12-12 16:40:35","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /activities","timestamp":"2025-12-12 16:40:35","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /users","timestamp":"2025-12-12 16:40:35","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /.well-known/appspecific/com.chrome.devtools.json","timestamp":"2025-12-12 16:40:37","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /settings/company-logo","timestamp":"2025-12-12 16:40:38","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /settings/company-name","timestamp":"2025-12-12 16:40:38","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /users","timestamp":"2025-12-12 16:40:38","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /tickets","timestamp":"2025-12-12 16:40:38","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /activities","timestamp":"2025-12-12 16:40:38","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /favicon.ico","timestamp":"2025-12-12 16:40:38","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /.well-known/appspecific/com.chrome.devtools.json","timestamp":"2025-12-12 16:40:41","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /settings/company-name","timestamp":"2025-12-12 16:40:41","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /settings/company-logo","timestamp":"2025-12-12 16:40:41","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /tickets","timestamp":"2025-12-12 16:40:41","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /.well-known/appspecific/com.chrome.devtools.json","timestamp":"2025-12-12 16:40:42","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /settings/company-name","timestamp":"2025-12-12 16:40:42","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /settings/company-logo","timestamp":"2025-12-12 16:40:42","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /users","timestamp":"2025-12-12 16:40:42","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /.well-known/appspecific/com.chrome.devtools.json","timestamp":"2025-12-12 16:40:42","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /settings/company-name","timestamp":"2025-12-12 16:40:42","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /settings/company-logo","timestamp":"2025-12-12 16:40:42","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /activities?username=mikki","timestamp":"2025-12-12 16:40:42","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /.well-known/appspecific/com.chrome.devtools.json","timestamp":"2025-12-12 16:40:43","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /settings/company-name","timestamp":"2025-12-12 16:40:43","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /settings/company-logo","timestamp":"2025-12-12 16:40:43","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /users","timestamp":"2025-12-12 16:40:43","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /.well-known/appspecific/com.chrome.devtools.json","timestamp":"2025-12-12 16:40:45","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /settings/company-name","timestamp":"2025-12-12 16:40:45","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /settings/company-logo","timestamp":"2025-12-12 16:40:45","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /tickets","timestamp":"2025-12-12 16:40:45","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /activities","timestamp":"2025-12-12 16:40:45","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /users","timestamp":"2025-12-12 16:40:45","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /.well-known/appspecific/com.chrome.devtools.json","timestamp":"2025-12-12 16:40:47","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /tickets","timestamp":"2025-12-12 16:40:47","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /settings/company-logo","timestamp":"2025-12-12 16:40:47","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /settings/company-name","timestamp":"2025-12-12 16:40:47","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /activities","timestamp":"2025-12-12 16:40:47","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /users","timestamp":"2025-12-12 16:40:47","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"GET /favicon.ico","timestamp":"2025-12-12 16:40:47","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}
+{"ip":"::1","level":"info","message":"POST /register","timestamp":"2025-12-12 16:42:57","userAgent":"curl/8.7.1"}
+{"ip":"::1","level":"info","message":"POST /login","timestamp":"2025-12-12 16:42:57","userAgent":"curl/8.7.1"}
+{"ip":"::1","level":"info","message":"POST /login","timestamp":"2025-12-12 16:42:58","userAgent":"curl/8.7.1"}
+{"ip":"::1","level":"info","message":"POST /login","timestamp":"2025-12-12 16:42:58","userAgent":"curl/8.7.1"}
+{"ip":"::1","level":"info","message":"POST /tickets","timestamp":"2025-12-12 16:42:58","userAgent":"curl/8.7.1"}
+{"ip":"::1","level":"info","message":"GET /tickets","timestamp":"2025-12-12 16:42:58","userAgent":"curl/8.7.1"}
+{"ip":"::1","level":"info","message":"GET /activities","timestamp":"2025-12-12 16:42:58","userAgent":"curl/8.7.1"}
+{"ip":"::1","level":"info","message":"POST /register","timestamp":"2025-12-12 16:44:08","userAgent":"curl/8.7.1"}
+{"ip":"::1","level":"info","message":"POST /login","timestamp":"2025-12-12 16:44:08","userAgent":"curl/8.7.1"}
+{"ip":"::1","level":"info","message":"POST /login","timestamp":"2025-12-12 16:44:08","userAgent":"curl/8.7.1"}
+{"ip":"::1","level":"info","message":"POST /login","timestamp":"2025-12-12 16:44:08","userAgent":"curl/8.7.1"}
+{"ip":"::1","level":"info","message":"POST /tickets","timestamp":"2025-12-12 16:44:08","userAgent":"curl/8.7.1"}
+{"ip":"::1","level":"info","message":"GET /tickets","timestamp":"2025-12-12 16:44:08","userAgent":"curl/8.7.1"}
+{"ip":"::1","level":"info","message":"GET /activities","timestamp":"2025-12-12 16:44:08","userAgent":"curl/8.7.1"}
+{"ip":"::1","level":"info","message":"POST /register","timestamp":"2025-12-12 16:44:41","userAgent":"curl/8.7.1"}
+{"ip":"::1","level":"info","message":"POST /login","timestamp":"2025-12-12 16:44:41","userAgent":"curl/8.7.1"}
+{"ip":"::1","level":"info","message":"POST /login","timestamp":"2025-12-12 16:44:41","userAgent":"curl/8.7.1"}
+{"ip":"::1","level":"info","message":"POST /login","timestamp":"2025-12-12 16:44:41","userAgent":"curl/8.7.1"}
+{"ip":"::1","level":"info","message":"POST /tickets","timestamp":"2025-12-12 16:44:41","userAgent":"curl/8.7.1"}
+{"ip":"::1","level":"info","message":"GET /tickets","timestamp":"2025-12-12 16:44:41","userAgent":"curl/8.7.1"}
+{"ip":"::1","level":"info","message":"GET /activities","timestamp":"2025-12-12 16:44:41","userAgent":"curl/8.7.1"}
+{"ip":"::1","level":"info","message":"POST /login","timestamp":"2025-12-12 16:45:06","userAgent":"curl/8.7.1"}
+{"ip":"::1","level":"info","message":"POST /tickets","timestamp":"2025-12-12 16:45:13","userAgent":"curl/8.7.1"}
+{"level":"info","message":"Server running on http://localhost:3000","timestamp":"2025-12-12 16:45:50"}
+{"ip":"::1","level":"info","message":"POST /login","timestamp":"2025-12-12 16:46:03","userAgent":"curl/8.7.1"}
+{"ip":"::1","level":"info","message":"POST /tickets","timestamp":"2025-12-12 16:46:05","userAgent":"curl/8.7.1"}
+{"ip":"::1","level":"info","message":"GET /tickets","timestamp":"2025-12-12 16:46:07","userAgent":"curl/8.7.1"}
+{"ip":"::1","level":"info","message":"POST /tickets","timestamp":"2025-12-12 16:46:58","userAgent":"curl/8.7.1"}
+{"ip":"::1","level":"info","message":"POST /tickets","timestamp":"2025-12-12 16:47:28","userAgent":"curl/8.7.1"}

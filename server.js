@@ -13,6 +13,8 @@ const fs = require('fs');
 const app = express();
 require('dotenv').config();
 
+const logger = require('./utils/logger');
+
 const PORT = process.env.PORT || 3002;
 
 // Import Routes
@@ -40,6 +42,15 @@ app.use(helmet({
         }
     }
 }));
+
+// Request Logging Middleware
+app.use((req, res, next) => {
+    logger.info(`${req.method} ${req.url}`, {
+        ip: req.ip,
+        userAgent: req.get('User-Agent')
+    });
+    next();
+});
 
 // Global Rate Limiting
 const globalLimiter = rateLimit({
@@ -90,7 +101,7 @@ app.use('/', settingsRoutes);
 
 // Global Error Handler
 app.use((err, req, res, next) => {
-    console.error('Unhandled Error:', err);
+    logger.error('Unhandled Error:', { message: err.message, stack: err.stack });
     if (err instanceof multer.MulterError) {
         return res.status(400).json({ message: `Upload error: ${err.message}` });
     }
@@ -102,5 +113,5 @@ app.use((err, req, res, next) => {
 
 // Start Server
 app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+    logger.info(`Server running on http://localhost:${PORT}`);
 });
