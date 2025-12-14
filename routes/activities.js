@@ -87,4 +87,28 @@ router.get('/activities', isAuthenticated, async (req, res) => {
     }
 });
 
+// Delete Activity
+router.delete('/activities/:id', isAuthenticated, async (req, res) => {
+    const activityId = parseInt(req.params.id);
+    const user = req.session.user;
+
+    // Only Owner and Operator can delete
+    if (user.role !== 'Owner' && user.role !== 'Operator') {
+        return res.status(403).json({ message: 'Forbidden: Insufficient permissions' });
+    }
+
+    try {
+        const [result] = await db.query('DELETE FROM activities WHERE id = ?', [activityId]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: 'Activity not found' });
+        }
+
+        res.json({ message: 'Activity deleted successfully' });
+    } catch (error) {
+        console.error('Delete activity error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
 module.exports = router;

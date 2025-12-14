@@ -49,34 +49,84 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Sort by date descending
         const sorted = [...activities].sort((a, b) => new Date(b.date) - new Date(a.date));
 
+        const isPrivileged = user.role === 'Owner' || user.role === 'Operator';
+
         sorted.forEach(activity => {
             const li = document.createElement('li');
+
+            let deleteBtnHtml = '';
+            if (isPrivileged) {
+                deleteBtnHtml = `
+                    <button class="btn-delete-activity" data-id="${activity.id}" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 5px;">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                `;
+            }
+
             li.innerHTML = `
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <div class="stat-icon" style="width: 32px; height: 32px; background: #f1f5f9; font-size: 0.9rem; color: var(--text-muted);">
-                        <i class="fas fa-history"></i>
+                <div style="display: flex; justify-content: space-between; align-items: start; width: 100%;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div class="stat-icon" style="width: 32px; height: 32px; background: #f1f5f9; font-size: 0.9rem; color: var(--text-muted);">
+                            <i class="fas fa-history"></i>
+                        </div>
+                        <div>
+                            <strong style="display: block; color: var(--text-main);">
+                                ${activity.username ? `<span class="text-primary">${activity.username}</span>: ` : ''}${activity.description}
+                            </strong>
+                            <small style="color: var(--text-muted); display: flex; align-items: center; gap: 5px;">
+                                <i class="far fa-calendar-alt"></i> ${new Date(activity.date).toLocaleString()}
+                            </small>
+                        </div>
                     </div>
-                    <div>
-                        <strong style="display: block; color: var(--text-main);">${activity.description}</strong>
-                        <small style="color: var(--text-muted); display: flex; align-items: center; gap: 5px;">
-                            <i class="far fa-calendar-alt"></i> ${new Date(activity.date).toLocaleString()}
-                        </small>
-                    </div>
+                    ${deleteBtnHtml}
                 </div>
             `;
             listContainer.appendChild(li);
         });
+
+        // Add event listeners for delete buttons
+        if (isPrivileged) {
+            document.querySelectorAll('.btn-delete-activity').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const id = e.currentTarget.getAttribute('data-id');
+                    if (confirm('Are you sure you want to delete this activity log?')) { // Simple confirm for now
+                        await deleteActivity(id);
+                    }
+                });
+            });
+        }
+    }
+
+    async function deleteActivity(id) {
+        try {
+            const response = await fetch(`/activities/${id}`, { method: 'DELETE' });
+            if (response.ok) {
+                showModal('Success', 'Activity deleted successfully');
+                fetchActivities(); // Refresh list
+            } else {
+                const res = await response.json();
+                showModal('Error', res.message || 'Failed to delete activity', true);
+            }
+        } catch (error) {
+            console.error('Error deleting activity:', error);
+            showModal('Error', 'An error occurred while deleting', true);
+        }
     }
 
     async function fetchActivities() {
         try {
-            const response = await fetch(`/activities?username=${encodeURIComponent(user.username)}`);
+            let url = '/activities';
+            // If NOT privileged, filter by own username. 
+            // If Privileged, fetch all (backend defaults to Teknisi logs if no username)
+            if (user.role !== 'Owner' && user.role !== 'Operator') {
+                url += `?username=${encodeURIComponent(user.username)}`;
+            }
+
+            const response = await fetch(url);
             myActivities = await response.json();
             renderActivityList(myActivities);
         } catch (error) {
             console.error('Error fetching activities:', error);
-            // tableBody.innerHTML = '<tr><td colspan="3" style="color: red; text-align: center;">Failed to load activities</td></tr>';
-            // Just show empty state or alert
             showModal('Error', 'Failed to load activities', true);
         }
     }

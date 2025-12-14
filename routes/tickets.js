@@ -157,6 +157,14 @@ router.post('/tickets/:id/update', isAuthenticated, upload.single('evidence'), a
             query += updates.join(', ') + ' WHERE id = ?';
             params.push(ticketId);
             await db.query(query, params);
+
+            // Log Status Change if applicable
+            if (status && status !== ticket.status) {
+                await db.query(
+                    'INSERT INTO ticket_status_history (ticket_id, old_status, new_status, changed_by) VALUES (?, ?, ?, ?)',
+                    [ticketId, ticket.status, status, req.session.user.username]
+                );
+            }
         }
 
         const [updatedRows] = await db.query('SELECT * FROM tickets WHERE id = ?', [ticketId]);
@@ -164,6 +172,37 @@ router.post('/tickets/:id/update', isAuthenticated, upload.single('evidence'), a
 
     } catch (error) {
         console.error('Update ticket error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Get Ticket History
+router.get('/tickets/:id/history', isAuthenticated, async (req, res) => {
+    const ticketId = parseInt(req.params.id);
+    try {
+        // Access Control (Same as details)
+        const [ticketRows] = await db.query('SELECT created_by FROM tickets WHERE id = ?', [ticketId]);
+        if (ticketRows.length === 0) return res.status(404).json({ message: 'Ticket not found' });
+
+        const isOwner = ticketRows[0].created_by === req.session.user.username;
+        const isAdmin = req.session.user.role === 'Owner' || req.session.user.role === 'Operator';
+        // Allow Teknisi involved? For now, stick to dashboard rules.
+
+        if (!isOwner && !isAdmin) {
+            return res.status(403).json({ message: 'Forbidden' });
+        }
+
+        const [history] = await db.query(
+            `SELECT h.*, u.full_name, u.role, u.photo 
+             FROM ticket_status_history h 
+             JOIN users u ON h.changed_by = u.username 
+             WHERE h.ticket_id = ? 
+             ORDER BY h.changed_at DESC`,
+            [ticketId]
+        );
+        res.json(history);
+    } catch (error) {
+        console.error('Get history error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });

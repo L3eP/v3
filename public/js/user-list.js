@@ -14,10 +14,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     async function fetchUsers() {
         try {
             const response = await fetch('/users');
-            allUsers = await response.json();
-            renderUsers(allUsers);
+
+            if (response.status === 401 || response.status === 403) {
+                window.location.href = 'dashboard.html';
+                return;
+            }
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch users');
+            }
+
+            const data = await response.json();
+
+            if (Array.isArray(data)) {
+                allUsers = data;
+                renderUsers(allUsers);
+            } else {
+                console.error('Invalid user data received:', data);
+                userTableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: red;">Error loading users. Data format invalid.</td></tr>';
+            }
         } catch (error) {
             console.error('Error fetching users:', error);
+            userTableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: red;">Error loading users. Please try again.</td></tr>';
         }
     }
 

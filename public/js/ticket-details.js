@@ -83,6 +83,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Initial fetch
     fetchTicketDetails();
+    fetchTicketHistory(ticketId);
 
     // Edit Button Logic
     const editBtn = document.getElementById('editTicketBtn');
@@ -180,3 +181,38 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 });
+
+async function fetchTicketHistory(id) {
+    try {
+        const response = await fetch(`/tickets/${id}/history`);
+        if (!response.ok) throw new Error('Failed to load history');
+        const history = await response.json();
+
+        const historyList = document.getElementById('statusHistoryList');
+        if (history.length === 0) {
+            historyList.innerHTML = '<li class=\"text-muted\">No status changes recorded.</li>';
+            return;
+        }
+
+        historyList.innerHTML = history.map(item => `
+            <li style=\"padding: 10px; border-bottom: 1px solid var(--border-color);\">
+                <div style=\"display: flex; justify-content: space-between; align-items: center;\">
+                    <div>
+                        <span class=\"status-badge status-${item.new_status.toLowerCase()}\">${item.new_status}</span>
+                        <span class=\"text-muted\" style=\"font-size: 0.85rem; margin-left: 8px;\">
+                            from ${item.old_status || 'Unknown'}
+                        </span>
+                    </div>
+                    <small class=\"text-muted\">${new Date(item.changed_at).toLocaleString()}</small>
+                </div>
+                <div style=\"margin-top: 4px; font-size: 0.9rem; color: var(--text-main);\">
+                    by <strong>${item.full_name || item.changed_by}</strong> (${item.role})
+                </div>
+            </li>
+        `).join('');
+
+    } catch (error) {
+        console.error('Error fetching history:', error);
+        document.getElementById('statusHistoryList').innerHTML = '<li class=\"text-danger\">Error loading history.</li>';
+    }
+}
