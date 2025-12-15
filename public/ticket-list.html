@@ -22,6 +22,15 @@
 
         <!-- Filter Bar -->
         <div class="filter-bar">
+            <div class="filter-group" style="flex: 2; min-width: 200px;">
+                <label for="searchInput" class="filter-label">Search</label>
+                <div style="position: relative;">
+                    <i class="fas fa-search"
+                        style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #9ca3af;"></i>
+                    <input type="text" id="searchInput" class="filter-select" placeholder="Search tickets..."
+                        style="padding-left: 35px; width: 100%;">
+                </div>
+            </div>
             <div class="filter-group">
                 <label for="statusFilter" class="filter-label">Status</label>
                 <select id="statusFilter" class="filter-select">

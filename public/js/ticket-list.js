@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     const tableBody = document.getElementById('ticketTableBody');
+    const searchInput = document.getElementById('searchInput'); // New Search Input
     const statusFilter = document.getElementById('statusFilter');
     const priorityFilter = document.getElementById('priorityFilter');
     const startDateFilter = document.getElementById('startDateFilter');
@@ -99,6 +100,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function filterTickets() {
+        const searchTerm = searchInput.value.toLowerCase();
         const statusValue = statusFilter.value;
         const priorityValue = priorityFilter.value;
         const startDateValue = startDateFilter.value ? new Date(startDateFilter.value) : null;
@@ -110,6 +112,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         const filtered = allTickets.filter(ticket => {
+            // Search Filter
+            const matchesSearch = !searchTerm ||
+                (ticket.id && ticket.id.toString().includes(searchTerm)) ||
+                (ticket.aktifitas && ticket.aktifitas.toLowerCase().includes(searchTerm)) ||
+                (ticket.subNode && ticket.subNode.toLowerCase().includes(searchTerm)) ||
+                (ticket.odc && ticket.odc.toLowerCase().includes(searchTerm)) ||
+                (ticket.lokasi && ticket.lokasi.toLowerCase().includes(searchTerm)) ||
+                (ticket.pic && ticket.pic.toLowerCase().includes(searchTerm)) ||
+                (ticket.info && ticket.info.toLowerCase().includes(searchTerm));
+
             const statusMatch = statusValue === 'All' || ticket.status === statusValue;
             const priorityMatch = priorityValue === 'All' || ticket.priority === priorityValue;
 
@@ -120,7 +132,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (endDateValue && ticketDate > endDateValue) dateMatch = false;
             }
 
-            return statusMatch && priorityMatch && dateMatch;
+            return matchesSearch && statusMatch && priorityMatch && dateMatch;
         });
 
         // Pagination Logic
@@ -218,6 +230,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Event Listeners for Filters (Reset to page 1)
         const resetPagination = () => { currentPage = 1; filterTickets(); };
+        searchInput.addEventListener('input', resetPagination);
         statusFilter.addEventListener('change', resetPagination);
         priorityFilter.addEventListener('change', resetPagination);
         startDateFilter.addEventListener('change', resetPagination);
