@@ -4,7 +4,9 @@ A robust web application for managing tickets and logging user activities, featu
 
 ## 📚 Documentation
 
-For a detailed technical deep-dive into the codebase, architecture, and API endpoints, please refer to the **[Comprehensive Code Documentation](docs/code_documentation.md)**.
+For a detailed technical deep-dive into the codebase, architecture, and API endpoints, please refer to the **Comprehensive Code Documentation**:
+- [English Version](docs/code_documentation_en.md)
+- [Versi Bahasa Indonesia](docs/code_documentation_id.md)
 
 ## 🚀 Features
 
