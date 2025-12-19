@@ -29,15 +29,16 @@ The backend is the core of the application, handling API requests, database inte
 | File | Purpose | Key Endpoints |
 | :--- | :--- | :--- |
 | **`auth.js`** | Authentication | `POST /login` (Verifies credentials), `POST /register` (Creates user), `POST /logout` (Destroys session). |
-| **`tickets.js`** | Ticket Management | `GET /tickets` (List), `POST /tickets` (Create), `GET /tickets/:id` (Details), `POST /tickets/:id/update` (Edit), `DELETE /tickets/:id` (Remove). |
+| **`tickets.js`** | Ticket Management | `GET /tickets` (List), `POST /tickets` (Create), `GET /tickets/:id` (Details), `POST /tickets/:id/update` (Edit), `DELETE /tickets/:id` (Remove), `GET /tickets/:id/history` (Status History). |
 | **`users.js`** | User Management | `GET /users` (List), `POST /update-profile` (Self-update), `POST /admin/users/update` (Admin update), `DELETE /users/:username` (Admin delete). |
-| **`activities.js`** | Activity Logging | `POST /activities` (Log new action), `GET /activities` (Fetch history). |
+| **`activities.js`** | Activity Logging | `POST /activities` (Log new action), `GET /activities` (Fetch history), `DELETE /activities/:id` (Delete log). |
 | **`settings.js`** | App Configuration | `GET/POST /settings/company-name` (Company branding), `GET/POST /settings/company-logo` (Logo upload). |
 
 ### 2.3. Database (`db.js`)
 -   Exports a `mysql2` connection pool.
 -   Uses environment variables (`DB_HOST`, `DB_USER`, etc.) for configuration.
--   **Tables**: `users`, `tickets`, `activities`, `settings`.
+-   **Logging**: Replaced `console.log` with `winston` logger for creating persistent logs in `logs/` directory (with weekly rotation).
+-   **Tables**: `users`, `tickets`, `activities`, `settings`, `ticket_status_history`.
 
 ## 3. Frontend Structure (`public/`)
 
@@ -55,14 +56,14 @@ The frontend consists of HTML pages paired with specific JavaScript files.
 
 | Page | JS File | Functionality |
 | :--- | :--- | :--- |
-| **Dashboard** | `js/dashboard.js` | Main admin dashboard. Fetches tickets, calculates stats (Done/Pending), renders charts using `Chart.js`, and lists recent tickets. |
+| **Dashboard** | `js/dashboard.js` | Main admin dashboard. Fetches tickets, calculates stats, renders charts, lists recent tickets, and **Activity Logs (with Delete support)**. |
 | **User Dashboard** | `js/user-dashboard.js` | Limited view for standard users. Shows recent tickets and personal activity. |
-| **Ticket List** | `js/ticket-list.js` | Displays tickets in a table with **Pagination**, **Sorting**, **Filtering** (Date, Status, Priority), and **Export** (CSV/PDF). |
-| **New Ticket** | `js/new-ticket.js` | Form to create tickets. Fetches user list for "PIC" dropdown. Handles file upload (`FormData`). |
-| **Ticket Details** | `js/ticket-details.js` | Shows full ticket info. Handles **Edit Modal** (pre-filling data) and **Delete** actions. |
-| **User List** | `js/user-list.js` | Admin view of all users. Allows deleting users or navigating to Edit User page. |
+| **Ticket List** | `js/ticket-list.js` | Displays tickets in a table with **Global Search**, **Pagination**, **Sorting**, **Filtering** (Date, Status, Priority), and **Export** (CSV/PDF). |
+| **New Ticket** | `js/new-ticket.js` | Form to create tickets. Uses a **2-column grid layout** for better responsiveness. |
+| **Ticket Details** | `js/ticket-details.js` | Shows full ticket info. Displays **Status History Timeline**. Handles Edit and Delete actions. |
+| **User List** | `js/user-list.js` | Admin view of users. Includes improved error handling for empty states. |
 | **Edit User** | `js/edit-user.js` | Admin form to update another user's profile (Role, Password, etc.). |
-| **Activity** | `js/activity.js` | Personal activity log. Allows logging new actions and exporting history. |
+| **Activity** | `js/activity.js` | Personal activity log. Allows logging new actions, filtering by technician, and deleting logs (if Owner). |
 | **Settings** | `js/settings.js` | User profile settings. Owners can also update Company Name and Logo here. |
 
 ## 4. Key Workflows & Logic
@@ -74,10 +75,9 @@ The frontend consists of HTML pages paired with specific JavaScript files.
     -   Middleware `isAdmin` (in `middleware/auth.js`) restricts routes to `Owner`.
     -   Frontend `navbar.js` hides links based on `user.role` stored in `localStorage`.
 
-### 4.2. File Uploads
--   **Library**: `multer` is used in `routes/tickets.js`, `routes/auth.js`, and `routes/settings.js`.
--   **Storage**: Files are saved to `public/uploads` with a timestamp prefix.
--   **Usage**: User photos, Ticket evidence images, Company logo.
+### 4.2. Ticket Status Tracking
+-   Any updates to the `status` field in `POST /tickets/:id/update` are automatically logged to the `ticket_status_history` table.
+-   Frontend `ticket-details.js` fetches this history via `GET /tickets/:id/history` to render a timeline.
 
 ### 4.3. Data Export
 -   **CSV**: Generated client-side in `ticket-list.js` and `activity.js` by creating a Blob URL.
@@ -91,6 +91,9 @@ The frontend consists of HTML pages paired with specific JavaScript files.
 **`tickets`**
 -   `id`, `aktifitas`, `sub_node`, `odc`, `lokasi`, `pic`, `priority`, `status`, `info`, `evidence`, `created_by`, `created_at`
 
+**`ticket_status_history`**
+-   `id`, `ticket_id`, `old_status`, `new_status`, `changed_by`, `changed_at`
+
 **`activities`**
 -   `id`, `description`, `username`, `date`
 
@@ -101,3 +104,4 @@ The frontend consists of HTML pages paired with specific JavaScript files.
 
 -   **Service Worker**: The app registers `sw.js` to cache assets. If you make changes to CSS/JS and don't see them, try doing a hard refresh or unregistering the service worker.
 -   **Local Storage**: The `user` object in `localStorage` is for UI convenience only. Security is handled by the server-side session cookie.
+-   **Logging**: Check `logs/app.log` and `logs/error.log` for backend activity. Logs are rotated weekly.
