@@ -20,18 +20,19 @@ For a detailed technical deep-dive into the codebase, architecture, and API endp
     - **XSS & IDOR Protection**: Verified resilience against common web vulnerabilities.
 
 ### Dashboard & Reporting
-- **Admin Dashboard**:
+- **Interactive Dashboard**:
     - Real-time statistics (Done, On Progress, Total).
-    - Visual charts (Tickets by Sub-Node).
-    - Recent ticket overview.
-- **User Dashboard**:
-    - Personalized view of recent tickets and activities.
-    - **Global Visibility**: Users can view all recent tickets to stay updated on team activities.
+    - **Dynamic Charts**: Visualize breakdown by Sub-Node, ODC, or Activity Type.
+    - **Activity Log**: View recent user actions, with role-based filtering (Teknisi) and delete capabilities.
 - **Ticket Management**:
-    - Create, View, and Update tickets.
-    - **Pagination**: Client-side pagination for easy navigation.
-    - **Export**: Download ticket lists as PDF or CSV.
-    - **Filtering**: Filter by Status, Priority, Date, etc.
+    - **Responsive Forms**: New grid layout for better usability on all devices.
+    - **Status History**: Visual timeline of all status changes on ticket details.
+    - **Evidence**: Improved image viewer for ticket attachments.
+    - **Advanced Search**: Global search bar to filter tickets by ID, Content, Location, or PIC.
+    - **Export**: Download filtered ticket lists as PDF or CSV.
+- **System Logs**:
+    - **Persistent Logging**: Application and Error logs stored in `logs/` directory.
+    - **Log Rotation**: Automatic weekly rotation and cleanup.
 
 ### User Management
 - **Profile Management**: Update profile details and password.
@@ -62,7 +63,8 @@ login-app/
 - **Framework**: Express.js
 - **Database**: MySQL (via `mysql2`)
 - **Security**: `bcryptjs`, `helmet`, `express-rate-limit`, `express-validator`
-- **Session**: `express-session`
+- **Session**: `express-session`, `express-mysql-session` (Persistent Store)
+- **Logging**: `winston`, `winston-daily-rotate-file`
 - **Utilities**: `dotenv`, `multer` (File Uploads)
 
 ### Frontend
