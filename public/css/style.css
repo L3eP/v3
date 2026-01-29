@@ -1636,3 +1636,12 @@ body.sidebar-collapsed {
     font-size: 0.95rem;
     font-weight: 500;
 }
+
+select {
+  width: 200px;
+  padding: 8px 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 14px;
+  background-color: #fff;
+}
