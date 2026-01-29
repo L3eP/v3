@@ -8,7 +8,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const tableBody = document.getElementById('ticketTableBody');
     const searchInput = document.getElementById('searchInput'); // New Search Input
-    const statusFilter = document.getElementById('statusFilter');
     const priorityFilter = document.getElementById('priorityFilter');
     const startDateFilter = document.getElementById('startDateFilter');
     const endDateFilter = document.getElementById('endDateFilter');

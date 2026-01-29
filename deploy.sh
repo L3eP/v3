@@ -99,12 +99,10 @@ fi
 read -p "🗄️  Do you want to initialize/reset the database? (y/n) " setup_db
 if [ "$setup_db" == "y" ]; then
     echo "Running database initialization..."
-    node init-db.js
     
     read -p "🌱 Do you want to seed initial data? (y/n) " seed_db
-    if [ "$seed_db" == "y" ]; then
-        node seed-tickets.js
-    fi
+    # if [ "$seed_db" == "y" ]; then
+    # fi
 fi
 
 # 6. Start Application
