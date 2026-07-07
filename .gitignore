@@ -33,9 +33,15 @@ cookie_*.txt
 .idea
 .DS_Store
 
-# Backups
-*.sql
+# Backups — only ignore backup dumps, not schema/migration files
+*_backup.sql
+*_db_*.sql
+latest.sql
+mayungapp.sql
 *.bak
+
+# Temporary migration files (not committed)
+migrasi.sql
 
 # User Uploads
 /public/uploads/*

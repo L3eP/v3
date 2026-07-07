@@ -53,43 +53,78 @@ router.post(
   },
 );
 
-// Get Activities
+// Get Activities (Supports Backend Pagination)
 router.get("/activities", isAuthenticated, async (req, res) => {
   try {
     const user = req.session.user;
+    const page = parseInt(req.query.page) || null;
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 10));
 
-    let query = "";
+    let baseQuery = "";
+    let countQuery = "";
     let params = [];
+    let countParams = [];
 
     if (
       user.role === "Owner" ||
       user.role === "Operator" ||
       user.role === "Admin"
     ) {
-      query = `
-    SELECT 
-      activities.*,
-      tickets.aktifitas
-    FROM activities
-    JOIN tickets ON tickets.id = activities.ticket_id
-  `;
+      baseQuery = `
+        SELECT
+          activities.*,
+          tickets.aktifitas
+        FROM activities
+        JOIN tickets ON tickets.id = activities.ticket_id
+      `;
+      countQuery = `
+        SELECT COUNT(*) as total
+        FROM activities
+        JOIN tickets ON tickets.id = activities.ticket_id
+      `;
     } else if (user.role === "Teknisi") {
-      query = `
-    SELECT 
-      activities.*,
-      tickets.aktifitas
-    FROM activities
-    JOIN tickets ON tickets.id = activities.ticket_id
-    WHERE activities.username = ?
-  `;
+      const whereClause = " WHERE activities.username = ?";
+      baseQuery = `
+        SELECT
+          activities.*,
+          tickets.aktifitas
+        FROM activities
+        JOIN tickets ON tickets.id = activities.ticket_id${whereClause}
+      `;
+      countQuery = `
+        SELECT COUNT(*) as total
+        FROM activities
+        JOIN tickets ON tickets.id = activities.ticket_id${whereClause}
+      `;
       params.push(user.username);
+      countParams.push(user.username);
     } else {
       return res.status(403).json({ message: "Forbidden" });
     }
 
-    query += " ORDER BY date DESC";
+    if (page) {
+      // Paginated response
+      const offset = (page - 1) * limit;
+      baseQuery += " ORDER BY date DESC LIMIT ? OFFSET ?";
+      params.push(limit, offset);
 
-    const [rows] = await db.query(query, params);
+      const [rows] = await db.query(baseQuery, params);
+      const [{ total }] = await db.query(countQuery, countParams);
+
+      return res.json({
+        data: rows,
+        pagination: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit) || 1,
+        },
+      });
+    }
+
+    // Backward compatible: return all
+    baseQuery += " ORDER BY date DESC";
+    const [rows] = await db.query(baseQuery, params);
     res.json(rows);
   } catch (error) {
     console.error("Get activities error:", error);

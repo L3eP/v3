@@ -1,12 +1,17 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // Security: hanya Owner yang bisa akses halaman register
+    const currentUser = JSON.parse(localStorage.getItem('user'));
+    if (!currentUser || currentUser.role !== 'Owner') {
+        window.location.href = 'dashboard.html';
+        return;
+    }
+
     const registerForm = document.getElementById('registerForm');
     const messageModal = document.getElementById('messageModal');
     const closeBtn = document.querySelector('.close-btn');
     const modalOkBtn = document.querySelector('.modal-ok-btn');
     const modalTitle = document.getElementById('modalTitle');
     const modalMessage = document.getElementById('modalMessage');
-
-    let redirectUrl = null;
 
     registerForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -16,53 +21,43 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const response = await fetch('/register', {
                 method: 'POST',
-                body: formData // Fetch handles Content-Type for FormData automatically
+                body: formData
             });
 
             const data = await response.json();
 
             if (response.ok) {
-                // Check if current user is Owner (to prevent logout)
-                const currentUser = JSON.parse(localStorage.getItem('user'));
-                const isOwner = currentUser && currentUser.role === 'Owner';
-
-                if (isOwner) {
-                    // If Owner, show success and clear form, stay on page
-                    showModal('Success', 'User created successfully!', null); // Using showModal instead of alert
-                    registerForm.reset(); // Using registerForm.reset() instead of e.target.reset()
-                } else {
-                    // If regular user (self-registration), redirect to login
-                    showModal('Success', data.message, 'index.html'); // Using showModal for redirection
-                }
+                showModal('Success', 'User created successfully!');
+                registerForm.reset();
+            } else if (response.status === 401) {
+                // Session expired — redirect ke login
+                localStorage.removeItem('user');
+                window.location.href = 'index.html';
             } else {
-                showModal('Error', data.message, null);
+                showModal('Error', data.message || data.errors?.[0]?.msg || 'Failed to create user');
             }
         } catch (error) {
-            showModal('Error', 'An error occurred. Please try again.', null);
+            showModal('Error', 'An error occurred. Please try again.');
         }
     });
 
-    function showModal(title, message, redirect) {
+    function showModal(title, message) {
         modalTitle.textContent = title;
         modalMessage.textContent = message;
 
         if (title === 'Success') {
-            modalTitle.style.color = '#10b981'; // Green
+            modalTitle.style.color = '#10b981';
             modalOkBtn.style.backgroundColor = '#10b981';
         } else {
-            modalTitle.style.color = '#ef4444'; // Red
+            modalTitle.style.color = '#ef4444';
             modalOkBtn.style.backgroundColor = '#ef4444';
         }
 
         messageModal.classList.add('show');
-        redirectUrl = redirect;
     }
 
     function closeModal() {
         messageModal.classList.remove('show');
-        if (redirectUrl) {
-            window.location.href = redirectUrl;
-        }
     }
 
     closeBtn.addEventListener('click', closeModal);

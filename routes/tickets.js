@@ -74,16 +74,65 @@ router.post('/tickets', isAuthenticated, upload.single('evidence'), [
     }
 });
 
-// Get Tickets
+// Get Tickets (Supports Backend Pagination)
 router.get('/tickets', isAuthenticated, async (req, res) => {
     try {
-        // If Admin/Owner/Operator, show all. If Teknisi, show only theirs?
-        // Requirement usually implies Dashboard shows all. Keeping as is for now, but IDOR check is more for specific item access.
-        // However, for strict security, we might want to filter lists too.
-        // For now, we'll keep list open (as per dashboard requirement) but lock down specific actions.
-        const [rows] = await db.query('SELECT * FROM tickets ORDER BY created_at DESC');
+        const page = parseInt(req.query.page) || null;
+        const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 10));
+
+        // Support search parameter for basic filtering
+        const search = req.query.search || '';
+
+        if (page) {
+            // Paginated response
+            const offset = (page - 1) * limit;
+            let query = 'SELECT * FROM tickets';
+            let countQuery = 'SELECT COUNT(*) as total FROM tickets';
+            let params = [];
+            let countParams = [];
+
+            if (search) {
+                const whereClause = ' WHERE aktifitas LIKE ? OR sub_node LIKE ? OR lokasi LIKE ? OR pic LIKE ? OR info LIKE ?';
+                const searchPattern = `%${search}%`;
+                query += whereClause;
+                countQuery += whereClause;
+                params = [searchPattern, searchPattern, searchPattern, searchPattern, searchPattern];
+                countParams = [...params];
+            }
+
+            query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+            params.push(limit, offset);
+
+            const [rows] = await db.query(query, params);
+            const [{ total }] = await db.query(countQuery, countParams);
+
+            return res.json({
+                data: rows.map(mapTicket),
+                pagination: {
+                    total,
+                    page,
+                    limit,
+                    totalPages: Math.ceil(total / limit) || 1
+                }
+            });
+        }
+
+        // Backward compatible: return all tickets (used by dashboard)
+        let query = 'SELECT * FROM tickets';
+        let params = [];
+
+        if (search) {
+            const whereClause = ' WHERE aktifitas LIKE ? OR sub_node LIKE ? OR lokasi LIKE ? OR pic LIKE ? OR info LIKE ?';
+            const searchPattern = `%${search}%`;
+            query += whereClause;
+            params = [searchPattern, searchPattern, searchPattern, searchPattern, searchPattern];
+        }
+
+        query += ' ORDER BY created_at DESC';
+        const [rows] = await db.query(query, params);
         const tickets = rows.map(mapTicket);
         res.json(tickets);
+
     } catch (error) {
         console.error('Get tickets error:', error);
         res.status(500).json({ message: 'Server error' });
