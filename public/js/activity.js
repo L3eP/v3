@@ -7,7 +7,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   const activityForm = document.getElementById("activityForm");
-  const tableBody = document.getElementById("activityTableBody");
   const exportCsvBtn = document.getElementById("exportCsvBtn");
   const exportPdfBtn = document.getElementById("exportPdfBtn");
 
@@ -17,6 +16,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const modalMessage = document.getElementById("modalMessage");
   const modalOkBtn = document.getElementById("modalOkBtn");
 
+  let allTickets = [];
   let myActivities = [];
 
   function showModal(title, message, isError = false) {
@@ -142,7 +142,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     e.preventDefault();
 
     const description = document.getElementById("activityDescription").value;
-    const ticketId = document.getElementById("ticket_id").value;
+    const ticketId = document.getElementById("ticket_id").value || "";
 
     try {
       const response = await fetch("/activities", {
@@ -171,7 +171,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Export CSV
   exportCsvBtn.addEventListener("click", () => {
     if (myActivities.length === 0) {
-      showModal("Info", "No activities to export", true);
+      showModal("Info", "No activities to export", false);
       return;
     }
 
@@ -199,7 +199,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Export PDF
   exportPdfBtn.addEventListener("click", () => {
     if (myActivities.length === 0) {
-      showModal("Info", "No activities to export", true);
+      showModal("Info", "No activities to export", false);
       return;
     }
 
@@ -238,14 +238,17 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const ticketSelect = document.getElementById("ticket_id");
     ticketSelect.innerHTML = "";
-    ticketSelect.appendChild(new Option("Choose Ticket", ""));
+    // Opsi pertama: tidak memilih ticket (untuk log kedatangan/kepulangan dll)
+    ticketSelect.appendChild(new Option("— No Ticket (General) —", ""));
 
-    const selesaiTickets = allTickets.filter(
-      (ticket) => ticket.status === "Terlapor",
+    // Filter ticket yang statusnya bukan Selesai (sedang dikerjakan)
+    const activeTickets = allTickets.filter(
+      (ticket) => ticket.status !== "Selesai",
     );
 
-    selesaiTickets.forEach((ticket) => {
-      ticketSelect.appendChild(new Option(ticket.aktifitas, ticket.id));
+    activeTickets.forEach((ticket) => {
+      const label = `#${ticket.id} - ${ticket.aktifitas} (${ticket.status})`;
+      ticketSelect.appendChild(new Option(label, ticket.id));
     });
   }
 

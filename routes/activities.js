@@ -11,7 +11,7 @@ router.post(
   [
     body("description").trim().notEmpty().escape(),
     body("username").trim().escape(),
-    body("ticket_id").trim().escape(),
+    body("ticket_id").optional().trim().escape(),
   ],
   async (req, res) => {
     const errors = validationResult(req);
@@ -27,11 +27,13 @@ router.post(
     }
 
     const date = new Date();
+    // ticket_id optional — jika tidak diisi atau kosong, simpan sebagai NULL
+    const activityTicketId = ticket_id ? parseInt(ticket_id) : null;
 
     try {
       const [result] = await db.query(
         "INSERT INTO activities (description, username, date, ticket_id) VALUES (?, ?, ?, ?)",
-        [description, username, date, ticket_id],
+        [description, username, date, activityTicketId],
       );
 
       const newActivity = {
@@ -39,7 +41,7 @@ router.post(
         description,
         username,
         date: date.toISOString(),
-        ticket_id,
+        ticket_id: activityTicketId,
       };
 
       res.status(201).json({
@@ -75,12 +77,12 @@ router.get("/activities", isAuthenticated, async (req, res) => {
           activities.*,
           tickets.aktifitas
         FROM activities
-        JOIN tickets ON tickets.id = activities.ticket_id
+        LEFT JOIN tickets ON tickets.id = activities.ticket_id
       `;
       countQuery = `
         SELECT COUNT(*) as total
         FROM activities
-        JOIN tickets ON tickets.id = activities.ticket_id
+        LEFT JOIN tickets ON tickets.id = activities.ticket_id
       `;
     } else if (user.role === "Teknisi") {
       const whereClause = " WHERE activities.username = ?";
@@ -89,12 +91,12 @@ router.get("/activities", isAuthenticated, async (req, res) => {
           activities.*,
           tickets.aktifitas
         FROM activities
-        JOIN tickets ON tickets.id = activities.ticket_id${whereClause}
+        LEFT JOIN tickets ON tickets.id = activities.ticket_id${whereClause}
       `;
       countQuery = `
         SELECT COUNT(*) as total
         FROM activities
-        JOIN tickets ON tickets.id = activities.ticket_id${whereClause}
+        LEFT JOIN tickets ON tickets.id = activities.ticket_id${whereClause}
       `;
       params.push(user.username);
       countParams.push(user.username);

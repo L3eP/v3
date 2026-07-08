@@ -58,13 +58,12 @@ CREATE TABLE IF NOT EXISTS activities (
     date TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
     created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
     date_selesai TIMESTAMP NULL DEFAULT NULL,
-    ticket_id INT NOT NULL,
+    ticket_id INT DEFAULT NULL,
     PRIMARY KEY (id),
     KEY idx_activities_username (username),
     KEY idx_activities_ticket_id (ticket_id),
     KEY idx_activities_date (date),
-    KEY fk_activities_ticket (ticket_id),
-    CONSTRAINT fk_activities_ticket FOREIGN KEY (ticket_id) REFERENCES tickets (id) ON DELETE CASCADE ON UPDATE CASCADE
+    CONSTRAINT fk_activities_ticket FOREIGN KEY (ticket_id) REFERENCES tickets (id) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- ============================================================
