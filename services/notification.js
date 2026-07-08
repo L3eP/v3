@@ -25,15 +25,15 @@ async function sendWhatsApp(phone, message) {
     return false;
   }
 
-  // Bersihkan nomor: hapus +, spasi, strip
-  let cleanPhone = phone.replace(/[+\s\-]/g, '');
+  // Bersihkan nomor: hapus +, spasi, strip, tanda kurung
+  let cleanPhone = phone.replace(/[+\s\-()]/g, '');
 
-  // Jika diawali 0, ganti dengan 62
+  // Jika diawali 0, ganti dengan 62 (ke format internasional)
   if (cleanPhone.startsWith('0')) {
     cleanPhone = '62' + cleanPhone.slice(1);
   }
 
-  // Jika diawali 62, pastikan tidak ada 0 setelahnya
+  // Jika diawali 62, pastikan tidak ada 0 setelahnya (contoh: 62081 → 6281)
   if (cleanPhone.startsWith('62') && cleanPhone[2] === '0') {
     cleanPhone = '62' + cleanPhone.slice(3);
   }
@@ -43,9 +43,12 @@ async function sendWhatsApp(phone, message) {
     return false;
   }
 
+  // Fonnte dengan countryCode: target harus nomor lokal (tanpa kode negara)
+  const localNumber = cleanPhone.replace(/^62/, '');
+
   try {
     const response = await axios.post(FONNTE_API, {
-      target: cleanPhone,
+      target: localNumber,
       message: message,
       countryCode: '62'
     }, {
