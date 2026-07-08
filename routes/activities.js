@@ -109,7 +109,10 @@ router.get("/activities", isAuthenticated, async (req, res) => {
       params.push(limit, offset);
 
       const [rows] = await db.query(baseQuery, params);
-      const [{ total }] = await db.query(countQuery, countParams);
+      const countResult = countParams.length
+        ? await db.query(countQuery, countParams)
+        : await db.query(countQuery);
+      const total = countResult[0][0].total;
 
       return res.json({
         data: rows,

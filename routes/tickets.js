@@ -97,14 +97,17 @@ router.get('/tickets', isAuthenticated, async (req, res) => {
                 query += whereClause;
                 countQuery += whereClause;
                 params = [searchPattern, searchPattern, searchPattern, searchPattern, searchPattern];
-                countParams = [...params];
+                countParams = [searchPattern, searchPattern, searchPattern, searchPattern, searchPattern];
             }
 
             query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
             params.push(limit, offset);
 
             const [rows] = await db.query(query, params);
-            const [{ total }] = await db.query(countQuery, countParams);
+            const countResult = countParams.length
+                ? await db.query(countQuery, countParams)
+                : await db.query(countQuery);
+            const total = countResult[0][0].total;
 
             return res.json({
                 data: rows.map(mapTicket),
