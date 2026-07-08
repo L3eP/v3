@@ -30,7 +30,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        tableBody.innerHTML = ticketsToRender.map(ticket => {
+        const startNumber = (currentPage - 1) * itemsPerPage + 1;
+
+        tableBody.innerHTML = ticketsToRender.map((ticket, idx) => {
+            const rowNumber = startNumber + idx;
             const date = new Date(ticket.createdAt).toLocaleDateString();
 
             const priorityClass = `priority-${ticket.priority.toLowerCase()}`;
@@ -39,7 +42,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             return `
                 <tr>
-                    <td>#${ticket.id}</td>
+                    <td>${rowNumber}</td>
                     <td>${ticket.aktifitas}</td>
                     <td>${ticket.subNode || '-'}</td>
                     <td>${ticket.odc || '-'}</td>
