@@ -247,7 +247,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     );
 
     activeTickets.forEach((ticket) => {
-      const label = `#${ticket.id} - ${ticket.aktifitas} (${ticket.status})`;
+      const label = `${ticket.lokasi} — ${ticket.aktifitas} — ${ticket.pic}`;
       ticketSelect.appendChild(new Option(label, ticket.id));
     });
   }
