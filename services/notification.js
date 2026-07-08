@@ -81,16 +81,24 @@ async function getPhoneByUsername(username) {
 }
 
 /**
- * Notifikasi: Ticket baru dibuat
+ * Ambil nomor telepon semua operator
+ * @returns {Promise<string[]>} Array nomor telepon operator
  */
-async function notifyTicketCreated(ticket) {
-  const picPhone = await getPhoneByUsername(ticket.pic);
-  if (!picPhone) {
-    logger.warn(`Nomor PIC ${ticket.pic} tidak ditemukan — notifikasi ticket ${ticket.id} dilewati`);
-    return;
+async function getAllOperatorPhones() {
+  try {
+    const [rows] = await db.query("SELECT phone FROM users WHERE role = 'Operator' AND phone IS NOT NULL AND phone != ''");
+    return rows.map(r => r.phone).filter(Boolean);
+  } catch (error) {
+    logger.error('Gagal ambil nomor operator:', error.message);
+    return [];
   }
+}
 
-  const message = `📋 *TIKET BARU*\n\n` +
+/**
+ * Format pesan notifikasi ticket baru
+ */
+function formatNewTicketMessage(ticket) {
+  return `📋 *TIKET BARU*\n\n` +
     `ID: #${ticket.id}\n` +
     `Aktifitas: ${ticket.aktifitas}\n` +
     `Lokasi: ${ticket.lokasi}\n` +
@@ -100,25 +108,75 @@ async function notifyTicketCreated(ticket) {
     `Status: ${ticket.status}\n` +
     `PIC: ${ticket.pic}\n\n` +
     `Silakan cek aplikasi untuk detail lebih lanjut.`;
+}
 
-  await sendWhatsApp(picPhone, message);
+/**
+ * Format pesan notifikasi update ticket
+ */
+function formatUpdateMessage(ticketId, oldStatus, newStatus, changedBy, ticketData) {
+  return `🔄 *TIKET DIUPDATE*\n\n` +
+    `ID: #${ticketId}\n` +
+    `Aktifitas: ${ticketData?.aktifitas || '-'}\n` +
+    `Lokasi: ${ticketData?.lokasi || '-'}\n` +
+    `Status: ${oldStatus} → *${newStatus}*\n` +
+    `Oleh: ${changedBy}\n\n` +
+    `Cek aplikasi untuk detail lebih lanjut.`;
+}
+
+/**
+ * Notifikasi: Ticket baru dibuat
+ * Mengirim ke PIC (teknisi) + semua operator
+ */
+async function notifyTicketCreated(ticket) {
+  const recipients = [];
+
+  // 1. PIC (teknisi yang ditugaskan)
+  const picPhone = await getPhoneByUsername(ticket.pic);
+  if (picPhone) {
+    recipients.push(picPhone);
+  } else {
+    logger.warn(`Nomor PIC ${ticket.pic} tidak ditemukan`);
+  }
+
+  // 2. Semua operator
+  const operatorPhones = await getAllOperatorPhones();
+  recipients.push(...operatorPhones);
+
+  if (recipients.length === 0) {
+    logger.warn(`Tidak ada penerima — notifikasi ticket ${ticket.id} dilewati`);
+    return;
+  }
+
+  const message = formatNewTicketMessage(ticket);
+
+  // Kirim ke semua penerima (fire-and-forget)
+  for (const phone of recipients) {
+    await sendWhatsApp(phone, message);
+  }
 }
 
 /**
  * Notifikasi: Status ticket berubah
+ * Mengirim ke PIC (teknisi) + semua operator
  */
 async function notifyTicketUpdated(ticketId, oldStatus, newStatus, changedBy, ticketData) {
+  const recipients = [];
+
+  // 1. PIC (teknisi yang ditugaskan)
   const picPhone = await getPhoneByUsername(ticketData?.pic);
-  if (!picPhone) return;
+  if (picPhone) recipients.push(picPhone);
 
-  const message = `🔄 *TIKET DIUPDATE*\n\n` +
-    `ID: #${ticketId}\n` +
-    `Aktifitas: ${ticketData?.aktifitas || '-'}\n` +
-    `Status: ${oldStatus} → *${newStatus}*\n` +
-    `Oleh: ${changedBy}\n\n` +
-    `Cek aplikasi untuk detail lebih lanjut.`;
+  // 2. Semua operator
+  const operatorPhones = await getAllOperatorPhones();
+  recipients.push(...operatorPhones);
 
-  await sendWhatsApp(picPhone, message);
+  if (recipients.length === 0) return;
+
+  const message = formatUpdateMessage(ticketId, oldStatus, newStatus, changedBy, ticketData);
+
+  for (const phone of recipients) {
+    await sendWhatsApp(phone, message);
+  }
 }
 
 module.exports = { sendWhatsApp, notifyTicketCreated, notifyTicketUpdated, getPhoneByUsername };
