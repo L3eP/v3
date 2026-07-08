@@ -4,6 +4,7 @@ const db = require('../db');
 const upload = require('../middleware/upload');
 const { body, validationResult } = require('express-validator');
 const { isAuthenticated } = require('../middleware/auth');
+const { notifyTicketCreated, notifyTicketUpdated } = require('../services/notification');
 
 // Helper to map DB ticket to Frontend ticket
 const mapTicket = (ticket) => {
@@ -66,6 +67,9 @@ router.post('/tickets', isAuthenticated, upload.single('evidence'), [
             createdBy,
             createdAt
         };
+
+        // Kirim notifikasi WA (fire-and-forget — tidak nunggu response)
+        notifyTicketCreated(newTicket);
 
         res.status(201).json({ message: 'Ticket created successfully', ticket: newTicket });
     } catch (error) {
@@ -237,6 +241,8 @@ router.post('/tickets/:id/update', isAuthenticated, upload.single('evidence'), a
                     'INSERT INTO ticket_status_history (ticket_id, old_status, new_status, changed_by) VALUES (?, ?, ?, ?)',
                     [ticketId, ticket.status, status, req.session.user.username]
                 );
+                // Notifikasi WA saat status berubah
+                notifyTicketUpdated(ticketId, ticket.status, status, req.session.user.username, ticket);
             }
         }
 
