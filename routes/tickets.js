@@ -74,40 +74,69 @@ router.post('/tickets', isAuthenticated, upload.single('evidence'), [
     }
 });
 
-// Get Tickets (Supports Backend Pagination)
+// Helper to build WHERE clause for ticket filters
+const buildTicketWhere = (filters) => {
+    const clauses = [];
+    const params = [];
+
+    if (filters.search) {
+        const searchPattern = `%${filters.search}%`;
+        clauses.push('(aktifitas LIKE ? OR sub_node LIKE ? OR lokasi LIKE ? OR pic LIKE ? OR info LIKE ?)');
+        params.push(searchPattern, searchPattern, searchPattern, searchPattern, searchPattern);
+    }
+
+    if (filters.status && filters.status !== 'All') {
+        clauses.push('status = ?');
+        params.push(filters.status);
+    }
+
+    if (filters.priority && filters.priority !== 'All') {
+        clauses.push('priority = ?');
+        params.push(filters.priority);
+    }
+
+    if (filters.startDate) {
+        clauses.push('created_at >= ?');
+        params.push(new Date(filters.startDate));
+    }
+
+    if (filters.endDate) {
+        clauses.push('created_at <= ?');
+        params.push(new Date(filters.endDate));
+    }
+
+    return { where: clauses.length ? ' WHERE ' + clauses.join(' AND ') : '', params };
+};
+
+// Get Tickets (Supports Backend Pagination & Filtering)
 router.get('/tickets', isAuthenticated, async (req, res) => {
     try {
         const page = parseInt(req.query.page) || null;
         const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 10));
 
-        // Support search parameter for basic filtering
-        const search = req.query.search || '';
+        const filters = {
+            search: req.query.search || '',
+            status: req.query.status || '',
+            priority: req.query.priority || '',
+            startDate: req.query.startDate || '',
+            endDate: req.query.endDate || ''
+        };
+
+        const { where, params } = buildTicketWhere(filters);
 
         if (page) {
             // Paginated response
             const offset = (page - 1) * limit;
-            let query = 'SELECT * FROM tickets';
-            let countQuery = 'SELECT COUNT(*) as total FROM tickets';
-            let params = [];
-            let countParams = [];
 
-            if (search) {
-                const whereClause = ' WHERE aktifitas LIKE ? OR sub_node LIKE ? OR lokasi LIKE ? OR pic LIKE ? OR info LIKE ?';
-                const searchPattern = `%${search}%`;
-                query += whereClause;
-                countQuery += whereClause;
-                params = [searchPattern, searchPattern, searchPattern, searchPattern, searchPattern];
-                countParams = [searchPattern, searchPattern, searchPattern, searchPattern, searchPattern];
-            }
-
-            query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
-            params.push(limit, offset);
-
-            const [rows] = await db.query(query, params);
-            const countResult = countParams.length
-                ? await db.query(countQuery, countParams)
-                : await db.query(countQuery);
-            const total = countResult[0][0].total;
+            const [rows] = await db.query(
+                'SELECT * FROM tickets' + where + ' ORDER BY created_at DESC LIMIT ? OFFSET ?',
+                [...params, limit, offset]
+            );
+            const [countResult] = await db.query(
+                'SELECT COUNT(*) as total FROM tickets' + where,
+                params
+            );
+            const total = countResult[0].total;
 
             return res.json({
                 data: rows.map(mapTicket),
@@ -121,18 +150,10 @@ router.get('/tickets', isAuthenticated, async (req, res) => {
         }
 
         // Backward compatible: return all tickets (used by dashboard)
-        let query = 'SELECT * FROM tickets';
-        let params = [];
-
-        if (search) {
-            const whereClause = ' WHERE aktifitas LIKE ? OR sub_node LIKE ? OR lokasi LIKE ? OR pic LIKE ? OR info LIKE ?';
-            const searchPattern = `%${search}%`;
-            query += whereClause;
-            params = [searchPattern, searchPattern, searchPattern, searchPattern, searchPattern];
-        }
-
-        query += ' ORDER BY created_at DESC';
-        const [rows] = await db.query(query, params);
+        const [rows] = await db.query(
+            'SELECT * FROM tickets' + where + ' ORDER BY created_at DESC',
+            params
+        );
         const tickets = rows.map(mapTicket);
         res.json(tickets);
 

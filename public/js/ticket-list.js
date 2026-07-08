@@ -146,6 +146,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (searchInput && searchInput.value.trim()) {
                 params.set('search', searchInput.value.trim());
             }
+            if (statusFilter && statusFilter.value && statusFilter.value !== 'All') {
+                params.set('status', statusFilter.value);
+            }
+            if (priorityFilter && priorityFilter.value && priorityFilter.value !== 'All') {
+                params.set('priority', priorityFilter.value);
+            }
+            if (startDateFilter && startDateFilter.value) {
+                params.set('startDate', startDateFilter.value);
+            }
+            if (endDateFilter && endDateFilter.value) {
+                params.set('endDate', endDateFilter.value);
+            }
 
             const response = await fetch(`/tickets?${params.toString()}`);
             const result = await response.json();
