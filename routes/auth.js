@@ -6,6 +6,7 @@ const db = require('../db');
 const upload = require('../middleware/upload');
 const path = require('path');
 const { isAuthenticated, isAdmin } = require('../middleware/auth');
+const { sanitizePhone } = require('../utils/phone');
 
 const loginLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
@@ -123,12 +124,15 @@ router.post('/register', isAuthenticated, isAdmin, registerLimiter, upload.singl
         const validRoles = ['Owner', 'Operator', 'Teknisi'];
         const userRole = role && validRoles.includes(role) ? role : 'Teknisi';
 
+        // Standarisasi nomor telepon ke format Fonnte (62xx)
+        const standardPhone = sanitizePhone(phone) || phone;
+
         // Set photo to uploaded file or default
         const photo = req.file ? `/uploads/${req.file.filename}` : '/uploads/default.png';
 
         await db.query(
             'INSERT INTO users (full_name, username, password, phone, role, photo) VALUES (?, ?, ?, ?, ?, ?)',
-            [fullName, username, hashedPassword, phone, userRole, photo]
+            [fullName, username, hashedPassword, standardPhone, userRole, photo]
         );
 
         res.status(201).json({ message: 'Account created successfully' });

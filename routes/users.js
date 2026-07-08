@@ -5,6 +5,7 @@ const upload = require('../middleware/upload');
 const path = require('path');
 const { isAuthenticated, isAdmin, isOwnerOrOperator } = require('../middleware/auth');
 const bcrypt = require('bcryptjs');
+const { sanitizePhone } = require('../utils/phone');
 
 // Helper to map DB user to Frontend user
 const mapUser = (user) => {
@@ -42,8 +43,10 @@ router.post('/update-profile', isAuthenticated, upload.single('photo'), async (r
             return res.status(401).json({ message: 'Incorrect current password' });
         }
 
+        // Standarisasi nomor telepon ke format Fonnte
+        const standardPhone = phone ? (sanitizePhone(phone) || phone) : user.phone;
         let query = 'UPDATE users SET phone = ?';
-        let params = [phone || user.phone];
+        let params = [standardPhone];
 
         if (newPassword) {
             const hashedPassword = await bcrypt.hash(newPassword, 10);
@@ -154,8 +157,9 @@ router.post('/admin/users/update', isAuthenticated, isAdmin, async (req, res) =>
         }
         const user = rows[0];
 
+        const standardPhone = phone ? (sanitizePhone(phone) || phone) : user.phone;
         let query = 'UPDATE users SET full_name = ?, phone = ?, role = ?';
-        let params = [fullName || user.full_name, phone || user.phone, role || user.role];
+        let params = [fullName || user.full_name, standardPhone, role || user.role];
 
         if (password) {
             const hashedPassword = await bcrypt.hash(password, 10);
