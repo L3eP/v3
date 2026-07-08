@@ -30,10 +30,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        const startNumber = (currentPage - 1) * itemsPerPage + 1;
-
+        // Nomor urut: 1 = ticket tertua, N = ticket termuda
+        // Karena sort DESC (terbaru di atas), hitung mundur dari total
         tableBody.innerHTML = ticketsToRender.map((ticket, idx) => {
-            const rowNumber = startNumber + idx;
+            const rowNumber = totalItems - (currentPage - 1) * itemsPerPage - idx;
             const date = new Date(ticket.createdAt).toLocaleDateString();
 
             const priorityClass = `priority-${ticket.priority.toLowerCase()}`;
