@@ -1,6 +1,6 @@
 {
-    "name": "Acme Corp App",
-    "short_name": "Acme App",
+    "name": "MAYUNG App",
+    "short_name": "MAYUNG",
     "start_url": "/dashboard.html",
     "display": "standalone",
     "background_color": "#f3f4f6",

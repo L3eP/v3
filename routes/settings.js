@@ -12,7 +12,7 @@ router.get('/settings/company-name', async (req, res) => {
         if (rows.length > 0) {
             res.json({ companyName: rows[0].setting_value });
         } else {
-            res.json({ companyName: 'Acme Corp' });
+            res.json({ companyName: 'MAYUNG' });
         }
     } catch (error) {
         console.error('Get company name error:', error);

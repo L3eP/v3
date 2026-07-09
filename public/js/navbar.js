@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const currentPage = window.location.pathname;
 
     // Fetch Company Name and Logo
-    let companyName = 'Acme Corp';
+    let companyName = 'MAYUNG';
     let companyLogo = null;
     try {
         const [nameRes, logoRes] = await Promise.all([
