@@ -50,6 +50,17 @@ INSERT INTO reference_options (type, label, group_name, sort_order) VALUES
 ('odc', 'ODC 14 - Rekat lauk', 'OLT DMS', 2),
 ('odc', 'ODC 15 - Gubuk Lauk Masjid', 'OLT HIOSO', 1);
 
+-- Seed data: ODP (turunan ODC)
+INSERT INTO reference_options (type, label, group_name, sort_order) VALUES
+('odp', 'ODP 1', 'ODC 4 - sekarteja', 1),
+('odp', 'ODP 2', 'ODC 4 - sekarteja', 2),
+('odp', 'ODP 3 - depan masjid', 'ODC 4 - sekarteja', 3),
+('odp', 'ODP 1 - Amak Ibi', 'ODC 1 - rumah p enjel', 1),
+('odp', 'ODP 2 - samping jalan', 'ODC 1 - rumah p enjel', 2),
+('odp', 'ODP 1', 'ODC 10 - BTN sekar anyar', 1),
+('odp', 'ODP 2', 'ODC 10 - BTN sekar anyar', 2),
+('odp', 'ODP 3', 'ODC 10 - BTN sekar anyar', 3);
+
 -- Seed data: Priority
 INSERT INTO reference_options (type, label, sort_order) VALUES
 ('priority', 'Low', 1),

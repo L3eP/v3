@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     aktifitas: { icon: 'fa-tasks', title: 'Aktifitas', hasGroup: false, hasCoord: false },
     sub_node: { icon: 'fa-sitemap', title: 'Sub-Node', hasGroup: false, hasCoord: true },
     odc: { icon: 'fa-network-wired', title: 'ODC', hasGroup: true, hasCoord: true },
+    odp: { icon: 'fa-plug', title: 'ODP', hasGroup: true, hasCoord: true, groupLabel: 'Induk ODC' },
     priority: { icon: 'fa-flag', title: 'Priority', hasGroup: false, hasCoord: false }
   };
 
@@ -75,9 +76,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     formEl.innerHTML = `
       <div class="inline-form">
         <input type="text" id="new-${type}-label" placeholder="Label ${cfg.title}" autofocus>
-        ${cfg.hasGroup ? `<input type="text" id="new-${type}-group" placeholder="Group (e.g. OLT JRG)">` : ''}
-        ${cfg.hasGroup ? `<input type="text" id="new-${type}-lat" placeholder="Latitude" style="min-width:100px;">` : ''}
-        ${cfg.hasGroup ? `<input type="text" id="new-${type}-lng" placeholder="Longitude" style="min-width:100px;">` : ''}
+        ${cfg.hasGroup ? `<input type="text" id="new-${type}-group" placeholder="${cfg.groupLabel || 'Group (e.g. OLT JRG)'}">` : ''}
+        ${cfg.hasCoord ? `<input type="text" id="new-${type}-lat" placeholder="Latitude" style="min-width:100px;">` : ''}
+        ${cfg.hasCoord ? `<input type="text" id="new-${type}-lng" placeholder="Longitude" style="min-width:100px;">` : ''}
         <button class="btn-save" onclick="addRef('${type}')"><i class="fas fa-check"></i> Simpan</button>
         <button class="btn-cancel" onclick="document.getElementById('form-${type}').style.display='none'"><i class="fas fa-times"></i></button>
       </div>
@@ -90,8 +91,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const label = document.getElementById(`new-${type}-label`).value.trim();
     if (!label) return;
     const group = TYPE_CONFIG[type].hasGroup ? document.getElementById(`new-${type}-group`).value.trim() : '';
-    const lat = TYPE_CONFIG[type].hasGroup ? document.getElementById(`new-${type}-lat`)?.value.trim() : '';
-    const lng = TYPE_CONFIG[type].hasGroup ? document.getElementById(`new-${type}-lng`)?.value.trim() : '';
+    const lat = TYPE_CONFIG[type].hasCoord ? document.getElementById(`new-${type}-lat`)?.value.trim() : '';
+    const lng = TYPE_CONFIG[type].hasCoord ? document.getElementById(`new-${type}-lng`)?.value.trim() : '';
 
     try {
       const body = { type, label, group_name: group || undefined };
@@ -197,7 +198,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const res = await fetch('/api/references');
       const data = await res.json();
       grid.innerHTML = '';
-      for (const type of ['aktifitas', 'sub_node', 'odc', 'priority']) {
+      for (const type of ['aktifitas', 'sub_node', 'odc', 'odp', 'priority']) {
         if (data[type]) renderSection(type, data[type]);
       }
     } catch (e) {

@@ -147,6 +147,30 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateOdcOptions(selected);
     });
 
+    // Filter ODP saat ODC berubah
+    odcSelect.addEventListener('change', () => {
+        const selectedOdc = odcSelect.value;
+        const odpSelect = document.getElementById('odp');
+        const odpItems = references.odp || [];
+        odpSelect.innerHTML = '<option value="">Pilih ODP (opsional)</option>';
+        odpItems
+            .filter(item => item.group === selectedOdc)
+            .forEach(item => {
+                const opt = document.createElement('option');
+                opt.value = item.label;
+                opt.textContent = item.label;
+                odpSelect.appendChild(opt);
+            });
+    });
+
+    function setupOdpDropdown(items) {
+        // Populate ODP jika ada ODC yang sudah terpilih
+        if (odcSelect.value) {
+            const event = new Event('change');
+            odcSelect.dispatchEvent(event);
+        }
+    }
+
     // Submit form
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
