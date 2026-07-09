@@ -89,6 +89,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <a href="register.html" class="nav-link ${currentPage.includes('register') ? 'active' : ''}">
                         <i class="fas fa-user-plus"></i> <span>Add User</span>
                     </a>
+                    <a href="admin.html" class="nav-link ${currentPage.includes('admin') ? 'active' : ''}">
+                        <i class="fas fa-cogs"></i> <span>Admin</span>
+                    </a>
                 ` : ''}
             </nav>
 
