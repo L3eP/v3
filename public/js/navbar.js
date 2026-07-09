@@ -79,6 +79,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <i class="fas fa-history"></i> <span>Activity</span>
                 </a>
 
+                <a href="map.html" class="nav-link ${currentPage.includes('map') ? 'active' : ''}">
+                    <i class="fas fa-map-marked-alt"></i> <span>Peta</span>
+                </a>
+
                 ${isPrivileged ? `
                     <a href="user-list.html" class="nav-link ${currentPage.includes('user-list') ? 'active' : ''}">
                         <i class="fas fa-users"></i> <span>Users</span>
