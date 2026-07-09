@@ -3,10 +3,15 @@ const router = express.Router();
 const db = require('../db');
 const { isAuthenticated } = require('../middleware/auth');
 
-// GET /api/geo — Data geografis untuk peta (ODC, ODP, dan lokasi tiket)
+// GET /api/geo — Data geografis untuk peta (OLT, ODC, ODP)
 router.get('/api/geo', isAuthenticated, async (req, res) => {
   try {
-    // ODC dengan koordinat
+    const [olt] = await db.query(
+      `SELECT id, label as name, latitude as lat, longitude as lng
+       FROM reference_options
+       WHERE type = 'olt' AND latitude IS NOT NULL AND longitude IS NOT NULL
+       ORDER BY label`
+    );
     const [odc] = await db.query(
       `SELECT id, label as name, group_name as area,
               latitude as lat, longitude as lng
@@ -21,7 +26,7 @@ router.get('/api/geo', isAuthenticated, async (req, res) => {
        WHERE type = 'odp' AND latitude IS NOT NULL AND longitude IS NOT NULL
        ORDER BY label`
     );
-    res.json({ odc, odp, stats: { odc: odc.length, odp: odp.length } });
+    res.json({ olt, odc, odp, stats: { olt: olt.length, odc: odc.length, odp: odp.length } });
   } catch (error) {
     console.error('Geo error:', error);
     res.status(500).json({ message: 'Server error' });

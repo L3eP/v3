@@ -24,6 +24,7 @@ const ticketRoutes = require('./routes/tickets');
 const activityRoutes = require('./routes/activities');
 const settingsRoutes = require('./routes/settings');
 const referenceRoutes = require('./routes/references');
+const geoRoutes = require('./routes/geo');
 
 // Middleware to parse JSON bodies
 app.use(express.json());
@@ -100,6 +101,7 @@ app.use('/', ticketRoutes);
 app.use('/', activityRoutes);
 app.use('/', settingsRoutes);
 app.use('/', referenceRoutes);
+app.use('/', geoRoutes);
 
 // Global Error Handler
 app.use((err, req, res, next) => {
