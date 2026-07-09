@@ -12,18 +12,19 @@ CREATE TABLE IF NOT EXISTS reference_options (
     longitude DECIMAL(10,7) DEFAULT NULL,
     sort_order INT DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_type (type)
+    INDEX idx_type (type),
+    UNIQUE INDEX uq_ref (type, label, group_name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- Seed data: Aktifitas
-INSERT INTO reference_options (type, label, sort_order) VALUES
+INSERT IGNORE INTO reference_options (type, label, sort_order) VALUES
 ('aktifitas', 'PSB', 1),
 ('aktifitas', 'Maintenance', 2),
 ('aktifitas', 'loss', 3),
 ('aktifitas', 'migrasi', 4);
 
 -- Seed data: Sub-Node
-INSERT INTO reference_options (type, label, sort_order) VALUES
+INSERT IGNORE INTO reference_options (type, label, sort_order) VALUES
 ('sub_node', 'ANJ', 1),
 ('sub_node', 'SKM', 2),
 ('sub_node', 'JRG', 3),
@@ -33,7 +34,7 @@ INSERT INTO reference_options (type, label, sort_order) VALUES
 ('sub_node', 'MBL', 7);
 
 -- Seed data: ODC
-INSERT INTO reference_options (type, label, group_name, sort_order) VALUES
+INSERT IGNORE INTO reference_options (type, label, group_name, sort_order) VALUES
 ('odc', 'ODC 1 - rumah p enjel', 'OLT JRG', 1),
 ('odc', 'ODC 2 - h. Marjan', 'OLT JRG', 2),
 ('odc', 'ODC 3 - depan kubur sekarteja', 'OLT JRG', 3),
@@ -51,7 +52,7 @@ INSERT INTO reference_options (type, label, group_name, sort_order) VALUES
 ('odc', 'ODC 15 - Gubuk Lauk Masjid', 'OLT HIOSO', 1);
 
 -- Seed data: ODP (turunan ODC)
-INSERT INTO reference_options (type, label, group_name, sort_order) VALUES
+INSERT IGNORE INTO reference_options (type, label, group_name, sort_order) VALUES
 ('odp', 'ODP 1', 'ODC 4 - sekarteja', 1),
 ('odp', 'ODP 2', 'ODC 4 - sekarteja', 2),
 ('odp', 'ODP 3 - depan masjid', 'ODC 4 - sekarteja', 3),
@@ -62,7 +63,7 @@ INSERT INTO reference_options (type, label, group_name, sort_order) VALUES
 ('odp', 'ODP 3', 'ODC 10 - BTN sekar anyar', 3);
 
 -- Seed data: Priority
-INSERT INTO reference_options (type, label, sort_order) VALUES
+INSERT IGNORE INTO reference_options (type, label, sort_order) VALUES
 ('priority', 'Low', 1),
 ('priority', 'Moderate', 2),
 ('priority', 'Critical', 3),
