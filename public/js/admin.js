@@ -10,13 +10,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   let editCallback = null;
   let deleteCallback = null;
   let activeTab = 'aktifitas';
+  let allData = {};
 
-  const TYPES = ['aktifitas', 'sub_node', 'odc', 'odp', 'priority'];
+  const TYPES = ['aktifitas', 'sub_node', 'odc', 'priority'];
   const TYPE_CONFIG = {
     aktifitas: { icon: 'fa-tasks', title: 'Aktifitas', hasGroup: false, hasCoord: false },
     sub_node:  { icon: 'fa-sitemap', title: 'Sub-Node',  hasGroup: false, hasCoord: true },
-    odc:       { icon: 'fa-network-wired', title: 'ODC',  hasGroup: true,  hasCoord: true, groupLabel: 'OLT Group' },
-    odp:       { icon: 'fa-plug', title: 'ODP',           hasGroup: true,  hasCoord: true, groupLabel: 'Induk ODC' },
+    odc:       { icon: 'fa-network-wired', title: 'ODC & ODP', hasGroup: true, hasCoord: true, groupLabel: 'OLT Group' },
     priority:  { icon: 'fa-flag', title: 'Priority',      hasGroup: false, hasCoord: false }
   };
 
@@ -58,57 +58,143 @@ document.addEventListener('DOMContentLoaded', async () => {
           <span style="font-size:0.8rem;color:var(--text-muted);font-weight:400;">(${items.length})</span>
         </h3>
         <div id="list-${type}"></div>
-        <button class="btn-add-ref" onclick="showAddForm('${type}')">
-          <i class="fas fa-plus"></i> Tambah ${cfg.title}
-        </button>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button class="btn-add-ref" onclick="showAddForm('${type}','odc')" style="flex:1;">
+            <i class="fas fa-plus"></i> Tambah ODC
+          </button>
+          <button class="btn-add-ref" onclick="showAddForm('${type}','odp')" style="flex:1;">
+            <i class="fas fa-plug"></i> Tambah ODP
+          </button>
+        </div>
         <div id="form-${type}" style="display:none;"></div>
       </div>
     `;
     panelsEl.appendChild(panel);
-    renderList(type, items);
+    renderOdcList(items);
   }
 
-  function renderList(type, items) {
-    const container = document.getElementById(`list-${type}`);
-    if (!items || items.length === 0) {
-      container.innerHTML = '<div class="empty-ref">Belum ada data</div>';
+  function renderOdcList(odcItems) {
+    const container = document.getElementById('list-odc');
+    const odpItems = allData.odp || [];
+
+    if (!odcItems || odcItems.length === 0) {
+      container.innerHTML = '<div class="empty-ref">Belum ada ODC</div>';
       return;
     }
-    container.innerHTML = items.map(item => {
-      const hasCoord = item.lat && item.lng;
+
+    // Group ODP by parent ODC label
+    const odpByParent = {};
+    odpItems.forEach(o => {
+      const parent = o.group || '';
+      if (!odpByParent[parent]) odpByParent[parent] = [];
+      odpByParent[parent].push(o);
+    });
+
+    container.innerHTML = odcItems.map(odc => {
+      const hasCoord = odc.lat && odc.lng;
+      const children = odpByParent[odc.label] || [];
       return `
-        <div class="ref-item">
+        <div class="ref-item" style="border-bottom:1px solid #e5e7eb;padding:8px 0;margin-bottom:0;">
           <div class="ref-label">
-            ${hasCoord ? '<span style="font-size:0.85rem;">📍</span>' : ''}
-            <span>${escapeHtml(item.label)}</span>
-            ${item.group ? `<span class="ref-group">${escapeHtml(item.group)}</span>` : ''}
+            ${hasCoord ? '<span style="font-size:0.85rem;">📍</span>' : '<span style="width:16px;display:inline-block;"></span>'}
+            <strong>${escapeHtml(odc.label)}</strong>
+            ${odc.group ? `<span class="ref-group">${escapeHtml(odc.group)}</span>` : ''}
           </div>
           <div class="ref-actions">
-            <button class="btn-edit-ref" onclick="editRef(${item.id},'${type}','${escapeHtml(item.label)}','${escapeHtml(item.group||'')}','${item.lat||''}','${item.lng||''}')">
+            <button class="btn-edit-ref" onclick="editRef(${odc.id},'odc','${escapeHtml(odc.label)}','${escapeHtml(odc.group||'')}','${odc.lat||''}','${odc.lng||''}')">
               <i class="fas fa-edit"></i>
             </button>
-            <button class="btn-del-ref" onclick="confirmDel(${item.id},'${escapeHtml(item.label)}')">
+            <button class="btn-del-ref" onclick="confirmDel(${odc.id},'${escapeHtml(odc.label)}')">
               <i class="fas fa-trash"></i>
             </button>
           </div>
-        </div>`;
+        </div>
+        ${children.map(odp => `
+          <div class="ref-item" style="padding:6px 0 6px 28px;border-bottom:none;background:#f9fafb;border-radius:4px;margin:2px 0;">
+            <div class="ref-label">
+              <span style="font-size:0.8rem;color:#9ca3af;width:16px;">└─</span>
+              <span style="color:#4b5563;font-size:0.9rem;">${escapeHtml(odp.label)}</span>
+              ${odp.lat && odp.lng ? '<span style="font-size:0.75rem;">📍</span>' : ''}
+            </div>
+            <div class="ref-actions">
+              <button class="btn-edit-ref" onclick="editRef(${odp.id},'odp','${escapeHtml(odp.label)}','${escapeHtml(odp.group||'')}','${odp.lat||''}','${odp.lng||''}')">
+                <i class="fas fa-edit"></i>
+              </button>
+              <button class="btn-del-ref" onclick="confirmDel(${odp.id},'${escapeHtml(odp.label)}')">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          </div>
+        `).join('')}
+      `;
     }).join('');
   }
 
-  window.showAddForm = function(type) {
+  window.showAddForm = function(type, subType) {
     const cfg = TYPE_CONFIG[type];
     const formEl = document.getElementById(`form-${type}`);
     formEl.style.display = 'block';
-    formEl.innerHTML = `
-      <div class="inline-form">
-        <input type="text" id="new-${type}-label" placeholder="Label ${cfg.title}" autofocus>
-        ${cfg.hasGroup ? `<input type="text" id="new-${type}-group" placeholder="${cfg.groupLabel || 'Group'}">` : ''}
-        ${cfg.hasCoord ? `<input type="text" id="new-${type}-lat" placeholder="Latitude" style="min-width:100px;">` : ''}
-        ${cfg.hasCoord ? `<input type="text" id="new-${type}-lng" placeholder="Longitude" style="min-width:100px;">` : ''}
-        <button class="btn-save" onclick="addRef('${type}')"><i class="fas fa-check"></i> Simpan</button>
-        <button class="btn-cancel" onclick="document.getElementById('form-${type}').style.display='none'"><i class="fas fa-times"></i></button>
-      </div>`;
-    document.querySelector(`.btn-add-ref[onclick*="'${type}'"]`).style.display = 'none';
+
+    if (type === 'odc') {
+      if (subType === 'odp') {
+        // Form tambah ODP — pilih induk ODC dari dropdown
+        const odcLabels = (allData.odc || []).map(o => o.label);
+        formEl.innerHTML = `
+          <div class="inline-form" style="flex-wrap:wrap;">
+            <input type="text" id="new-odp-label" placeholder="Label ODP" autofocus style="min-width:150px;">
+            <select id="new-odp-parent" style="min-width:180px;">
+              <option value="">Pilih Induk ODC</option>
+              ${odcLabels.map(l => `<option value="${escapeHtml(l)}">${escapeHtml(l)}</option>`).join('')}
+            </select>
+            <input type="text" id="new-odp-lat" placeholder="Latitude" style="min-width:100px;">
+            <input type="text" id="new-odp-lng" placeholder="Longitude" style="min-width:100px;">
+            <button class="btn-save" onclick="addOdp()"><i class="fas fa-check"></i> Simpan</button>
+            <button class="btn-cancel" onclick="document.getElementById('form-odc').style.display='none'"><i class="fas fa-times"></i></button>
+          </div>`;
+      } else {
+        // Form tambah ODC
+        formEl.innerHTML = `
+          <div class="inline-form">
+            <input type="text" id="new-odc-label" placeholder="Label ODC" autofocus>
+            <input type="text" id="new-odc-group" placeholder="OLT Group">
+            <input type="text" id="new-odc-lat" placeholder="Latitude" style="min-width:100px;">
+            <input type="text" id="new-odc-lng" placeholder="Longitude" style="min-width:100px;">
+            <button class="btn-save" onclick="addRef('odc')"><i class="fas fa-check"></i> Simpan</button>
+            <button class="btn-cancel" onclick="document.getElementById('form-odc').style.display='none'"><i class="fas fa-times"></i></button>
+          </div>`;
+      }
+      document.querySelectorAll(`.btn-add-ref[onclick*="odc"]`).forEach(b => b.style.display = 'none');
+    } else {
+      // Non-ODC types (aktifitas, sub_node, priority)
+      formEl.innerHTML = `
+        <div class="inline-form">
+          <input type="text" id="new-${type}-label" placeholder="Label ${cfg.title}" autofocus>
+          ${cfg.hasGroup ? `<input type="text" id="new-${type}-group" placeholder="${cfg.groupLabel || 'Group'}">` : ''}
+          ${cfg.hasCoord ? `<input type="text" id="new-${type}-lat" placeholder="Latitude" style="min-width:100px;">` : ''}
+          ${cfg.hasCoord ? `<input type="text" id="new-${type}-lng" placeholder="Longitude" style="min-width:100px;">` : ''}
+          <button class="btn-save" onclick="addRef('${type}')"><i class="fas fa-check"></i> Simpan</button>
+          <button class="btn-cancel" onclick="document.getElementById('form-${type}').style.display='none'"><i class="fas fa-times"></i></button>
+        </div>`;
+      const btn = document.querySelector(`.btn-add-ref[onclick*="'${type}'"]`);
+      if (btn) btn.style.display = 'none';
+    }
+  };
+
+  window.addOdp = async function() {
+    const label = document.getElementById('new-odp-label').value.trim();
+    const parent = document.getElementById('new-odp-parent').value;
+    if (!label || !parent) { showToast('Label dan induk ODC harus diisi'); return; }
+    const lat = document.getElementById('new-odp-lat').value.trim();
+    const lng = document.getElementById('new-odp-lng').value.trim();
+    try {
+      const body = { type: 'odp', label, group_name: parent };
+      if (lat && lng) { body.latitude = parseFloat(lat); body.longitude = parseFloat(lng); }
+      const res = await fetch('/api/references', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+      });
+      if (res.ok) { showToast('ODP berhasil ditambahkan'); loadReferences(); }
+      else { const d = await res.json(); showToast('Error: ' + (d.message || 'Gagal')); }
+    } catch (e) { showToast('Error: ' + e.message); }
   };
 
   window.addRef = async function(type) {
@@ -130,7 +216,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   window.editRef = function(id, type, label, group, lat, lng) {
-    const cfg = TYPE_CONFIG[type];
+    const cfg = type === 'odp'
+      ? { title: 'ODP', hasGroup: true, hasCoord: true, groupLabel: 'Induk ODC' }
+      : TYPE_CONFIG[type] || TYPE_CONFIG.odc;
     document.getElementById('editModalTitle').textContent = `Edit ${cfg.title}`;
     document.getElementById('editLabel').value = label;
     document.getElementById('editGroupWrap').style.display = cfg.hasGroup ? 'block' : 'none';
@@ -180,6 +268,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.switchTab = switchTab;
   window.showAddForm = showAddForm;
   window.addRef = addRef;
+  window.addOdp = addOdp;
   window.editRef = editRef;
   window.confirmDel = confirmDel;
 
@@ -194,16 +283,69 @@ document.addEventListener('DOMContentLoaded', async () => {
     panelsEl.innerHTML = '';
     try {
       const res = await fetch('/api/references');
-      const data = await res.json();
+      allData = await res.json();
       tabsEl.innerHTML = '';
       panelsEl.innerHTML = '';
       renderTabs();
       TYPES.forEach(type => {
-        if (data[type]) renderPanel(type, data[type]);
+        if (type === 'odc') {
+          renderPanel(type, allData.odc || []);
+        } else {
+          renderRegularPanel(type, allData[type] || []);
+        }
       });
     } catch (e) {
       tabsEl.innerHTML = '<div style="color:#ef4444;padding:10px;">Gagal load data</div>';
     }
+  }
+
+  function renderRegularPanel(type, items) {
+    const cfg = TYPE_CONFIG[type];
+    const panel = document.createElement('div');
+    panel.className = `admin-panel ${type === activeTab ? 'active' : ''}`;
+    panel.dataset.type = type;
+    panel.innerHTML = `
+      <div class="admin-card">
+        <h3 style="margin:0 0 15px 0;display:flex;align-items:center;gap:8px;color:var(--text-main);">
+          <i class="fas ${cfg.icon}" style="color:#4f46e5;"></i> ${cfg.title}
+          <span style="font-size:0.8rem;color:var(--text-muted);font-weight:400;">(${items.length})</span>
+        </h3>
+        <div id="list-${type}"></div>
+        <button class="btn-add-ref" onclick="showAddForm('${type}')">
+          <i class="fas fa-plus"></i> Tambah ${cfg.title}
+        </button>
+        <div id="form-${type}" style="display:none;"></div>
+      </div>
+    `;
+    panelsEl.appendChild(panel);
+    renderRegularList(type, items);
+  }
+
+  function renderRegularList(type, items) {
+    const container = document.getElementById(`list-${type}`);
+    if (!items || items.length === 0) {
+      container.innerHTML = '<div class="empty-ref">Belum ada data</div>';
+      return;
+    }
+    container.innerHTML = items.map(item => {
+      const hasCoord = item.lat && item.lng;
+      return `
+        <div class="ref-item">
+          <div class="ref-label">
+            ${hasCoord ? '<span style="font-size:0.85rem;">📍</span>' : ''}
+            <span>${escapeHtml(item.label)}</span>
+            ${item.group ? `<span class="ref-group">${escapeHtml(item.group)}</span>` : ''}
+          </div>
+          <div class="ref-actions">
+            <button class="btn-edit-ref" onclick="editRef(${item.id},'${type}','${escapeHtml(item.label)}','${escapeHtml(item.group||'')}','${item.lat||''}','${item.lng||''}')">
+              <i class="fas fa-edit"></i>
+            </button>
+            <button class="btn-del-ref" onclick="confirmDel(${item.id},'${escapeHtml(item.label)}')">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        </div>`;
+    }).join('');
   }
 
   loadReferences();
