@@ -14,12 +14,17 @@ router.get('/api/references', isAuthenticated, async (req, res) => {
     const grouped = {};
     rows.forEach(row => {
       if (!grouped[row.type]) grouped[row.type] = [];
-      grouped[row.type].push({
+      const item = {
         id: row.id,
         label: row.label,
         group: row.group_name,
         sortOrder: row.sort_order
-      });
+      };
+      if (row.latitude || row.longitude) {
+        item.lat = parseFloat(row.latitude);
+        item.lng = parseFloat(row.longitude);
+      }
+      grouped[row.type].push(item);
     });
 
     res.json(grouped);
@@ -44,8 +49,8 @@ router.post('/api/references', isAuthenticated, isAdmin, async (req, res) => {
 
   try {
     const [result] = await db.query(
-      'INSERT INTO reference_options (type, label, group_name, sort_order) VALUES (?, ?, ?, ?)',
-      [type, label, group_name || null, sort_order || 0]
+      'INSERT INTO reference_options (type, label, group_name, latitude, longitude, sort_order) VALUES (?, ?, ?, ?, ?, ?)',
+      [type, label, group_name || null, req.body.latitude || null, req.body.longitude || null, sort_order || 0]
     );
 
     res.status(201).json({
@@ -69,6 +74,8 @@ router.put('/api/references/:id', isAuthenticated, isAdmin, async (req, res) => 
 
     if (label) { updates.push('label = ?'); params.push(label); }
     if (group_name !== undefined) { updates.push('group_name = ?'); params.push(group_name); }
+    if (req.body.latitude !== undefined) { updates.push('latitude = ?'); params.push(req.body.latitude || null); }
+    if (req.body.longitude !== undefined) { updates.push('longitude = ?'); params.push(req.body.longitude || null); }
     if (sort_order !== undefined) { updates.push('sort_order = ?'); params.push(sort_order); }
 
     if (updates.length === 0) {

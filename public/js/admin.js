@@ -45,22 +45,27 @@ document.addEventListener('DOMContentLoaded', async () => {
       container.innerHTML = '<div class="empty-ref">Belum ada data</div>';
       return;
     }
-    container.innerHTML = items.map(item => `
+    container.innerHTML = items.map(item => {
+      const coord = item.lat && item.lng ? ` [${item.lat}, ${item.lng}]` : '';
+      const latParam = item.lat || '';
+      const lngParam = item.lng || '';
+      return `
       <div class="ref-item">
         <div class="ref-label">
           <span>${escapeHtml(item.label)}</span>
+          ${coord ? `<span class="ref-group" style="background:#dbeafe;color:#2563eb;">📍</span>` : ''}
           ${item.group ? `<span class="ref-group">${escapeHtml(item.group)}</span>` : ''}
         </div>
         <div class="ref-actions">
-          <button class="btn-edit-ref" onclick="editRef(${item.id}, '${type}', '${escapeHtml(item.label)}', '${escapeHtml(item.group || '')}')">
+          <button class="btn-edit-ref" onclick="editRef(${item.id}, '${type}', '${escapeHtml(item.label)}', '${escapeHtml(item.group || '')}', '${latParam}', '${lngParam}')">
             <i class="fas fa-edit"></i>
           </button>
           <button class="btn-del-ref" onclick="confirmDel(${item.id}, '${escapeHtml(item.label)}')">
             <i class="fas fa-trash"></i>
           </button>
         </div>
-      </div>
-    `).join('');
+      </div>`;
+    }).join('');
   }
 
   window.showAddForm = function(type) {
@@ -71,6 +76,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       <div class="inline-form">
         <input type="text" id="new-${type}-label" placeholder="Label ${cfg.title}" autofocus>
         ${cfg.hasGroup ? `<input type="text" id="new-${type}-group" placeholder="Group (e.g. OLT JRG)">` : ''}
+        ${cfg.hasGroup ? `<input type="text" id="new-${type}-lat" placeholder="Latitude" style="min-width:100px;">` : ''}
+        ${cfg.hasGroup ? `<input type="text" id="new-${type}-lng" placeholder="Longitude" style="min-width:100px;">` : ''}
         <button class="btn-save" onclick="addRef('${type}')"><i class="fas fa-check"></i> Simpan</button>
         <button class="btn-cancel" onclick="document.getElementById('form-${type}').style.display='none'"><i class="fas fa-times"></i></button>
       </div>
@@ -83,12 +90,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     const label = document.getElementById(`new-${type}-label`).value.trim();
     if (!label) return;
     const group = TYPE_CONFIG[type].hasGroup ? document.getElementById(`new-${type}-group`).value.trim() : '';
+    const lat = TYPE_CONFIG[type].hasGroup ? document.getElementById(`new-${type}-lat`)?.value.trim() : '';
+    const lng = TYPE_CONFIG[type].hasGroup ? document.getElementById(`new-${type}-lng`)?.value.trim() : '';
 
     try {
+      const body = { type, label, group_name: group || undefined };
+      if (lat && lng) { body.latitude = parseFloat(lat); body.longitude = parseFloat(lng); }
       const res = await fetch('/api/references', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type, label, group_name: group || undefined })
+        body: JSON.stringify(body)
       });
       if (res.ok) {
         showToast(`${TYPE_CONFIG[type].title} berhasil ditambahkan`);
@@ -102,7 +113,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   };
 
-  window.editRef = function(id, type, label, group) {
+  window.editRef = function(id, type, label, group, lat, lng) {
     document.getElementById('editModal').classList.add('show');
     document.getElementById('editModalTitle').textContent = `Edit ${TYPE_CONFIG[type].title}`;
     document.getElementById('editLabel').value = label;
@@ -114,16 +125,25 @@ document.addEventListener('DOMContentLoaded', async () => {
       groupWrap.style.display = 'none';
     }
 
+    document.getElementById('editGroupWrap').style.display = TYPE_CONFIG[type].hasGroup ? 'block' : 'none';
+    document.getElementById('editCoordWrap').style.display = TYPE_CONFIG[type].hasGroup ? 'block' : 'none';
+
     editCallback = async () => {
       const newLabel = document.getElementById('editLabel').value.trim();
       if (!newLabel) return;
-      const newGroup = TYPE_CONFIG[type].hasGroup ? document.getElementById('editGroup').value.trim() : undefined;
+      const body = { label: newLabel };
+      if (TYPE_CONFIG[type].hasGroup) {
+        body.group_name = document.getElementById('editGroup').value.trim() || undefined;
+        const elat = document.getElementById('editLat').value.trim();
+        const elng = document.getElementById('editLng').value.trim();
+        if (elat && elng) { body.latitude = parseFloat(elat); body.longitude = parseFloat(elng); }
+      }
 
       try {
         const res = await fetch(`/api/references/${id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ label: newLabel, group_name: newGroup })
+          body: JSON.stringify(body)
         });
         if (res.ok) {
           document.getElementById('editModal').classList.remove('show');

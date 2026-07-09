@@ -8,6 +8,8 @@ CREATE TABLE IF NOT EXISTS reference_options (
     type VARCHAR(50) NOT NULL,
     label VARCHAR(255) NOT NULL,
     group_name VARCHAR(100) DEFAULT NULL,
+    latitude DECIMAL(10,7) DEFAULT NULL,
+    longitude DECIMAL(10,7) DEFAULT NULL,
     sort_order INT DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_type (type)
