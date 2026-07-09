@@ -10,10 +10,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   let deleteCallback = null;
 
   const TYPE_CONFIG = {
-    aktifitas: { icon: 'fa-tasks', title: 'Aktifitas', hasGroup: false },
-    sub_node: { icon: 'fa-sitemap', title: 'Sub-Node', hasGroup: false },
-    odc: { icon: 'fa-network-wired', title: 'ODC', hasGroup: true },
-    priority: { icon: 'fa-flag', title: 'Priority', hasGroup: false }
+    aktifitas: { icon: 'fa-tasks', title: 'Aktifitas', hasGroup: false, hasCoord: false },
+    sub_node: { icon: 'fa-sitemap', title: 'Sub-Node', hasGroup: false, hasCoord: true },
+    odc: { icon: 'fa-network-wired', title: 'ODC', hasGroup: true, hasCoord: true },
+    priority: { icon: 'fa-flag', title: 'Priority', hasGroup: false, hasCoord: false }
   };
 
   function showToast(msg) {

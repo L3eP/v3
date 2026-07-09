@@ -21,8 +21,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             const res = await fetch('/api/references');
             references = await res.json();
 
-            // Populate Aktifitas
-            populateSelect(aktifitasSelect, references.aktifitas || [], 'Pilih Aktifitas');
+            // Aktifitas — text input + datalist untuk saran
+            setupAktifitasDatalist(references.aktifitas || []);
 
             // Populate Sub-Node
             populateSelect(subNodeSelect, references.sub_node || [], 'Pilih Sub-Node');
@@ -37,10 +37,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             await loadPicUsers();
         } catch (error) {
             console.error('Error loading references:', error);
-            // Fallback ke data hardcoded minimal
-            populateSelect(aktifitasSelect, [
-                { label: 'PSB' }, { label: 'Maintenance' }, { label: 'loss' }, { label: 'migrasi' }
-            ], 'Pilih Aktifitas');
             populateSelect(prioritySelect, [
                 { label: 'Low' }, { label: 'Moderate' }, { label: 'Critical' }
             ], 'Pilih Priority', false);
@@ -127,6 +123,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             option.textContent = user.fullName || user.username;
             picSelect.appendChild(option);
         }
+    }
+
+    function setupAktifitasDatalist(items) {
+        // Hapus datalist lama jika ada
+        const old = document.getElementById('aktifitasList');
+        if (old) old.remove();
+
+        const datalist = document.createElement('datalist');
+        datalist.id = 'aktifitasList';
+        items.forEach(item => {
+            const opt = document.createElement('option');
+            opt.value = item.label;
+            datalist.appendChild(opt);
+        });
+        aktifitasSelect.parentNode.appendChild(datalist);
+        aktifitasSelect.setAttribute('list', 'aktifitasList');
     }
 
     // Filter ODC saat sub-node berubah
