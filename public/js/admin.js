@@ -12,10 +12,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   let activeTab = 'aktifitas';
   let allData = {};
 
-  const TYPES = ['aktifitas', 'sub_node', 'odc', 'priority'];
+  const TYPES = ['aktifitas', 'sub_node', 'olt', 'odc', 'priority'];
   const TYPE_CONFIG = {
     aktifitas: { icon: 'fa-tasks', title: 'Aktifitas', hasGroup: false, hasCoord: false },
     sub_node:  { icon: 'fa-sitemap', title: 'Sub-Node',  hasGroup: false, hasCoord: true },
+    olt:       { icon: 'fa-server', title: 'OLT',        hasGroup: false, hasCoord: true },
     odc:       { icon: 'fa-network-wired', title: 'ODC & ODP', hasGroup: true, hasCoord: true, groupLabel: 'OLT Group' },
     priority:  { icon: 'fa-flag', title: 'Priority',      hasGroup: false, hasCoord: false }
   };
