@@ -46,4 +46,4 @@ migrasi.sql
 # User Uploads
 /public/uploads/*
 !/public/uploads/.gitkeep
-!/public/uploads/default.png
+!/public/uploads/default.pngprod_db.sql
