@@ -154,6 +154,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                   <div class="ref-actions">
                     <button class="btn-edit-ref" onclick="editRef('odp',${odp.id},'${esc(odp.label)}','${esc(odp.group||'')}','${odp.lat||''}','${odp.lng||''}')"><i class="fas fa-edit"></i></button>
                     <button class="btn-del-ref" onclick="confirmDel(${odp.id},'${esc(odp.label)}')"><i class="fas fa-trash"></i></button>
+                    <span style="font-size:0.75rem;color:#94a3b8;margin-left:8px;">ONU: —</span>
                   </div>
                 </div>`).join('')}`;
               }).join('')}
