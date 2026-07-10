@@ -162,49 +162,85 @@ document.addEventListener('DOMContentLoaded', async () => {
           }).join('')}
         </div>
         <button class="btn-add-ref" onclick="showFtthAdd('olt')"><i class="fas fa-plus"></i> Tambah OLT</button>
-        <div id="ftthForm" style="display:none;"></div>
       </div>`;
   }
 
   window.showFtthAdd = function(type, parentGroup) {
-    const formEl = document.getElementById('ftthForm');
-    formEl.style.display = 'block';
-    const labels = { olt:'OLT', odc:'ODC', odp:'ODP' };
+    const titles = { olt:'OLT', odc:'ODC', odp:'ODP' };
+    const title = titles[type];
+    const btnHtml = `<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px;padding-top:12px;border-top:1px solid #e5e7eb;">
+      <button class="login-btn" style="background:#6b7280;" onclick="document.getElementById('editModal').classList.remove('show')">Batal</button>
+      <button class="login-btn" id="addSaveBtn">Simpan</button>
+    </div>`;
 
+    let formHtml = '';
     if (type === 'olt') {
-      formEl.innerHTML = `<div class="inline-form">
-        <input type="text" id="fnew-olt" placeholder="Label OLT" autofocus>
-        <input type="text" id="fnew-olt-lat" placeholder="Latitude" style="min-width:100px;">
-        <input type="text" id="fnew-olt-lng" placeholder="Longitude" style="min-width:100px;">
-        <button class="btn-save" onclick="addFtth('olt')"><i class="fas fa-check"></i> Simpan</button>
-        <button class="btn-cancel" onclick="document.getElementById('ftthForm').style.display='none'"><i class="fas fa-times"></i></button>
-      </div>`;
+      formHtml = `<input type="text" id="fnew-olt" placeholder="Label OLT" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;margin-bottom:8px;" autofocus>
+        <div style="display:flex;gap:8px;"><input type="text" id="fnew-olt-lat" placeholder="Latitude" style="flex:1;padding:8px;border:1px solid #d1d5db;border-radius:6px;">
+        <input type="text" id="fnew-olt-lng" placeholder="Longitude" style="flex:1;padding:8px;border:1px solid #d1d5db;border-radius:6px;"></div>`;
     } else if (type === 'odc') {
       const oltList = (allData.olt||[]).map(o => o.label);
-      formEl.innerHTML = `<div class="inline-form">
-        <input type="text" id="fnew-odc" placeholder="Label ODC" autofocus>
-        <select id="fnew-odc-group" style="min-width:150px;">
+      formHtml = `<input type="text" id="fnew-odc" placeholder="Label ODC" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;margin-bottom:8px;" autofocus>
+        <select id="fnew-odc-group" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;margin-bottom:8px;">
           ${oltList.map(l => `<option value="${esc(l)}" ${l===parentGroup?'selected':''}>${esc(l)}</option>`).join('')}
         </select>
-        <input type="text" id="fnew-odc-lat" placeholder="Latitude" style="min-width:100px;">
-        <input type="text" id="fnew-odc-lng" placeholder="Longitude" style="min-width:100px;">
-        <button class="btn-save" onclick="addFtth('odc')"><i class="fas fa-check"></i> Simpan</button>
-        <button class="btn-cancel" onclick="document.getElementById('ftthForm').style.display='none'"><i class="fas fa-times"></i></button>
-      </div>`;
+        <div style="display:flex;gap:8px;"><input type="text" id="fnew-odc-lat" placeholder="Latitude" style="flex:1;padding:8px;border:1px solid #d1d5db;border-radius:6px;">
+        <input type="text" id="fnew-odc-lng" placeholder="Longitude" style="flex:1;padding:8px;border:1px solid #d1d5db;border-radius:6px;"></div>`;
     } else if (type === 'odp') {
       const odcList = (allData.odc||[]).map(o => o.label);
-      formEl.innerHTML = `<div class="inline-form">
-        <input type="text" id="fnew-odp" placeholder="Label ODP" autofocus>
-        <select id="fnew-odp-group" style="min-width:150px;">
+      formHtml = `<input type="text" id="fnew-odp" placeholder="Label ODP" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;margin-bottom:8px;" autofocus>
+        <select id="fnew-odp-group" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;margin-bottom:8px;">
           <option value="">Pilih Induk ODC</option>
           ${odcList.map(l => `<option value="${esc(l)}" ${l===parentGroup?'selected':''}>${esc(l)}</option>`).join('')}
         </select>
-        <input type="text" id="fnew-odp-lat" placeholder="Latitude" style="min-width:100px;">
-        <input type="text" id="fnew-odp-lng" placeholder="Longitude" style="min-width:100px;">
-        <button class="btn-save" onclick="addFtth('odp')"><i class="fas fa-check"></i> Simpan</button>
-        <button class="btn-cancel" onclick="document.getElementById('ftthForm').style.display='none'"><i class="fas fa-times"></i></button>
-      </div>`;
+        <div style="display:flex;gap:8px;"><input type="text" id="fnew-odp-lat" placeholder="Latitude" style="flex:1;padding:8px;border:1px solid #d1d5db;border-radius:6px;">
+        <input type="text" id="fnew-odp-lng" placeholder="Longitude" style="flex:1;padding:8px;border:1px solid #d1d5db;border-radius:6px;"></div>`;
     }
+
+    // Tampilkan form di modal
+    document.getElementById('editModalTitle').textContent = `Tambah ${title} Baru`;
+    document.getElementById('editFormContainer').style.display = 'none';
+    document.getElementById('addFormContainer').style.display = 'block';
+    document.getElementById('addFormContainer').innerHTML = formHtml + btnHtml;
+
+    // Event klik Simpan
+    setTimeout(() => {
+      document.getElementById('addSaveBtn').addEventListener('click', async () => {
+        const label = document.getElementById(`fnew-${type}`).value.trim();
+        if (!label) { showToast('Label harus diisi'); return; }
+        const group = type !== 'olt' ? (document.getElementById(`fnew-${type}-group`)?.value||'') : '';
+        const lat = (document.getElementById(`fnew-${type}-lat`)?.value.trim()||'');
+        const lng = (document.getElementById(`fnew-${type}-lng`)?.value.trim()||'');
+        if (type !== 'olt' && !group) { showToast('Pilih induk terlebih dahulu'); return; }
+        try {
+          const body = { type, label };
+          if (type !== 'olt') body.group_name = group;
+          if (lat && lng) { body.latitude = parseFloat(lat); body.longitude = parseFloat(lng); }
+          const r = await fetch('/api/references', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+          if (r.ok) { document.getElementById('editModal').classList.remove('show'); showToast(`${title} berhasil ditambahkan`); goHome(); await loadData(); navigateTo('ftth'); }
+          else showToast('Gagal');
+        } catch(e) { showToast('Error: '+e.message); }
+      });
+    }, 50);
+
+    editCallback = async () => {
+      const label = document.getElementById(`fnew-${type}`).value.trim();
+      if (!label) return;
+      const group = type !== 'olt' ? (document.getElementById(`fnew-${type}-group`)?.value||'') : '';
+      const lat = (document.getElementById(`fnew-${type}-lat`)?.value.trim()||'');
+      const lng = (document.getElementById(`fnew-${type}-lng`)?.value.trim()||'');
+      if (type !== 'olt' && !group) { showToast('Pilih induk terlebih dahulu'); return; }
+      try {
+        const body = { type, label };
+        if (type !== 'olt') body.group_name = group;
+        if (lat && lng) { body.latitude = parseFloat(lat); body.longitude = parseFloat(lng); }
+        const r = await fetch('/api/references', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+        if (r.ok) { document.getElementById('editModal').classList.remove('show'); showToast(`${title} berhasil ditambahkan`); goHome(); await loadData(); navigateTo('ftth'); }
+        else showToast('Gagal');
+      } catch(e) { showToast('Error: '+e.message); }
+    };
+
+    document.getElementById('editModal').classList.add('show');
   };
 
   window.addFtth = async function(type) {
@@ -231,6 +267,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const hasCoord = ['olt','odc','odp','sub_node'].includes(type);
     const hasGroup = ['odc','odp'].includes(type);
     document.getElementById('editModalTitle').textContent = `Edit ${t}`;
+    document.getElementById('editFormContainer').style.display = 'block';
+    document.getElementById('addFormContainer').style.display = 'none';
     document.getElementById('editLabel').value = label;
     document.getElementById('editGroupWrap').style.display = hasGroup ? 'block' : 'none';
     if (hasGroup) document.getElementById('editGroup').value = group;

@@ -42,7 +42,7 @@ router.post('/api/references', isAuthenticated, isAdmin, async (req, res) => {
     return res.status(400).json({ message: 'Type and label are required' });
   }
 
-  const validTypes = ['aktifitas', 'sub_node', 'odc', 'priority'];
+  const validTypes = ['aktifitas', 'sub_node', 'odc', 'odp', 'olt', 'priority'];
   if (!validTypes.includes(type)) {
     return res.status(400).json({ message: 'Invalid type' });
   }
