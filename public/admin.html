@@ -10,14 +10,24 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="vendor/fontawesome/css/all.min.css">
     <style>
-        .admin-tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 2px solid #e5e7eb; overflow-x: auto; }
-        .admin-tab { padding: 10px 20px; border: none; background: none; cursor: pointer; font-size: 0.95rem; color: var(--text-muted); border-bottom: 2px solid transparent; margin-bottom: -2px; white-space: nowrap; transition: all 0.2s; }
-        .admin-tab:hover { color: var(--text-main); background: #f9fafb; border-radius: 8px 8px 0 0; }
-        .admin-tab.active { color: #4f46e5; border-bottom-color: #4f46e5; font-weight: 600; }
-        .admin-tab i { margin-right: 6px; }
-        .admin-panel { display: none; }
-        .admin-panel.active { display: block; }
-        .admin-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .admin-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 16px; margin-top: 20px; }
+        .admin-card { background: white; border-radius: 14px; padding: 24px 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); cursor: pointer; transition: all 0.2s; border: 1px solid #f3f4f6; text-align: center; }
+        .admin-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+        .admin-card-icon { font-size: 2rem; margin-bottom: 8px; }
+        .admin-card-title { font-weight: 600; font-size: 0.95rem; color: var(--text-main); }
+        .admin-card-count { font-size: 1.8rem; font-weight: 700; margin-top: 6px; }
+        .admin-card-sub { font-size: 0.78rem; color: var(--text-muted); margin-top: 4px; }
+
+        .detail-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+        .back-btn { background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 1.2rem; padding: 8px; border-radius: 8px; }
+        .back-btn:hover { background: #f3f4f6; color: var(--text-main); }
+
+        .ftth-olt { margin-bottom: 12px; background: #f8fafc; border-radius: 10px; padding: 12px 16px; border: 1px solid #e2e8f0; }
+        .ftth-olt-hdr { display: flex; justify-content: space-between; align-items: center; font-weight: 600; color: #7c3aed; font-size: 0.95rem; margin-bottom: 8px; }
+        .ftth-olt-hdr .ref-actions button { color:#7c3aed; }
+        .ftth-odc { display: flex; justify-content: space-between; align-items: center; padding: 6px 12px; margin: 3px 0 3px 20px; background: white; border-radius: 6px; border: 1px solid #f1f5f9; }
+        .ftth-odp { display: flex; justify-content: space-between; align-items: center; padding: 4px 12px 4px 44px; font-size: 0.88rem; color: #4b5563; }
+
         .ref-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border-color); }
         .ref-item:last-child { border-bottom: none; }
         .ref-label { display: flex; align-items: center; gap: 8px; }
@@ -26,63 +36,62 @@
         .ref-actions button { background: none; border: none; cursor: pointer; padding: 4px 8px; border-radius: 4px; font-size: 0.85rem; }
         .btn-edit-ref { color: #2563eb; } .btn-edit-ref:hover { background: #dbeafe; }
         .btn-del-ref { color: #ef4444; } .btn-del-ref:hover { background: #fee2e2; }
+        .btn-sm { padding: 4px 10px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.8rem; }
         .btn-add-ref { margin-top: 10px; padding: 8px 16px; background: #f3f4f6; border: 1px dashed #d1d5db; border-radius: 8px; cursor: pointer; width: 100%; color: var(--text-muted); }
         .btn-add-ref:hover { background: #e5e7eb; color: var(--text-main); }
-        .empty-ref { color: var(--text-muted); font-size: 0.9rem; padding: 10px 0; text-align: center; }
         .inline-form { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
         .inline-form input, .inline-form select { flex: 1; min-width: 120px; padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.9rem; }
-        .inline-form button { padding: 6px 14px; border: none; border-radius: 6px; cursor: pointer; }
         .btn-save { background: #10b981; color: white; } .btn-cancel { background: #6b7280; color: white; }
         .toast { visibility: hidden; min-width: 250px; background: #333; color: #fff; text-align: center; border-radius: 8px; padding: 12px; position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 1000; }
-        .toast.show { visibility: visible; animation: fadein 0.3s; }
-        @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+        .toast.show { visibility: visible; animation: fadein 0.3s; } @keyframes fadein { from{opacity:0} to{opacity:1} }
+        .hidden { display: none !important; }
     </style>
 </head>
 <body class="with-sidebar">
     <div id="navbar"></div>
     <div class="dashboard-container">
-        <div style="margin-bottom: 20px;">
-            <h1 style="margin: 0; font-size: 1.5rem;"><i class="fas fa-cogs"></i> Admin Panel</h1>
-            <p style="color: var(--text-muted); margin: 5px 0 0 0;">Kelola data reference untuk dropdown aplikasi</p>
+        <div id="adminHome">
+            <div style="margin-bottom:20px;">
+                <h1 style="margin:0;font-size:1.5rem;"><i class="fas fa-cogs"></i> Admin Panel</h1>
+                <p style="color:var(--text-muted);margin:5px 0 0 0;">Pilih kategori untuk mengelola data</p>
+            </div>
+            <div class="admin-grid" id="cardGrid"></div>
         </div>
-
-        <div class="admin-tabs" id="adminTabs"></div>
-        <div id="adminPanels"></div>
+        <div id="adminDetail" class="hidden"></div>
     </div>
 
-    <!-- Edit Modal -->
     <div id="editModal" class="modal">
-        <div class="modal-content" style="max-width: 450px;">
+        <div class="modal-content" style="max-width:450px;">
             <h3 id="editModalTitle">Edit</h3>
-            <div style="margin: 15px 0;">
-                <label style="display: block; margin-bottom: 5px; font-weight: 500;">Label</label>
-                <input type="text" id="editLabel" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px;">
-                <div id="editGroupWrap" style="margin-top: 10px; display: none;">
-                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">Group</label>
-                    <input type="text" id="editGroup" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px;" placeholder="e.g. OLT JRG">
+            <div style="margin:15px 0;">
+                <label style="display:block;margin-bottom:5px;font-weight:500;">Label</label>
+                <input type="text" id="editLabel" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
+                <div id="editGroupWrap" style="margin-top:10px;display:none;">
+                    <label style="display:block;margin-bottom:5px;font-weight:500;">Group</label>
+                    <input type="text" id="editGroup" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
                 </div>
-                <div id="editCoordWrap" style="margin-top: 10px; display: none;">
-                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">Koordinat</label>
-                    <div style="display: flex; gap: 8px;">
-                        <input type="text" id="editLat" style="flex:1; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px;" placeholder="Latitude">
-                        <input type="text" id="editLng" style="flex:1; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px;" placeholder="Longitude">
+                <div id="editCoordWrap" style="margin-top:10px;display:none;">
+                    <label style="display:block;margin-bottom:5px;font-weight:500;">Koordinat</label>
+                    <div style="display:flex;gap:8px;">
+                        <input type="text" id="editLat" style="flex:1;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;" placeholder="Latitude">
+                        <input type="text" id="editLng" style="flex:1;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;" placeholder="Longitude">
                     </div>
                 </div>
             </div>
-            <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                <button class="login-btn" style="background: #6b7280;" id="cancelEditBtn">Cancel</button>
+            <div style="display:flex;gap:10px;justify-content:flex-end;">
+                <button class="login-btn" style="background:#6b7280;" id="cancelEditBtn">Cancel</button>
                 <button class="login-btn" id="saveEditBtn">Save</button>
             </div>
         </div>
     </div>
 
     <div id="confirmModal" class="modal">
-        <div class="modal-content" style="max-width: 400px;">
-            <h3 style="color: #ef4444;">Confirm Delete</h3>
-            <p id="confirmMessage" style="margin: 15px 0;">Are you sure?</p>
-            <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                <button class="login-btn" style="background: #6b7280;" id="cancelDelBtn">Cancel</button>
-                <button class="login-btn" style="background: #ef4444;" id="confirmDelBtn">Delete</button>
+        <div class="modal-content" style="max-width:400px;">
+            <h3 style="color:#ef4444;">Confirm Delete</h3>
+            <p id="confirmMessage" style="margin:15px 0;">Are you sure?</p>
+            <div style="display:flex;gap:10px;justify-content:flex-end;">
+                <button class="login-btn" style="background:#6b7280;" id="cancelDelBtn">Cancel</button>
+                <button class="login-btn" style="background:#ef4444;" id="confirmDelBtn">Delete</button>
             </div>
         </div>
     </div>

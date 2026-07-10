@@ -1,255 +1,256 @@
 document.addEventListener('DOMContentLoaded', async () => {
   const user = JSON.parse(localStorage.getItem('user'));
-  if (!user || user.role !== 'Owner') {
-    window.location.href = 'dashboard.html';
-    return;
-  }
+  if (!user || user.role !== 'Owner') { window.location.href = 'dashboard.html'; return; }
 
-  const tabsEl = document.getElementById('adminTabs');
-  const panelsEl = document.getElementById('adminPanels');
+  const homeEl = document.getElementById('adminHome');
+  const detailEl = document.getElementById('adminDetail');
+  const cardGrid = document.getElementById('cardGrid');
+  let allData = {};
   let editCallback = null;
   let deleteCallback = null;
-  let activeTab = 'aktifitas';
-  let allData = {};
 
-  const TYPES = ['aktifitas', 'sub_node', 'olt', 'odc', 'priority'];
-  const TYPE_CONFIG = {
-    aktifitas: { icon: 'fa-tasks', title: 'Aktifitas', hasGroup: false, hasCoord: false },
-    sub_node:  { icon: 'fa-sitemap', title: 'Sub-Node',  hasGroup: false, hasCoord: true },
-    olt:       { icon: 'fa-server', title: 'OLT',        hasGroup: false, hasCoord: true },
-    odc:       { icon: 'fa-network-wired', title: 'ODC & ODP', hasGroup: true, hasCoord: true, groupLabel: 'OLT Group' },
-    priority:  { icon: 'fa-flag', title: 'Priority',      hasGroup: false, hasCoord: false }
-  };
-
-  function showToast(msg) {
+  function showToast(m) {
     const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.className = 'toast show';
+    t.textContent = m; t.className = 'toast show';
     setTimeout(() => t.className = 'toast', 2500);
   }
 
-  function escapeHtml(str) {
-    if (!str) return '';
-    return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  }
+  function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-  function switchTab(type) {
-    activeTab = type;
-    document.querySelectorAll('.admin-tab').forEach(t => t.classList.toggle('active', t.dataset.type === type));
-    document.querySelectorAll('.admin-panel').forEach(p => p.classList.toggle('active', p.dataset.type === type));
-  }
+  // ======== CARDS ========
+  const CARDS = [
+    { key:'aktifitas', icon:'fa-tasks',   label:'Aktifitas', color:'#2563eb', getCount: d => (d.aktifitas||[]).length },
+    { key:'sub_node',  icon:'fa-sitemap', label:'Sub-Node',  color:'#7c3aed', getCount: d => (d.sub_node||[]).length },
+    { key:'ftth',      icon:'fa-network-wired', label:'Jaringan FTTH', color:'#059669',
+      getCount: d => ({olt:(d.olt||[]).length, odc:(d.odc||[]).length, odp:(d.odp||[]).length}) },
+    { key:'priority',  icon:'fa-flag',    label:'Priority',   color:'#d97706', getCount: d => (d.priority||[]).length },
+    { key:'psb',       icon:'fa-file-alt',label:'PSB Form',   color:'#db2777', isLink: true, getCount: () => null },
+  ];
 
-  function renderTabs() {
-    tabsEl.innerHTML = TYPES.map(t => `
-      <button class="admin-tab ${t === activeTab ? 'active' : ''}" data-type="${t}" onclick="switchTab('${t}')">
-        <i class="fas ${TYPE_CONFIG[t].icon}"></i> ${TYPE_CONFIG[t].title}
-      </button>
-    `).join('');
-  }
-
-  function renderPanel(type, items) {
-    const cfg = TYPE_CONFIG[type];
-    const panel = document.createElement('div');
-    panel.className = `admin-panel ${type === activeTab ? 'active' : ''}`;
-    panel.dataset.type = type;
-    panel.innerHTML = `
-      <div class="admin-card">
-        <h3 style="margin:0 0 15px 0;display:flex;align-items:center;gap:8px;color:var(--text-main);">
-          <i class="fas ${cfg.icon}" style="color:#4f46e5;"></i> ${cfg.title}
-          <span style="font-size:0.8rem;color:var(--text-muted);font-weight:400;">(${items.length})</span>
-        </h3>
-        <div id="list-${type}"></div>
-        <div style="display:flex;gap:8px;margin-top:10px;">
-          <button class="btn-add-ref" onclick="showAddForm('${type}','odc')" style="flex:1;">
-            <i class="fas fa-plus"></i> Tambah ODC
-          </button>
-          <button class="btn-add-ref" onclick="showAddForm('${type}','odp')" style="flex:1;">
-            <i class="fas fa-plug"></i> Tambah ODP
-          </button>
-        </div>
-        <div id="form-${type}" style="display:none;"></div>
-      </div>
-    `;
-    panelsEl.appendChild(panel);
-    renderOdcList(items);
-  }
-
-  function renderOdcList(odcItems) {
-    const container = document.getElementById('list-odc');
-    const odpItems = allData.odp || [];
-
-    if (!odcItems || odcItems.length === 0) {
-      container.innerHTML = '<div class="empty-ref">Belum ada ODC</div>';
-      return;
-    }
-
-    // Group ODP by parent ODC label
-    const odpByParent = {};
-    odpItems.forEach(o => {
-      const parent = o.group || '';
-      if (!odpByParent[parent]) odpByParent[parent] = [];
-      odpByParent[parent].push(o);
-    });
-
-    container.innerHTML = odcItems.map(odc => {
-      const hasCoord = odc.lat && odc.lng;
-      const children = odpByParent[odc.label] || [];
-      return `
-        <div class="ref-item" style="border-bottom:1px solid #e5e7eb;padding:8px 0;margin-bottom:0;">
-          <div class="ref-label">
-            ${hasCoord ? '<span style="font-size:0.85rem;">📍</span>' : '<span style="width:16px;display:inline-block;"></span>'}
-            <strong>${escapeHtml(odc.label)}</strong>
-            ${odc.group ? `<span class="ref-group">${escapeHtml(odc.group)}</span>` : ''}
-          </div>
-          <div class="ref-actions">
-            <button class="btn-edit-ref" onclick="editRef(${odc.id},'odc','${escapeHtml(odc.label)}','${escapeHtml(odc.group||'')}','${odc.lat||''}','${odc.lng||''}')">
-              <i class="fas fa-edit"></i>
-            </button>
-            <button class="btn-del-ref" onclick="confirmDel(${odc.id},'${escapeHtml(odc.label)}')">
-              <i class="fas fa-trash"></i>
-            </button>
-          </div>
-        </div>
-        ${children.map(odp => `
-          <div class="ref-item" style="padding:6px 0 6px 28px;border-bottom:none;background:#f9fafb;border-radius:4px;margin:2px 0;">
-            <div class="ref-label">
-              <span style="font-size:0.8rem;color:#9ca3af;width:16px;">└─</span>
-              <span style="color:#4b5563;font-size:0.9rem;">${escapeHtml(odp.label)}</span>
-              ${odp.lat && odp.lng ? '<span style="font-size:0.75rem;">📍</span>' : ''}
-            </div>
-            <div class="ref-actions">
-              <button class="btn-edit-ref" onclick="editRef(${odp.id},'odp','${escapeHtml(odp.label)}','${escapeHtml(odp.group||'')}','${odp.lat||''}','${odp.lng||''}')">
-                <i class="fas fa-edit"></i>
-              </button>
-              <button class="btn-del-ref" onclick="confirmDel(${odp.id},'${escapeHtml(odp.label)}')">
-                <i class="fas fa-trash"></i>
-              </button>
-            </div>
-          </div>
-        `).join('')}
-      `;
+  function renderCards() {
+    cardGrid.innerHTML = CARDS.map(c => {
+      let countHtml = '';
+      if (c.key === 'ftth') {
+        const cnt = c.getCount(allData);
+        countHtml = `<div class="admin-card-count" style="font-size:1.2rem;">OLT ${cnt.olt} · ODC ${cnt.odc} · ODP ${cnt.odp}</div>`;
+      } else if (c.getCount) {
+        const cnt = c.getCount(allData);
+        countHtml = cnt !== null ? `<div class="admin-card-count">${cnt}</div>` : '';
+      }
+      return `<div class="admin-card" onclick="navigateTo('${c.key}')" style="${c.key==='psb'?'opacity:0.7;':''}">
+        <div class="admin-card-icon" style="color:${c.color}"><i class="fas ${c.icon}"></i></div>
+        <div class="admin-card-title">${c.label}</div>
+        ${countHtml}
+        ${c.isLink ? '<div class="admin-card-sub">→ Buka halaman</div>' : '<div class="admin-card-sub">Klik untuk kelola</div>'}
+      </div>`;
     }).join('');
   }
 
-  window.showAddForm = function(type, subType) {
-    const cfg = TYPE_CONFIG[type];
-    const formEl = document.getElementById(`form-${type}`);
-    formEl.style.display = 'block';
-
-    if (type === 'odc') {
-      if (subType === 'odp') {
-        // Form tambah ODP — pilih induk ODC dari dropdown
-        const odcLabels = (allData.odc || []).map(o => o.label);
-        formEl.innerHTML = `
-          <div class="inline-form" style="flex-wrap:wrap;">
-            <input type="text" id="new-odp-label" placeholder="Label ODP" autofocus style="min-width:150px;">
-            <select id="new-odp-parent" style="min-width:180px;">
-              <option value="">Pilih Induk ODC</option>
-              ${odcLabels.map(l => `<option value="${escapeHtml(l)}">${escapeHtml(l)}</option>`).join('')}
-            </select>
-            <input type="text" id="new-odp-lat" placeholder="Latitude" style="min-width:100px;">
-            <input type="text" id="new-odp-lng" placeholder="Longitude" style="min-width:100px;">
-            <button class="btn-save" onclick="addOdp()"><i class="fas fa-check"></i> Simpan</button>
-            <button class="btn-cancel" onclick="document.getElementById('form-odc').style.display='none'"><i class="fas fa-times"></i></button>
-          </div>`;
-      } else {
-        // Form tambah ODC
-        formEl.innerHTML = `
-          <div class="inline-form">
-            <input type="text" id="new-odc-label" placeholder="Label ODC" autofocus>
-            <input type="text" id="new-odc-group" placeholder="OLT Group">
-            <input type="text" id="new-odc-lat" placeholder="Latitude" style="min-width:100px;">
-            <input type="text" id="new-odc-lng" placeholder="Longitude" style="min-width:100px;">
-            <button class="btn-save" onclick="addRef('odc')"><i class="fas fa-check"></i> Simpan</button>
-            <button class="btn-cancel" onclick="document.getElementById('form-odc').style.display='none'"><i class="fas fa-times"></i></button>
-          </div>`;
-      }
-      document.querySelectorAll(`.btn-add-ref[onclick*="odc"]`).forEach(b => b.style.display = 'none');
-    } else {
-      // Non-ODC types (aktifitas, sub_node, priority)
-      formEl.innerHTML = `
-        <div class="inline-form">
-          <input type="text" id="new-${type}-label" placeholder="Label ${cfg.title}" autofocus>
-          ${cfg.hasGroup ? `<input type="text" id="new-${type}-group" placeholder="${cfg.groupLabel || 'Group'}">` : ''}
-          ${cfg.hasCoord ? `<input type="text" id="new-${type}-lat" placeholder="Latitude" style="min-width:100px;">` : ''}
-          ${cfg.hasCoord ? `<input type="text" id="new-${type}-lng" placeholder="Longitude" style="min-width:100px;">` : ''}
-          <button class="btn-save" onclick="addRef('${type}')"><i class="fas fa-check"></i> Simpan</button>
-          <button class="btn-cancel" onclick="document.getElementById('form-${type}').style.display='none'"><i class="fas fa-times"></i></button>
-        </div>`;
-      const btn = document.querySelector(`.btn-add-ref[onclick*="'${type}'"]`);
-      if (btn) btn.style.display = 'none';
-    }
+  window.navigateTo = function(key) {
+    if (key === 'psb') { showToast('PSB Form akan segera hadir'); return; }
+    homeEl.classList.add('hidden');
+    detailEl.classList.remove('hidden');
+    if (key === 'ftth') renderFtth();
+    else renderSimpleList(key);
   };
 
-  window.addOdp = async function() {
-    const label = document.getElementById('new-odp-label').value.trim();
-    const parent = document.getElementById('new-odp-parent').value;
-    if (!label || !parent) { showToast('Label dan induk ODC harus diisi'); return; }
-    const lat = document.getElementById('new-odp-lat').value.trim();
-    const lng = document.getElementById('new-odp-lng').value.trim();
-    try {
-      const body = { type: 'odp', label, group_name: parent };
-      if (lat && lng) { body.latitude = parseFloat(lat); body.longitude = parseFloat(lng); }
-      const res = await fetch('/api/references', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
-      });
-      if (res.ok) { showToast('ODP berhasil ditambahkan'); loadReferences(); }
-      else { const d = await res.json(); showToast('Error: ' + (d.message || 'Gagal')); }
-    } catch (e) { showToast('Error: ' + e.message); }
+  window.goHome = function() {
+    homeEl.classList.remove('hidden');
+    detailEl.classList.add('hidden');
+    detailEl.innerHTML = '';
   };
 
-  window.addRef = async function(type) {
-    const label = document.getElementById(`new-${type}-label`).value.trim();
+  // ======== SIMPLE LIST (aktifitas, sub_node, priority) ========
+  function renderSimpleList(type) {
+    const cfg = { aktifitas:{icon:'fa-tasks',title:'Aktifitas'}, sub_node:{icon:'fa-sitemap',title:'Sub-Node'}, priority:{icon:'fa-flag',title:'Priority'} }[type];
+    const items = allData[type] || [];
+    const hasCoord = type === 'sub_node';
+    detailEl.innerHTML = `
+      <div class="detail-header"><button class="back-btn" onclick="goHome()"><i class="fas fa-arrow-left"></i></button><h2 style="margin:0;"><i class="fas ${cfg.icon}" style="color:#4f46e5;"></i> ${cfg.title} (${items.length})</h2></div>
+      <div class="admin-card"><div id="slist-${type}"></div>
+      <button class="btn-add-ref" onclick="showSimpleAdd('${type}')"><i class="fas fa-plus"></i> Tambah ${cfg.title}</button>
+      <div id="sform-${type}" style="display:none;"></div></div>`;
+    renderSimpleItems(type, items);
+  }
+
+  function renderSimpleItems(type, items) {
+    const el = document.getElementById(`slist-${type}`);
+    if (!items.length) { el.innerHTML = '<div class="empty-ref">Belum ada data</div>'; return; }
+    const hasCoord = type === 'sub_node';
+    el.innerHTML = items.map(i => `<div class="ref-item">
+      <div class="ref-label">${i.lat&&i.lng?'📍 ':''}<span>${esc(i.label)}</span></div>
+      <div class="ref-actions">
+        <button class="btn-edit-ref" onclick="editRef('${type}',${i.id},'${esc(i.label)}','','${i.lat||''}','${i.lng||''}')"><i class="fas fa-edit"></i></button>
+        <button class="btn-del-ref" onclick="confirmDel(${i.id},'${esc(i.label)}')"><i class="fas fa-trash"></i></button>
+      </div>
+    </div>`).join('');
+  }
+
+  window.showSimpleAdd = function(type) {
+    const cfg = { aktifitas:'Aktifitas', sub_node:'Sub-Node', priority:'Priority' }[type];
+    const f = document.getElementById(`sform-${type}`);
+    f.style.display = 'block';
+    const hasCoord = type === 'sub_node';
+    f.innerHTML = `<div class="inline-form">
+      <input type="text" id="snew-${type}" placeholder="Label ${cfg}" autofocus>
+      ${hasCoord?'<input type="text" id="snew-'+type+'-lat" placeholder="Latitude" style="min-width:100px;">':''}
+      ${hasCoord?'<input type="text" id="snew-'+type+'-lng" placeholder="Longitude" style="min-width:100px;">':''}
+      <button class="btn-save" onclick="addSimple('${type}')"><i class="fas fa-check"></i> Simpan</button>
+      <button class="btn-cancel" onclick="document.getElementById('sform-${type}').style.display='none'"><i class="fas fa-times"></i></button>
+    </div>`;
+    document.querySelector(`.btn-add-ref[onclick*="'${type}'"]`).style.display = 'none';
+  };
+
+  window.addSimple = async function(type) {
+    const label = document.getElementById(`snew-${type}`).value.trim();
     if (!label) return;
-    const cfg = TYPE_CONFIG[type];
-    const group = cfg.hasGroup ? (document.getElementById(`new-${type}-group`)?.value.trim() || '') : '';
-    const lat = cfg.hasCoord ? (document.getElementById(`new-${type}-lat`)?.value.trim() || '') : '';
-    const lng = cfg.hasCoord ? (document.getElementById(`new-${type}-lng`)?.value.trim() || '') : '';
+    const lat = type==='sub_node' ? (document.getElementById(`snew-${type}-lat`)?.value.trim()||'') : '';
+    const lng = type==='sub_node' ? (document.getElementById(`snew-${type}-lng`)?.value.trim()||'') : '';
     try {
-      const body = { type, label, group_name: group || undefined };
+      const body = { type, label };
       if (lat && lng) { body.latitude = parseFloat(lat); body.longitude = parseFloat(lng); }
-      const res = await fetch('/api/references', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
-      });
-      if (res.ok) { showToast(`${cfg.title} berhasil ditambahkan`); loadReferences(); }
-      else { const d = await res.json(); showToast('Error: ' + (d.message || 'Gagal')); }
-    } catch (e) { showToast('Error: ' + e.message); }
+      const r = await fetch('/api/references', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+      if (r.ok) { showToast('Berhasil ditambahkan'); goHome(); await loadData(); navigateTo(type); }
+      else showToast('Gagal');
+    } catch(e) { showToast('Error: '+e.message); }
   };
 
-  window.editRef = function(id, type, label, group, lat, lng) {
-    const cfg = type === 'odp'
-      ? { title: 'ODP', hasGroup: true, hasCoord: true, groupLabel: 'Induk ODC' }
-      : TYPE_CONFIG[type] || TYPE_CONFIG.odc;
-    document.getElementById('editModalTitle').textContent = `Edit ${cfg.title}`;
+  // ======== FTTH TREE (OLT → ODC → ODP) ========
+  function renderFtth() {
+    const olts = allData.olt || [];
+    const odcs = allData.odc || [];
+    const odps = allData.odp || [];
+
+    detailEl.innerHTML = `
+      <div class="detail-header"><button class="back-btn" onclick="goHome()"><i class="fas fa-arrow-left"></i></button>
+        <h2 style="margin:0;"><i class="fas fa-network-wired" style="color:#059669;"></i> Jaringan FTTH</h2>
+        <span style="font-size:0.85rem;color:var(--text-muted);margin-left:8px;">OLT ${olts.length} · ODC ${odcs.length} · ODP ${odps.length}</span>
+      </div>
+      <div class="admin-card">
+        <div id="ftthTree">
+          ${olts.map(olt => {
+            const childOdcs = odcs.filter(o => o.group === olt.label);
+            return `<div class="ftth-olt">
+              <div class="ftth-olt-hdr">
+                <span>${olt.lat&&olt.lng?'📍 ':''}${esc(olt.label)}</span>
+                <div class="ref-actions">
+                  <button class="btn-edit-ref" onclick="editRef('olt',${olt.id},'${esc(olt.label)}','','${olt.lat||''}','${olt.lng||''}')"><i class="fas fa-edit"></i></button>
+                  <button class="btn-del-ref" onclick="confirmDel(${olt.id},'${esc(olt.label)}')"><i class="fas fa-trash"></i></button>
+                  <button class="btn-sm" style="background:#e0e7ff;color:#4338ca;" onclick="showFtthAdd('odc','${esc(olt.label)}')">+ODC</button>
+                </div>
+              </div>
+              ${childOdcs.map(odc => {
+                const childOdps = odps.filter(p => p.group === odc.label);
+                return `<div class="ftth-odc">
+                  <span>${odc.lat&&odc.lng?'📍 ':''}${esc(odc.label)}</span>
+                  <div class="ref-actions">
+                    <button class="btn-edit-ref" onclick="editRef('odc',${odc.id},'${esc(odc.label)}','${esc(odc.group||'')}','${odc.lat||''}','${odc.lng||''}')"><i class="fas fa-edit"></i></button>
+                    <button class="btn-del-ref" onclick="confirmDel(${odc.id},'${esc(odc.label)}')"><i class="fas fa-trash"></i></button>
+                    <button class="btn-sm" style="background:#d1fae5;color:#047857;" onclick="showFtthAdd('odp','${esc(odc.label)}')">+ODP</button>
+                  </div>
+                </div>
+                ${childOdps.map(odp => `<div class="ftth-odp">
+                  <span>${odp.lat&&odp.lng?'📍 ':''}${esc(odp.label)}</span>
+                  <div class="ref-actions">
+                    <button class="btn-edit-ref" onclick="editRef('odp',${odp.id},'${esc(odp.label)}','${esc(odp.group||'')}','${odp.lat||''}','${odp.lng||''}')"><i class="fas fa-edit"></i></button>
+                    <button class="btn-del-ref" onclick="confirmDel(${odp.id},'${esc(odp.label)}')"><i class="fas fa-trash"></i></button>
+                  </div>
+                </div>`).join('')}`;
+              }).join('')}
+            </div>`;
+          }).join('')}
+        </div>
+        <button class="btn-add-ref" onclick="showFtthAdd('olt')"><i class="fas fa-plus"></i> Tambah OLT</button>
+        <div id="ftthForm" style="display:none;"></div>
+      </div>`;
+  }
+
+  window.showFtthAdd = function(type, parentGroup) {
+    const formEl = document.getElementById('ftthForm');
+    formEl.style.display = 'block';
+    const labels = { olt:'OLT', odc:'ODC', odp:'ODP' };
+
+    if (type === 'olt') {
+      formEl.innerHTML = `<div class="inline-form">
+        <input type="text" id="fnew-olt" placeholder="Label OLT" autofocus>
+        <input type="text" id="fnew-olt-lat" placeholder="Latitude" style="min-width:100px;">
+        <input type="text" id="fnew-olt-lng" placeholder="Longitude" style="min-width:100px;">
+        <button class="btn-save" onclick="addFtth('olt')"><i class="fas fa-check"></i> Simpan</button>
+        <button class="btn-cancel" onclick="document.getElementById('ftthForm').style.display='none'"><i class="fas fa-times"></i></button>
+      </div>`;
+    } else if (type === 'odc') {
+      const oltList = (allData.olt||[]).map(o => o.label);
+      formEl.innerHTML = `<div class="inline-form">
+        <input type="text" id="fnew-odc" placeholder="Label ODC" autofocus>
+        <select id="fnew-odc-group" style="min-width:150px;">
+          ${oltList.map(l => `<option value="${esc(l)}" ${l===parentGroup?'selected':''}>${esc(l)}</option>`).join('')}
+        </select>
+        <input type="text" id="fnew-odc-lat" placeholder="Latitude" style="min-width:100px;">
+        <input type="text" id="fnew-odc-lng" placeholder="Longitude" style="min-width:100px;">
+        <button class="btn-save" onclick="addFtth('odc')"><i class="fas fa-check"></i> Simpan</button>
+        <button class="btn-cancel" onclick="document.getElementById('ftthForm').style.display='none'"><i class="fas fa-times"></i></button>
+      </div>`;
+    } else if (type === 'odp') {
+      const odcList = (allData.odc||[]).map(o => o.label);
+      formEl.innerHTML = `<div class="inline-form">
+        <input type="text" id="fnew-odp" placeholder="Label ODP" autofocus>
+        <select id="fnew-odp-group" style="min-width:150px;">
+          <option value="">Pilih Induk ODC</option>
+          ${odcList.map(l => `<option value="${esc(l)}" ${l===parentGroup?'selected':''}>${esc(l)}</option>`).join('')}
+        </select>
+        <input type="text" id="fnew-odp-lat" placeholder="Latitude" style="min-width:100px;">
+        <input type="text" id="fnew-odp-lng" placeholder="Longitude" style="min-width:100px;">
+        <button class="btn-save" onclick="addFtth('odp')"><i class="fas fa-check"></i> Simpan</button>
+        <button class="btn-cancel" onclick="document.getElementById('ftthForm').style.display='none'"><i class="fas fa-times"></i></button>
+      </div>`;
+    }
+  };
+
+  window.addFtth = async function(type) {
+    const label = document.getElementById(`fnew-${type}`).value.trim();
+    if (!label) return;
+    const group = type !== 'olt' ? (document.getElementById(`fnew-${type}-group`)?.value||'') : '';
+    const lat = (document.getElementById(`fnew-${type}-lat`)?.value.trim()||'');
+    const lng = (document.getElementById(`fnew-${type}-lng`)?.value.trim()||'');
+    if (type !== 'olt' && !group) { showToast('Pilih induk terlebih dahulu'); return; }
+    try {
+      const body = { type, label };
+      if (type !== 'olt') body.group_name = group;
+      if (lat && lng) { body.latitude = parseFloat(lat); body.longitude = parseFloat(lng); }
+      const r = await fetch('/api/references', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+      if (r.ok) { showToast(`${type.toUpperCase()} berhasil ditambahkan`); goHome(); await loadData(); navigateTo('ftth'); }
+      else showToast('Gagal');
+    } catch(e) { showToast('Error: '+e.message); }
+  };
+
+  // ======== EDIT / DELETE (shared) ========
+  window.editRef = function(type, id, label, group, lat, lng) {
+    const titles = { olt:'OLT', odc:'ODC', odp:'ODP', aktifitas:'Aktifitas', sub_node:'Sub-Node', priority:'Priority' };
+    const t = titles[type] || type;
+    const hasCoord = ['olt','odc','odp','sub_node'].includes(type);
+    const hasGroup = ['odc','odp'].includes(type);
+    document.getElementById('editModalTitle').textContent = `Edit ${t}`;
     document.getElementById('editLabel').value = label;
-    document.getElementById('editGroupWrap').style.display = cfg.hasGroup ? 'block' : 'none';
-    if (cfg.hasGroup) {
-      document.querySelector('#editGroupWrap label').textContent = cfg.groupLabel || 'Group';
-      document.getElementById('editGroup').value = group;
-    }
-    document.getElementById('editCoordWrap').style.display = cfg.hasCoord ? 'block' : 'none';
-    if (cfg.hasCoord) {
-      document.getElementById('editLat').value = lat;
-      document.getElementById('editLng').value = lng;
-    }
+    document.getElementById('editGroupWrap').style.display = hasGroup ? 'block' : 'none';
+    if (hasGroup) document.getElementById('editGroup').value = group;
+    document.getElementById('editCoordWrap').style.display = hasCoord ? 'block' : 'none';
+    if (hasCoord) { document.getElementById('editLat').value = lat; document.getElementById('editLng').value = lng; }
     document.getElementById('editModal').classList.add('show');
     editCallback = async () => {
-      const newLabel = document.getElementById('editLabel').value.trim();
-      if (!newLabel) return;
-      const body = { label: newLabel };
-      if (cfg.hasGroup) { body.group_name = document.getElementById('editGroup').value.trim() || undefined; }
-      if (cfg.hasCoord) {
-        const elat = document.getElementById('editLat').value.trim();
-        const elng = document.getElementById('editLng').value.trim();
-        if (elat && elng) { body.latitude = parseFloat(elat); body.longitude = parseFloat(elng); }
+      const nl = document.getElementById('editLabel').value.trim();
+      if (!nl) return;
+      const body = { label: nl };
+      if (hasGroup) body.group_name = document.getElementById('editGroup').value.trim() || undefined;
+      if (hasCoord) {
+        const el = document.getElementById('editLat').value.trim();
+        const en = document.getElementById('editLng').value.trim();
+        if (el && en) { body.latitude = parseFloat(el); body.longitude = parseFloat(en); }
       }
       try {
-        const res = await fetch(`/api/references/${id}`, {
-          method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
-        });
-        if (res.ok) { document.getElementById('editModal').classList.remove('show'); showToast(`${cfg.title} berhasil diupdate`); loadReferences(); }
-        else { const d = await res.json(); showToast('Error: ' + (d.message || 'Gagal')); }
-      } catch (e) { showToast('Error: ' + e.message); }
+        const r = await fetch(`/api/references/${id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+        if (r.ok) { document.getElementById('editModal').classList.remove('show'); showToast(`${t} berhasil diupdate`); goHome(); await loadData(); if (type==='olt'||type==='odc'||type==='odp') navigateTo('ftth'); else { const k = { olt:'ftth', odc:'ftth', odp:'ftth', aktifitas:'aktifitas', sub_node:'sub_node', priority:'priority' }[type]; navigateTo(k||type); } }
+        else showToast('Gagal update');
+      } catch(e) { showToast('Error: '+e.message); }
     };
   };
 
@@ -258,96 +259,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('confirmMessage').textContent = `Hapus "${label}"?`;
     deleteCallback = async () => {
       try {
-        const res = await fetch(`/api/references/${id}`, { method: 'DELETE' });
-        if (res.ok) { document.getElementById('confirmModal').classList.remove('show'); showToast(`"${label}" berhasil dihapus`); loadReferences(); }
-        else { const d = await res.json(); showToast('Error: ' + (d.message || 'Gagal')); }
-      } catch (e) { showToast('Error: ' + e.message); }
+        const r = await fetch(`/api/references/${id}`, { method:'DELETE' });
+        if (r.ok) { document.getElementById('confirmModal').classList.remove('show'); showToast(`"${label}" berhasil dihapus`); goHome(); await loadData(); renderCards(); }
+        else showToast('Gagal hapus');
+      } catch(e) { showToast('Error: '+e.message); }
     };
   };
 
-  // Expose to global for onclick
-  window.switchTab = switchTab;
-  window.showAddForm = showAddForm;
-  window.addRef = addRef;
-  window.addOdp = addOdp;
-  window.editRef = editRef;
-  window.confirmDel = confirmDel;
-
-  // Modal handlers
   document.getElementById('saveEditBtn').addEventListener('click', () => { if (editCallback) editCallback(); });
   document.getElementById('cancelEditBtn').addEventListener('click', () => document.getElementById('editModal').classList.remove('show'));
   document.getElementById('confirmDelBtn').addEventListener('click', () => { if (deleteCallback) deleteCallback(); });
   document.getElementById('cancelDelBtn').addEventListener('click', () => document.getElementById('confirmModal').classList.remove('show'));
 
-  async function loadReferences() {
-    tabsEl.innerHTML = '<div style="padding:10px;"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
-    panelsEl.innerHTML = '';
+  async function loadData() {
     try {
-      const res = await fetch('/api/references');
-      allData = await res.json();
-      tabsEl.innerHTML = '';
-      panelsEl.innerHTML = '';
-      renderTabs();
-      TYPES.forEach(type => {
-        if (type === 'odc') {
-          renderPanel(type, allData.odc || []);
-        } else {
-          renderRegularPanel(type, allData[type] || []);
-        }
-      });
-    } catch (e) {
-      tabsEl.innerHTML = '<div style="color:#ef4444;padding:10px;">Gagal load data</div>';
+      const r = await fetch('/api/references');
+      allData = await r.json();
+      renderCards();
+    } catch(e) {
+      cardGrid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:#ef4444;">Gagal load data</div>';
     }
   }
 
-  function renderRegularPanel(type, items) {
-    const cfg = TYPE_CONFIG[type];
-    const panel = document.createElement('div');
-    panel.className = `admin-panel ${type === activeTab ? 'active' : ''}`;
-    panel.dataset.type = type;
-    panel.innerHTML = `
-      <div class="admin-card">
-        <h3 style="margin:0 0 15px 0;display:flex;align-items:center;gap:8px;color:var(--text-main);">
-          <i class="fas ${cfg.icon}" style="color:#4f46e5;"></i> ${cfg.title}
-          <span style="font-size:0.8rem;color:var(--text-muted);font-weight:400;">(${items.length})</span>
-        </h3>
-        <div id="list-${type}"></div>
-        <button class="btn-add-ref" onclick="showAddForm('${type}')">
-          <i class="fas fa-plus"></i> Tambah ${cfg.title}
-        </button>
-        <div id="form-${type}" style="display:none;"></div>
-      </div>
-    `;
-    panelsEl.appendChild(panel);
-    renderRegularList(type, items);
-  }
-
-  function renderRegularList(type, items) {
-    const container = document.getElementById(`list-${type}`);
-    if (!items || items.length === 0) {
-      container.innerHTML = '<div class="empty-ref">Belum ada data</div>';
-      return;
-    }
-    container.innerHTML = items.map(item => {
-      const hasCoord = item.lat && item.lng;
-      return `
-        <div class="ref-item">
-          <div class="ref-label">
-            ${hasCoord ? '<span style="font-size:0.85rem;">📍</span>' : ''}
-            <span>${escapeHtml(item.label)}</span>
-            ${item.group ? `<span class="ref-group">${escapeHtml(item.group)}</span>` : ''}
-          </div>
-          <div class="ref-actions">
-            <button class="btn-edit-ref" onclick="editRef(${item.id},'${type}','${escapeHtml(item.label)}','${escapeHtml(item.group||'')}','${item.lat||''}','${item.lng||''}')">
-              <i class="fas fa-edit"></i>
-            </button>
-            <button class="btn-del-ref" onclick="confirmDel(${item.id},'${escapeHtml(item.label)}')">
-              <i class="fas fa-trash"></i>
-            </button>
-          </div>
-        </div>`;
-    }).join('');
-  }
-
-  loadReferences();
+  await loadData();
 });
