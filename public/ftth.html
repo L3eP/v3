@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#4f46e5">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jaringan FTTH - MAYUNG</title>
+    <link rel="stylesheet" href="css/style.css?v=9">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="vendor/fontawesome/css/all.min.css">
+    <style>
+        .ftth-tabs { display:flex; gap:4px; margin-bottom:20px; border-bottom:2px solid #e5e7eb; overflow-x:auto; }
+        .ftth-tab { padding:10px 20px; border:none; background:none; cursor:pointer; font-size:.95rem; color:var(--text-muted); border-bottom:2px solid transparent; margin-bottom:-2px; white-space:nowrap; transition:all .2s; }
+        .ftth-tab:hover { color:var(--text-main); background:#f9fafb; border-radius:8px 8px 0 0; }
+        .ftth-tab.active { color:#4f46e5; border-bottom-color:#4f46e5; font-weight:600; }
+        .ftth-tab i { margin-right:6px; }
+        .ftth-panel { display:none; }
+        .ftth-panel.active { display:block; }
+        .ftth-card { background:#fff; border-radius:12px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,.1); }
+        .ftth-card h3 { margin:0 0 15px 0; display:flex; align-items:center; gap:8px; }
+        .ftth-count { font-size:.8rem; color:var(--text-muted); font-weight:400; }
+        .ftth-item { display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border-color); }
+        .ftth-label { display:flex; align-items:center; gap:8px; }
+        .ftth-group { font-size:.8rem; color:var(--text-muted); background:#e5e7eb; padding:2px 8px; border-radius:4px; }
+        .ftth-actions { display:flex; gap:5px; }
+        .ftth-actions button { background:none; border:none; cursor:pointer; padding:4px 8px; border-radius:4px; font-size:.85rem; }
+        .ftth-edit { color:#2563eb; } .ftth-edit:hover { background:#dbeafe; }
+        .ftth-del { color:#ef4444; } .ftth-del:hover { background:#fee2e2; }
+        .ftth-add { margin-top:10px; padding:8px 16px; background:#f3f4f6; border:1px dashed #d1d5db; border-radius:8px; cursor:pointer; width:100%; color:var(--text-muted); }
+        .ftth-add:hover { background:#e5e7eb; color:var(--text-main); }
+        .ftth-inline { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+        .ftth-input { flex:1; min-width:120px; padding:6px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:.9rem; }
+        .ftth-save { background:#10b981; color:#fff; border:none; border-radius:6px; cursor:pointer; padding:6px 14px; }
+        .ftth-cancel { background:#6b7280; color:#fff; border:none; border-radius:6px; cursor:pointer; padding:6px 14px; }
+        .ftth-empty { color:var(--text-muted); font-size:.9rem; padding:10px 0; text-align:center; }
+        .ftth-toast { visibility:hidden; min-width:250px; background:#333; color:#fff; text-align:center; border-radius:8px; padding:12px; position:fixed; bottom:30px; left:50%; transform:translateX(-50%); z-index:1000; }
+        .ftth-show { visibility:visible; animation:fadein .3s; }
+        @keyframes fadein { from{opacity:0} to{opacity:1} }
+    </style>
+</head>
+<body class="with-sidebar">
+    <div id="navbar"></div>
+    <div class="dashboard-container">
+        <h1 style="margin:0 0 5px 0;font-size:1.5rem;"><i class="fas fa-network-wired" style="color:#059669;"></i> Jaringan FTTH</h1>
+        <p style="color:var(--text-muted);margin:0 0 20px 0;">Kelola infrastruktur jaringan</p>
+        <div class="ftth-tabs" id="ftthTabs"></div>
+        <div id="ftthPanels"></div>
+    </div>
+    <div id="ftthToast" class="ftth-toast"></div>
+
+    <!-- Edit Modal -->
+    <div id="editModal" class="modal">
+        <div class="modal-content" style="max-width:450px;">
+            <h3 id="editModalTitle">Edit</h3>
+            <div style="margin:15px 0;">
+                <label style="display:block;margin-bottom:5px;font-weight:500;">Label</label>
+                <input type="text" id="editLabel" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
+                <div id="editGroupWrap" style="margin-top:10px;display:none;">
+                    <label style="display:block;margin-bottom:5px;font-weight:500;">Group</label>
+                    <input type="text" id="editGroup" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
+                </div>
+                <div id="editCoordWrap" style="margin-top:10px;display:none;">
+                    <label style="display:block;margin-bottom:5px;font-weight:500;">Koordinat</label>
+                    <div style="display:flex;gap:8px;">
+                        <input type="text" id="editLat" style="flex:1;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;" placeholder="Latitude">
+                        <input type="text" id="editLng" style="flex:1;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;" placeholder="Longitude">
+                    </div>
+                </div>
+            </div>
+            <div style="display:flex;gap:10px;justify-content:flex-end;">
+                <button class="login-btn" style="background:#6b7280;" id="cancelEditBtn">Cancel</button>
+                <button class="login-btn" id="saveEditBtn">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Modal -->
+    <div id="confirmModal" class="modal">
+        <div class="modal-content" style="max-width:400px;">
+            <h3 style="color:#ef4444;">Confirm Delete</h3>
+            <p id="confirmMessage" style="margin:15px 0;">Are you sure?</p>
+            <div style="display:flex;gap:10px;justify-content:flex-end;">
+                <button class="login-btn" style="background:#6b7280;" id="cancelDelBtn">Cancel</button>
+                <button class="login-btn" style="background:#ef4444;" id="confirmDelBtn">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/navbar.js"></script>
+    <script src="js/ftth.js"></script>
+</body>
+</html>

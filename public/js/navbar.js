@@ -79,6 +79,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <i class="fas fa-history"></i> <span>Activity</span>
                 </a>
 
+                <a href="ftth.html" class="nav-link ${currentPage.includes('ftth') ? 'active' : ''}">
+                    <i class="fas fa-network-wired"></i> <span>Jaringan FTTH</span>
+                </a>
+
                 <a href="map.html" class="nav-link ${currentPage.includes('map') ? 'active' : ''}">
                     <i class="fas fa-map-marked-alt"></i> <span>Peta</span>
                 </a>
