@@ -14,6 +14,7 @@ const app = express();
 require('dotenv').config();
 
 const logger = require('./utils/logger');
+const { csrfMiddleware } = require('./middleware/csrf');
 
 const PORT = process.env.PORT || 3002;
 
@@ -25,6 +26,8 @@ const activityRoutes = require('./routes/activities');
 const settingsRoutes = require('./routes/settings');
 const referenceRoutes = require('./routes/references');
 const geoRoutes = require('./routes/geo');
+const psbRoutes = require('./routes/psb');
+const inventoryRoutes = require('./routes/inventory');
 
 // Middleware to parse JSON bodies
 app.use(express.json());
@@ -57,7 +60,7 @@ app.use((req, res, next) => {
 // Global Rate Limiting
 const globalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 1000, // Limit each IP to 100 requests per windowMs
+    max: 1000, // Limit each IP to 1000 requests per 15 minutes
     message: 'Too many requests from this IP, please try again later.'
 });
 app.use(globalLimiter);
@@ -94,6 +97,9 @@ if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
 }
 
+// CSRF Protection (after session, before routes)
+app.use(csrfMiddleware);
+
 // Use Routes
 app.use('/', authRoutes);
 app.use('/', userRoutes);
@@ -102,6 +108,8 @@ app.use('/', activityRoutes);
 app.use('/', settingsRoutes);
 app.use('/', referenceRoutes);
 app.use('/', geoRoutes);
+app.use('/', psbRoutes);
+app.use('/', inventoryRoutes);
 
 // Global Error Handler
 app.use((err, req, res, next) => {

@@ -128,58 +128,59 @@ function formatUpdateMessage(ticketId, oldStatus, newStatus, changedBy, ticketDa
 
 /**
  * Notifikasi: Ticket baru dibuat
- * Mengirim ke PIC (teknisi) + semua operator
+ * Mengirim ke pembuat tiket + PIC (teknisi) — sesuai permintaan client
  */
 async function notifyTicketCreated(ticket) {
-  const recipients = [];
+  const recipients = new Set();
 
-  // 1. PIC (teknisi yang ditugaskan)
-  const picPhone = await getPhoneByUsername(ticket.pic);
-  if (picPhone) {
-    recipients.push(picPhone);
-  } else {
-    logger.warn(`Nomor PIC ${ticket.pic} tidak ditemukan`);
+  // 1. Pembuat tiket
+  const creatorName = ticket.createdBy || ticket.created_by;
+  const creatorPhone = await getPhoneByUsername(creatorName);
+  if (creatorPhone) recipients.add(creatorPhone);
+
+  // 2. PIC (teknisi yang ditugaskan) — jika berbeda dengan pembuat
+  if (creatorName !== ticket.pic) {
+    const picPhone = await getPhoneByUsername(ticket.pic);
+    if (picPhone) recipients.add(picPhone);
   }
 
-  // 2. Semua operator
-  const operatorPhones = await getAllOperatorPhones();
-  recipients.push(...operatorPhones);
-
-  if (recipients.length === 0) {
+  if (recipients.size === 0) {
     logger.warn(`Tidak ada penerima — notifikasi ticket ${ticket.id} dilewati`);
     return;
   }
 
   const message = formatNewTicketMessage(ticket);
 
-  // Kirim ke semua penerima (fire-and-forget)
-  for (const phone of recipients) {
-    await sendWhatsApp(phone, message);
-  }
+  // Kirim ke semua penerima secara paralel (fire-and-forget)
+  await Promise.allSettled(
+    [...recipients].map(phone => sendWhatsApp(phone, message))
+  );
 }
 
 /**
  * Notifikasi: Status ticket berubah
- * Mengirim ke PIC (teknisi) + semua operator
+ * Mengirim ke pembuat tiket + PIC (teknisi) — sesuai permintaan client
  */
 async function notifyTicketUpdated(ticketId, oldStatus, newStatus, changedBy, ticketData) {
-  const recipients = [];
+  const recipients = new Set();
 
-  // 1. PIC (teknisi yang ditugaskan)
-  const picPhone = await getPhoneByUsername(ticketData?.pic);
-  if (picPhone) recipients.push(picPhone);
+  // 1. Pembuat tiket
+  const creatorPhone = await getPhoneByUsername(ticketData?.created_by || ticketData?.createdBy);
+  if (creatorPhone) recipients.add(creatorPhone);
 
-  // 2. Semua operator
-  const operatorPhones = await getAllOperatorPhones();
-  recipients.push(...operatorPhones);
+  // 2. PIC (teknisi yang ditugaskan) — jika berbeda dengan pembuat
+  if (creatorPhone && (ticketData?.created_by || ticketData?.createdBy) !== ticketData?.pic) {
+    const picPhone = await getPhoneByUsername(ticketData?.pic);
+    if (picPhone) recipients.add(picPhone);
+  }
 
-  if (recipients.length === 0) return;
+  if (recipients.size === 0) return;
 
   const message = formatUpdateMessage(ticketId, oldStatus, newStatus, changedBy, ticketData);
 
-  for (const phone of recipients) {
-    await sendWhatsApp(phone, message);
-  }
+  await Promise.allSettled(
+    [...recipients].map(phone => sendWhatsApp(phone, message))
+  );
 }
 
 module.exports = { sendWhatsApp, notifyTicketCreated, notifyTicketUpdated, getPhoneByUsername };

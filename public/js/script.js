@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const password = loginForm.password.value;
 
         try {
-            const response = await fetch('/login', {
+            const response = await csrfFetch('/login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'

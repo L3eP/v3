@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const endDateFilter = document.getElementById('endDateFilter');
     const exportCsvBtn = document.getElementById('exportCsvBtn');
     const exportPdfBtn = document.getElementById('exportPdfBtn');
+    const exportScope = document.getElementById('exportScope');
 
     const paginationControls = document.getElementById('paginationControls');
 
@@ -201,35 +202,38 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Export: fetch all tickets that match current filters for export
     async function fetchAllFilteredTicketsForExport() {
         try {
-            let url = '/tickets';
+            const scope = exportScope ? exportScope.value : 'all';
+            let url = '/tickets?limit=1000';
             if (searchInput && searchInput.value.trim()) {
-                url += `?search=${encodeURIComponent(searchInput.value.trim())}`;
+                url += `&search=${encodeURIComponent(searchInput.value.trim())}`;
             }
+
+            // Jika scope = "Bulan ini", override date filter
+            if (scope === 'month') {
+                const now = new Date();
+                const start = new Date(now.getFullYear(), now.getMonth(), 1);
+                const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                url += `&startDate=${start.toISOString().split('T')[0]}&endDate=${end.toISOString().split('T')[0]}`;
+            } else {
+                // Pakai filter tanggal dari form (jika ada)
+                if (startDateFilter && startDateFilter.value) url += `&startDate=${startDateFilter.value}`;
+                if (endDateFilter && endDateFilter.value) url += `&endDate=${endDateFilter.value}`;
+            }
+
             const response = await fetch(url);
             const result = await response.json();
 
             // Can be paginated format or array
             let tickets = Array.isArray(result) ? result : (result.data || []);
 
-            // Apply status/priority/date filters client-side
+            // Apply status/priority filters client-side
             const statusValue = statusFilter ? statusFilter.value : 'All';
             const priorityValue = priorityFilter ? priorityFilter.value : 'All';
-            const startDateValue = startDateFilter && startDateFilter.value ? new Date(startDateFilter.value) : null;
-            const endDateValue = endDateFilter && endDateFilter.value ? new Date(endDateFilter.value) : null;
-
-            if (endDateValue) endDateValue.setHours(23, 59, 59, 999);
 
             return tickets.filter(ticket => {
                 const statusMatch = statusValue === 'All' || ticket.status === statusValue;
                 const priorityMatch = priorityValue === 'All' || ticket.priority === priorityValue;
-
-                let dateMatch = true;
-                if (startDateValue || endDateValue) {
-                    const ticketDate = new Date(ticket.createdAt);
-                    if (startDateValue && ticketDate < startDateValue) dateMatch = false;
-                    if (endDateValue && ticketDate > endDateValue) dateMatch = false;
-                }
-                return statusMatch && priorityMatch && dateMatch;
+                return statusMatch && priorityMatch;
             });
         } catch (error) {
             console.error('Error fetching for export:', error);
@@ -320,42 +324,63 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // Export PDF
+    // Export PDF (with summary rekap)
     if (exportPdfBtn) {
         exportPdfBtn.addEventListener('click', async () => {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF('l', 'mm', 'a4');
-            const visibleTickets = await fetchAllFilteredTicketsForExport();
+            const tickets = await fetchAllFilteredTicketsForExport();
 
-            doc.text('Ticket List Export', 14, 15);
+            // Hitung summary
+            const byStatus = {}; const byPriority = {};
+            tickets.forEach(t => {
+                byStatus[t.status] = (byStatus[t.status] || 0) + 1;
+                byPriority[t.priority] = (byPriority[t.priority] || 0) + 1;
+            });
+            const total = tickets.length;
+
+            // Header
+            doc.setFontSize(16);
+            doc.text('Export Tiket', 14, 15);
             doc.setFontSize(10);
-            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 22);
+            doc.text(`Total: ${total} tiket — ${new Date().toLocaleDateString()}`, 14, 23);
 
-            const tableData = visibleTickets.map(t => [
-                t.id,
-                t.aktifitas,
-                t.subNode,
-                t.odc,
-                t.lokasi,
-                t.pic,
-                t.priority,
-                t.status,
-                t.createdBy,
-                new Date(t.createdAt).toLocaleDateString(),
-                (t.info || '').substring(0, 30) + (t.info && t.info.length > 30 ? '...' : '')
+            // Summary by Status
+            doc.setFontSize(11);
+            doc.text('By Status:', 14, 32);
+            doc.setFontSize(9);
+            let sy = 38;
+            Object.entries(byStatus).forEach(([s, c]) => {
+                doc.text(`  ${s}: ${c} tiket (${Math.round(c/total*100)}%)`, 14, sy);
+                sy += 6;
+            });
+
+            // Summary by Priority
+            doc.setFontSize(11);
+            doc.text('By Priority:', 110, 32);
+            doc.setFontSize(9);
+            let py = 38;
+            Object.entries(byPriority).forEach(([p, c]) => {
+                doc.text(`  ${p}: ${c} tiket (${Math.round(c/total*100)}%)`, 110, py);
+                py += 6;
+            });
+
+            // Ticket table
+            doc.setFontSize(10);
+            const tableStartY = Math.max(sy, py) + 6;
+            const tableData = tickets.map(t => [
+                t.id, t.aktifitas, t.subNode, t.odc, t.lokasi, t.pic, t.priority, t.status,
+                t.createdBy, new Date(t.createdAt).toLocaleDateString()
             ]);
 
             doc.autoTable({
-                head: [['ID', 'Aktifitas', 'Sub-node', 'ODC', 'Lokasi', 'PIC', 'Priority', 'Status', 'Created By', 'Date', 'Info']],
+                head: [['ID', 'Aktifitas', 'Sub-node', 'ODC', 'Lokasi', 'PIC', 'Priority', 'Status', 'Created By', 'Date']],
                 body: tableData,
-                startY: 25,
+                startY: tableStartY,
                 theme: 'grid',
                 styles: { fontSize: 7 },
                 headStyles: { fillColor: [75, 85, 99] },
-                columnStyles: {
-                    1: { cellWidth: 30 },
-                    9: { cellWidth: 'auto' }
-                }
+                columnStyles: { 1: { cellWidth: 30 }, 9: { cellWidth: 'auto' } }
             });
 
             doc.save(`tickets_export_${new Date().toISOString().split('T')[0]}.pdf`);

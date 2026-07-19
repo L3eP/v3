@@ -10,9 +10,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   const SECTIONS = {
     aktifitas: { icon:'fa-tasks',   label:'Aktifitas', color:'#2563eb', coord:false },
     sub_node:  { icon:'fa-sitemap', label:'Sub-Node',  color:'#7c3aed', coord:true  },
-    ftth:      { icon:'fa-network-wired', label:'Jaringan FTTH', color:'#059669', coord:false },
+    // ftth → standalone page (ftth.html)
     priority:  { icon:'fa-flag',    label:'Priority',   color:'#d97706', coord:false },
-    psb:       { icon:'fa-file-alt',label:'PSB Form',   color:'#db2777', coord:false },
+    adduser:   { icon:'fa-user-plus',label:'Add User',  color:'#0891b2', coord:false },
+    // psb → standalone page (psb.html)
   };
 
   function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -30,30 +31,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     grid.innerHTML = Object.entries(SECTIONS).map(([k, s]) => {
       let countHtml = '';
       const data = allData[k];
-      if (k === 'ftth') {
-        const olt = (allData.olt||[]).length;
-        const odc = (allData.odc||[]).length;
-        const odp = (allData.odp||[]).length;
-        countHtml = `<div class="admin-card-count" style="font-size:1.2rem;">OLT ${olt} · ODC ${odc} · ODP ${odp}</div>`;
-      } else if (k === 'psb') {
-        countHtml = '';
-      } else if (data) {
+      // ftth → standalone page
+      if (data) {
         countHtml = `<div class="admin-card-count">${data.length}</div>`;
       }
-      return `<div class="admin-card" onclick="goSection('${k}')" style="${k==='psb'?'opacity:0.6;':''}">
+      return `<div class="admin-card" onclick="goSection('${k}')">
         <div class="admin-card-icon" style="color:${s.color}"><i class="fas ${s.icon}"></i></div>
         <div class="admin-card-title">${s.label}</div>
         ${countHtml}
-        <div class="admin-card-sub">${k==='psb'?'→ Buka halaman':'Klik untuk kelola'}</div>
+        <div class="admin-card-sub">Klik untuk kelola</div>
       </div>`;
     }).join('');
   }
 
   window.goSection = function(key) {
-    if (key === 'psb') { toast('PSB Form akan segera hadir'); return; }
     homeEl.classList.add('hidden');
     detailEl.classList.remove('hidden');
-    if (key === 'ftth') renderFtth();
+    if (key === 'adduser') renderAddUser();
     else renderList(key);
   };
 
@@ -114,135 +108,92 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       const body = { type, label };
       if (lat && lng) { body.latitude = parseFloat(lat); body.longitude = parseFloat(lng); }
-      const r = await fetch('/api/references', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+      const r = await csrfFetch('/api/references', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
       if (r.ok) { toast('Berhasil ditambahkan'); goHome(); await loadData(); goSection(type); }
       else { const d = await r.json(); toast(d.message||'Gagal'); }
     } catch(e) { toast('Error: '+e.message); }
   };
 
   // ==================== FTTH TREE ====================
-  function renderFtth() {
-    const olts = allData.olt || [];
-    const odcs = allData.odc || [];
-    const odps = allData.odp || [];
+  // ==================== ADD USER ====================
+  function renderAddUser() {
     detailEl.innerHTML = `
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
         <button class="back-btn" onclick="goHome()"><i class="fas fa-arrow-left"></i></button>
-        <h2 style="margin:0;"><i class="fas fa-network-wired" style="color:#059669;"></i> Jaringan FTTH</h2>
-        <span style="font-size:0.85rem;color:var(--text-muted);margin-left:8px;">OLT ${olts.length} · ODC ${odcs.length} · ODP ${odps.length}</span>
+        <h2 style="margin:0;"><i class="fas fa-user-plus" style="color:#0891b2;"></i> Add User</h2>
       </div>
-      <div class="admin-card" id="ftthWrap">
-        ${olts.map(olt => {
-          const childOdcs = odcs.filter(o => o.group === olt.label);
-          return `<div class="ftth-olt">
-            <div class="ftth-olt-hdr">
-              <span>${olt.lat&&olt.lng?'📍 ':''}${esc(olt.label)}</span>
-              <div class="ref-actions">
-                <button class="btn-edit-ref" onclick="openEdit('olt',${olt.id},'${esc(olt.label)}','','${olt.lat||''}','${olt.lng||''}')"><i class="fas fa-edit"></i></button>
-                <button class="btn-del-ref" onclick="openDelete(${olt.id},'${esc(olt.label)}')"><i class="fas fa-trash"></i></button>
-                <button class="btn-sm" style="background:#e0e7ff;color:#4338ca;" onclick="showAddFtth('odc','${esc(olt.label)}')">+ODC</button>
-              </div>
-            </div>
-            ${childOdcs.map(odc => {
-              const childOdps = odps.filter(p => p.group === odc.label);
-              return `<div class="ftth-odc">
-                <span>${odc.lat&&odc.lng?'📍 ':''}${esc(odc.label)}</span>
-                <div class="ref-actions">
-                  <button class="btn-edit-ref" onclick="openEdit('odc',${odc.id},'${esc(odc.label)}','${esc(odc.group||'')}','${odc.lat||''}','${odc.lng||''}')"><i class="fas fa-edit"></i></button>
-                  <button class="btn-del-ref" onclick="openDelete(${odc.id},'${esc(odc.label)}')"><i class="fas fa-trash"></i></button>
-                  <button class="btn-sm" style="background:#d1fae5;color:#047857;" onclick="showAddFtth('odp','${esc(odc.label)}')">+ODP</button>
-                </div>
-              </div>
-              ${childOdps.map(odp => `<div class="ftth-odp">
-                <span>${odp.lat&&odp.lng?'📍 ':''}${esc(odp.label)}</span>
-                <div class="ref-actions">
-                  <button class="btn-edit-ref" onclick="openEdit('odp',${odp.id},'${esc(odp.label)}','${esc(odp.group||'')}','${odp.lat||''}','${odp.lng||''}')"><i class="fas fa-edit"></i></button>
-                  <button class="btn-del-ref" onclick="openDelete(${odp.id},'${esc(odp.label)}')"><i class="fas fa-trash"></i></button>
-                  <span style="font-size:0.75rem;color:#94a3b8;margin-left:8px;">ONU: —</span>
-                </div>
-              </div>`).join('')}`;
-            }).join('')}
-          </div>`;
-        }).join('')}
-        <button class="btn-add-ref" onclick="showAddFtth('olt')" style="margin-top:12px;"><i class="fas fa-plus"></i> Tambah OLT</button>
+      <div class="admin-card" style="max-width:500px;padding:24px;">
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div style="display:flex;gap:10px;">
+            <input type="text" id="auFullName" placeholder="Nama Lengkap *" style="flex:1;padding:10px 12px;border:1px solid #d1d5db;border-radius:6px;">
+            <input type="text" id="auUsername" placeholder="Username *" style="flex:1;padding:10px 12px;border:1px solid #d1d5db;border-radius:6px;">
+          </div>
+          <input type="password" id="auPassword" placeholder="Password * (min 6 karakter)" style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:6px;">
+          <div style="display:flex;gap:10px;">
+            <input type="tel" id="auPhone" placeholder="No Telepon (628xx)" style="flex:1;padding:10px 12px;border:1px solid #d1d5db;border-radius:6px;">
+            <select id="auRole" style="flex:1;padding:10px 12px;border:1px solid #d1d5db;border-radius:6px;">
+              <option value="Teknisi">Teknisi</option>
+              <option value="Operator">Operator</option>
+              <option value="Owner">Owner</option>
+            </select>
+          </div>
+          <div>
+            <label style="display:block;font-size:.85rem;color:var(--text-muted);margin-bottom:4px;">Foto Profil (opsional)</label>
+            <input type="file" id="auPhoto" accept="image/*" style="width:100%;padding:6px;">
+          </div>
+          <button id="auSubmitBtn" class="login-btn" style="width:auto;padding:10px 24px;">
+            <i class="fas fa-user-plus"></i> Buat User
+          </button>
+        </div>
       </div>`;
+
+    document.getElementById('auSubmitBtn').addEventListener('click', submitAddUser);
   }
 
-  // ==================== FTTH ADD (via modal) ====================
-  window.showAddFtth = function(type, parentGroup) {
-    const titles = { olt:'OLT', odc:'ODC', odp:'ODP' };
-    const title = titles[type];
+  async function submitAddUser() {
+    const fullName = document.getElementById('auFullName').value.trim();
+    const username = document.getElementById('auUsername').value.trim();
+    const password = document.getElementById('auPassword').value.trim();
+    if (!fullName || !username || !password) { toast('Nama, username, dan password wajib diisi'); return; }
+    if (password.length < 6) { toast('Password minimal 6 karakter'); return; }
 
-    // Build form HTML
-    let html = `<input type="text" id="finp" placeholder="Label ${title}" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;margin-bottom:8px;" autofocus>`;
+    const formData = new FormData();
+    formData.append('fullName', fullName);
+    formData.append('username', username);
+    formData.append('password', password);
+    const phone = document.getElementById('auPhone').value.trim();
+    if (phone) formData.append('phone', phone);
+    formData.append('role', document.getElementById('auRole').value);
+    const photo = document.getElementById('auPhoto').files[0];
+    if (photo) formData.append('photo', photo);
 
-    if (type === 'olt') {
-      html += `<div style="display:flex;gap:8px;">
-        <input type="text" id="finp-lat" placeholder="Latitude" style="flex:1;padding:8px;border:1px solid #d1d5db;border-radius:6px;">
-        <input type="text" id="finp-lng" placeholder="Longitude" style="flex:1;padding:8px;border:1px solid #d1d5db;border-radius:6px;">
-      </div>`;
-    } else if (type === 'odc') {
-      const oltList = (allData.olt||[]).map(o => o.label);
-      html += `<select id="finp-group" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;margin-bottom:8px;">
-        ${oltList.map(l => `<option value="${esc(l)}" ${l===parentGroup?'selected':''}>${esc(l)}</option>`).join('')}
-      </select>
-      <div style="display:flex;gap:8px;">
-        <input type="text" id="finp-lat" placeholder="Latitude" style="flex:1;padding:8px;border:1px solid #d1d5db;border-radius:6px;">
-        <input type="text" id="finp-lng" placeholder="Longitude" style="flex:1;padding:8px;border:1px solid #d1d5db;border-radius:6px;">
-      </div>`;
-    } else {
-      const odcList = (allData.odc||[]).map(o => o.label);
-      html += `<select id="finp-group" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;margin-bottom:8px;">
-        <option value="">Pilih Induk ODC</option>
-        ${odcList.map(l => `<option value="${esc(l)}" ${l===parentGroup?'selected':''}>${esc(l)}</option>`).join('')}
-      </select>
-      <div style="display:flex;gap:8px;">
-        <input type="text" id="finp-lat" placeholder="Latitude" style="flex:1;padding:8px;border:1px solid #d1d5db;border-radius:6px;">
-        <input type="text" id="finp-lng" placeholder="Longitude" style="flex:1;padding:8px;border:1px solid #d1d5db;border-radius:6px;">
-      </div>`;
-    }
-
-    html += `<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px;padding-top:12px;border-top:1px solid #e5e7eb;">
-      <button class="login-btn" style="background:#6b7280;" onclick="document.getElementById('editModal').classList.remove('show')">Batal</button>
-      <button class="login-btn" onclick="saveFtth('${type}')">Simpan</button>
-    </div>`;
-
-    document.getElementById('editModalTitle').textContent = `Tambah ${title} Baru`;
-    document.getElementById('editModalBody').style.display = 'none';
-    document.getElementById('addFormContainer').style.display = 'block';
-    document.getElementById('addFormContainer').innerHTML = html;
-    document.getElementById('editModal').classList.add('show');
-  };
-
-  window.saveFtth = async function(type) {
-    const label = document.getElementById('finp').value.trim();
-    if (!label) { toast('Label harus diisi'); return; }
-    const group = type !== 'olt' ? (document.getElementById('finp-group')?.value||'') : '';
-    const lat = (document.getElementById('finp-lat')?.value.trim()||'');
-    const lng = (document.getElementById('finp-lng')?.value.trim()||'');
-    if (type !== 'olt' && !group) { toast('Pilih induk terlebih dahulu'); return; }
+    const btn = document.getElementById('auSubmitBtn');
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
     try {
-      const body = { type, label };
-      if (type !== 'olt') body.group_name = group;
-      if (lat && lng) { body.latitude = parseFloat(lat); body.longitude = parseFloat(lng); }
-      const r = await fetch('/api/references', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+      const r = await csrfFetch('/register', { method:'POST', body: formData });
+      const data = await r.json();
       if (r.ok) {
-        document.getElementById('editModal').classList.remove('show');
-        document.getElementById('editModalBody').style.display = 'block';
-        document.getElementById('addFormContainer').style.display = 'none';
-        toast('Berhasil ditambahkan');
-        goHome(); await loadData(); goSection('ftth');
-      } else { const d = await r.json(); toast(d.message||'Gagal'); }
-    } catch(e) { toast('Error: '+e.message); }
-  };
+        toast('User berhasil dibuat');
+        document.getElementById('auFullName').value = '';
+        document.getElementById('auUsername').value = '';
+        document.getElementById('auPassword').value = '';
+        document.getElementById('auPhone').value = '';
+        document.getElementById('auPhoto').value = '';
+      } else {
+        toast(data.message || (data.errors ? data.errors.map(e => e.msg).join(', ') : 'Gagal'), 'error');
+      }
+    } catch(e) { toast('Error: '+e.message, 'error'); }
+    finally { btn.disabled = false; btn.innerHTML = '<i class="fas fa-user-plus"></i> Buat User'; }
+  }
 
   // ==================== EDIT (via modal) ====================
-  window.openEdit = function(type, id, label, group, lat, lng) {
+  window.openEdit = function(type, id, label, group, lat, lng, parentPort) {
     const titles = { olt:'OLT', odc:'ODC', odp:'ODP', aktifitas:'Aktifitas', sub_node:'Sub-Node', priority:'Priority' };
     editId = id; editType = type;
     const t = titles[type] || type;
     const hasCoord = ['olt','odc','odp','sub_node'].includes(type);
     const hasGroup = ['odc','odp'].includes(type);
+    const hasPort = ['odc','odp','onu'].includes(type);
 
     document.getElementById('editModalTitle').textContent = `Edit ${t}`;
     document.getElementById('editModalBody').style.display = 'block';
@@ -250,6 +201,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('editLabel').value = label;
     document.getElementById('editGroupWrap').style.display = hasGroup ? 'block' : 'none';
     if (hasGroup) document.getElementById('editGroup').value = group;
+    document.getElementById('editPortWrap').style.display = hasPort ? 'block' : 'none';
+    if (hasPort) document.getElementById('editPort').value = parentPort || '';
     document.getElementById('editCoordWrap').style.display = hasCoord ? 'block' : 'none';
     if (hasCoord) { document.getElementById('editLat').value = lat; document.getElementById('editLng').value = lng; }
     document.getElementById('editModal').classList.add('show');
@@ -259,20 +212,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!editId) return;
     const hasCoord = ['olt','odc','odp','sub_node'].includes(editType);
     const hasGroup = ['odc','odp'].includes(editType);
+    const hasPort = ['odc','odp','onu'].includes(editType);
     const body = { label: document.getElementById('editLabel').value.trim() };
     if (hasGroup) body.group_name = document.getElementById('editGroup').value.trim() || undefined;
+    if (hasPort) body.parent_port = document.getElementById('editPort').value.trim() || null;
     if (hasCoord) {
       const el = document.getElementById('editLat').value.trim();
       const en = document.getElementById('editLng').value.trim();
       if (el && en) { body.latitude = parseFloat(el); body.longitude = parseFloat(en); }
     }
     try {
-      const r = await fetch(`/api/references/${editId}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+      const r = await csrfFetch(`/api/references/${editId}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
       if (r.ok) {
         document.getElementById('editModal').classList.remove('show');
         toast('Berhasil diupdate');
         goHome(); await loadData();
-        goSection(['olt','odc','odp'].includes(editType) ? 'ftth' : editType);
+        goSection(editType);
       } else { const d = await r.json(); toast(d.message||'Gagal'); }
     } catch(e) { toast('Error: '+e.message); }
   };
@@ -292,12 +247,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('confirmDelBtn').onclick = async () => {
     if (!deleteId) return;
     try {
-      const r = await fetch(`/api/references/${deleteId}`, { method:'DELETE' });
+      const r = await csrfFetch(`/api/references/${deleteId}`, { method:'DELETE' });
       if (r.ok) {
         document.getElementById('confirmModal').classList.remove('show');
         toast(`"${deleteLabel}" berhasil dihapus`);
         deleteId = null;
-        goHome(); await loadData(); renderCards();
+        goHome(); await loadData();
       } else { const d = await r.json(); toast(d.message||'Gagal'); }
     } catch(e) { toast('Error: '+e.message); }
   };

@@ -102,7 +102,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   async function deleteActivity(id) {
     try {
-      const response = await fetch(`/activities/${id}`, { method: "DELETE" });
+      const response = await csrfFetch(`/activities/${id}`, { method: "DELETE" });
       if (response.ok) {
         showModal("Success", "Activity deleted successfully");
         fetchActivities(); // Refresh list
@@ -145,7 +145,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const ticketId = document.getElementById("ticket_id").value || "";
 
     try {
-      const response = await fetch("/activities", {
+      const response = await csrfFetch("/activities", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <link rel="manifest" href="manifest.json" />
+    <meta name="theme-color" content="#4f46e5" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PSB - MAYUNG</title>
+    <link rel="stylesheet" href="css/style.css?v=9" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="vendor/fontawesome/css/all.min.css" />
+    <style>
+      .psb-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; align-items:start; }
+      .psb-form-card { background:var(--surface-color); padding:24px; border-radius:var(--radius-lg); border:1px solid var(--border-color); }
+      .psb-list-card { background:var(--surface-color); padding:24px; border-radius:var(--radius-lg); border:1px solid var(--border-color); }
+      .psb-item { display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid var(--border-color); gap:12px; }
+      .psb-item:last-child { border-bottom:none; }
+      .psb-info { flex:1; min-width:0; }
+      .psb-name { font-weight:600; color:var(--text-main); font-size:.95rem; }
+      .psb-meta { font-size:.8rem; color:var(--text-muted); margin-top:2px; }
+      .psb-sn { font-size:.75rem; color:var(--text-muted); font-family:monospace; }
+      .psb-empty { text-align:center; padding:40px 20px; color:var(--text-muted); }
+      .psb-empty i { font-size:2rem; margin-bottom:10px; opacity:0.5; }
+      .status-badge-psb { display:inline-block; padding:2px 10px; border-radius:10px; font-size:.72rem; font-weight:600; color:#fff; }
+      @media (max-width:768px) { .psb-grid { grid-template-columns:1fr; } }
+    </style>
+  </head>
+  <body class="with-sidebar">
+    <div id="navbar"></div>
+
+    <div class="dashboard-container">
+      <div style="margin-bottom:24px;">
+        <h1 style="margin:0;font-size:1.5rem;"><i class="fas fa-file-alt" style="color:#db2777;"></i> PSB / Pemasangan Baru</h1>
+        <p style="color:var(--text-muted);margin:5px 0 0 0;">Daftarkan pelanggan baru dan pencatatan ONU</p>
+      </div>
+
+      <div class="psb-grid">
+        <!-- Form -->
+        <div class="psb-form-card">
+          <h3 style="margin:0 0 16px 0;font-size:1.05rem;"><i class="fas fa-plus-circle" style="color:#10b981;"></i> Form Pendaftaran</h3>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <input type="text" id="psbName" placeholder="Nama Pelanggan *" class="filter-select" style="width:100%;">
+            <textarea id="psbAddress" placeholder="Alamat *" rows="2" class="filter-select" style="width:100%;resize:vertical;"></textarea>
+            <div style="display:flex;gap:8px;">
+              <input type="tel" id="psbPhone" placeholder="No Telepon" class="filter-select" style="flex:1;">
+              <input type="text" id="psbOnuSn" placeholder="SN ONU" class="filter-select" style="flex:1;">
+            </div>
+            <div style="display:flex;gap:8px;">
+              <input type="text" id="psbLat" placeholder="Latitude" class="filter-select" style="flex:1;">
+              <input type="text" id="psbLng" placeholder="Longitude" class="filter-select" style="flex:1;">
+            </div>
+            <select id="psbOdp" class="filter-select" style="width:100%;">
+              <option value="">Pilih Parent ODP (opsional)</option>
+            </select>
+            <div>
+              <label style="display:block;font-size:.85rem;color:var(--text-muted);margin-bottom:4px;">Foto Belakang Modem (opsional)</label>
+              <input type="file" id="psbPhoto" accept="image/*" class="filter-select" style="width:100%;padding:6px;">
+            </div>
+            <textarea id="psbNotes" placeholder="Catatan (opsional)" rows="2" class="filter-select" style="width:100%;resize:vertical;"></textarea>
+            <button id="psbSubmitBtn" class="login-btn" style="width:auto;padding:10px 24px;">
+              <i class="fas fa-save"></i> Daftarkan PSB
+            </button>
+          </div>
+        </div>
+
+        <!-- List -->
+        <div class="psb-list-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <h3 style="margin:0;font-size:1.05rem;"><i class="fas fa-list" style="color:#2563eb;"></i> Daftar PSB <span id="psbCount" style="font-weight:400;color:var(--text-muted);font-size:.9rem;">(0)</span></h3>
+          </div>
+          <div id="psbListContainer" style="max-height:600px;overflow-y:auto;">
+            <div class="psb-empty">
+              <i class="fas fa-inbox"></i>
+              <p>Belum ada pendaftaran</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Detail Modal -->
+    <div id="detailModal" class="modal">
+      <div class="modal-content" style="max-width:500px;text-align:left;">
+        <h3 id="detailModalTitle" style="color:#db2777;">Detail PSB</h3>
+        <div id="detailModalBody" style="margin:15px 0;"></div>
+        <button class="modal-ok-btn" onclick="document.getElementById('detailModal').classList.remove('show')">Tutup</button>
+      </div>
+    </div>
+
+    <!-- Confirm Modal -->
+    <div id="confirmModal" class="modal">
+      <div class="modal-content" style="max-width:400px;">
+        <h3 style="color:#ef4444;">Hapus PSB</h3>
+        <p id="confirmMessage" style="margin:15px 0;">Yakin ingin menghapus?</p>
+        <div style="display:flex;gap:10px;justify-content:flex-end;">
+          <button class="login-btn" style="background:#6b7280;" id="cancelDelBtn">Batal</button>
+          <button class="login-btn" style="background:#ef4444;" id="confirmDelBtn">Hapus</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="js/csrf.js"></script>
+    <script src="js/navbar.js"></script>
+    <script src="js/psb.js"></script>
+  </body>
+</html>

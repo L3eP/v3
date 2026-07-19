@@ -6,6 +6,7 @@ const db = require('../db');
 const upload = require('../middleware/upload');
 const path = require('path');
 const { isAuthenticated, isAdmin } = require('../middleware/auth');
+const asyncHandler = require('../middleware/asyncHandler');
 const { sanitizePhone } = require('../utils/phone');
 
 const loginLimiter = rateLimit({
@@ -40,50 +41,45 @@ const bcrypt = require('bcryptjs');
 router.post('/login', loginLimiter, [
     body('username').trim().escape(),
     body('password').trim().escape()
-], async (req, res) => {
+], asyncHandler(async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
     }
     const { username, password } = req.body;
 
-    try {
-        const [rows] = await db.query('SELECT * FROM users WHERE username = ?', [username]);
-        const user = rows[0];
+    const [rows] = await db.query('SELECT * FROM users WHERE username = ?', [username]);
+    const user = rows[0];
 
-        if (!user) {
-            return res.status(401).json({ message: 'Invalid credentials' });
-        }
-
-        const isMatch = await bcrypt.compare(password, user.password);
-
-        if (isMatch) {
-            const mappedUser = mapUser(user);
-            req.session.user = mappedUser;
-
-            let redirectUrl;
-            if (user.role === 'Owner' || user.role === 'Operator') {
-                redirectUrl = '/dashboard.html';
-            } else if (user.role === 'Teknisi') {
-                redirectUrl = '/activity.html';
-            } else {
-                // Fallback
-                redirectUrl = '/user-dashboard.html';
-            }
-
-            res.status(200).json({
-                message: 'Login successful',
-                redirect: redirectUrl,
-                user: mappedUser
-            });
-        } else {
-            res.status(401).json({ message: 'Invalid credentials' });
-        }
-    } catch (error) {
-        console.error('Login error:', error);
-        res.status(500).json({ message: 'Server error' });
+    if (!user) {
+        return res.status(401).json({ message: 'Invalid credentials' });
     }
-});
+
+    const isMatch = await bcrypt.compare(password, user.password);
+
+    if (isMatch) {
+        const mappedUser = mapUser(user);
+        req.session.user = mappedUser;
+
+        let redirectUrl;
+        if (user.role === 'Owner' || user.role === 'Operator') {
+            redirectUrl = '/dashboard.html';
+        } else if (user.role === 'Teknisi') {
+            redirectUrl = '/activity.html';
+        } else {
+            // Fallback
+            redirectUrl = '/user-dashboard.html';
+        }
+
+        res.status(200).json({
+            message: 'Login successful',
+            redirect: redirectUrl,
+            user: mappedUser
+        });
+    } else {
+        res.status(401).json({ message: 'Invalid credentials' });
+    }
+}));
 
 // Logout
 router.post('/logout', (req, res) => {
@@ -103,43 +99,38 @@ router.post('/register', isAuthenticated, isAdmin, registerLimiter, upload.singl
     body('fullName').trim().escape(),
     body('phone').trim().escape(),
     body('role').optional().isIn(['Owner', 'Operator', 'Teknisi']).withMessage('Invalid role')
-], async (req, res) => {
+], asyncHandler(async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
     }
     const { fullName, username, password, phone, role } = req.body;
 
-    try {
-        // Check if user exists
-        const [existingUsers] = await db.query('SELECT * FROM users WHERE username = ?', [username]);
-        if (existingUsers.length > 0) {
-            return res.status(400).json({ message: 'Username already exists' });
-        }
-
-        // Hash password
-        const hashedPassword = await bcrypt.hash(password, 10);
-
-        // Validate role — only allow valid roles, default to Teknisi
-        const validRoles = ['Owner', 'Operator', 'Teknisi'];
-        const userRole = role && validRoles.includes(role) ? role : 'Teknisi';
-
-        // Standarisasi nomor telepon ke format Fonnte (62xx)
-        const standardPhone = sanitizePhone(phone) || phone;
-
-        // Set photo to uploaded file or default
-        const photo = req.file ? `/uploads/${req.file.filename}` : '/uploads/default.png';
-
-        await db.query(
-            'INSERT INTO users (full_name, username, password, phone, role, photo) VALUES (?, ?, ?, ?, ?, ?)',
-            [fullName, username, hashedPassword, standardPhone, userRole, photo]
-        );
-
-        res.status(201).json({ message: 'Account created successfully' });
-    } catch (error) {
-        console.error('Register error:', error);
-        res.status(500).json({ message: 'Server error' });
+    // Check if user exists
+    const [existingUsers] = await db.query('SELECT * FROM users WHERE username = ?', [username]);
+    if (existingUsers.length > 0) {
+        return res.status(400).json({ message: 'Username already exists' });
     }
-});
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Validate role — only allow valid roles, default to Teknisi
+    const validRoles = ['Owner', 'Operator', 'Teknisi'];
+    const userRole = role && validRoles.includes(role) ? role : 'Teknisi';
+
+    // Standarisasi nomor telepon ke format Fonnte (62xx)
+    const standardPhone = sanitizePhone(phone) || phone;
+
+    // Set photo to uploaded file or default
+    const photo = req.file ? `/uploads/${req.file.filename}` : '/uploads/default.png';
+
+    await db.query(
+        'INSERT INTO users (full_name, username, password, phone, role, photo) VALUES (?, ?, ?, ?, ?, ?)',
+        [fullName, username, hashedPassword, standardPhone, userRole, photo]
+    );
+
+    res.status(201).json({ message: 'Account created successfully' });
+}));
 
 module.exports = router;

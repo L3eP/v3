@@ -39,6 +39,7 @@ cookie_*.txt
 latest.sql
 mayungapp.sql
 *.bak
+/backup
 
 # Temporary migration files (not committed)
 migrasi.sql
@@ -50,3 +51,20 @@ migrasi.sql
 
 # Production database dump
 prod_db.sql
+
+# AI / Claude
+CLAUDE.md
+/.claude
+
+# Docs — hanya code_documentation yg di-publish
+/docs/*.md
+!/docs/code_documentation_en.md
+!/docs/code_documentation_id.md
+
+# Scripts — migration & internal tools
+/scripts/*.sql
+/scripts/*.sh
+/scripts/migrate_history.js
+
+# Backup internal
+/backup/

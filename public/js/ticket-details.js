@@ -133,7 +133,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // including the file input 'evidence'
 
         try {
-            const response = await fetch(`/tickets/${ticketId}/update`, {
+            const response = await csrfFetch(`/tickets/${ticketId}/update`, {
                 method: 'POST',
                 body: formData
             });
@@ -156,15 +156,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     const deleteBtn = document.getElementById('deleteTicketBtn');
     if (deleteBtn) {
         deleteBtn.addEventListener('click', () => {
-            if (confirm('Are you sure you want to delete this ticket? This action cannot be undone.')) {
-                deleteTicket();
-            }
+            showConfirm('Hapus tiket ini? Data akan diarsipkan.', deleteTicket);
         });
     }
 
     async function deleteTicket() {
         try {
-            const response = await fetch(`/tickets/${ticketId}`, {
+            const response = await csrfFetch(`/tickets/${ticketId}`, {
                 method: 'DELETE'
             });
 

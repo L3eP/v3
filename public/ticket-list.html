@@ -59,8 +59,12 @@
                 <input type="date" id="endDateFilter" class="filter-select">
             </div>
             <div class="export-buttons">
-                <button id="exportCsvBtn" class="btn-export btn-csv">Export CSV</button>
-                <button id="exportPdfBtn" class="btn-export btn-pdf">Export PDF</button>
+                <select id="exportScope" class="filter-select" style="width:auto;min-width:100px;">
+                    <option value="all">Semua (filter aktif)</option>
+                    <option value="month">Bulan ini</option>
+                </select>
+                <button id="exportCsvBtn" class="btn-export btn-csv">CSV</button>
+                <button id="exportPdfBtn" class="btn-export btn-pdf">PDF</button>
             </div>
         </div>
 
@@ -94,6 +98,7 @@
         </nav>
     </div>
 
+    <script src="js/csrf.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
     <script src="js/navbar.js"></script>

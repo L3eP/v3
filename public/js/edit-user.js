@@ -57,7 +57,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         try {
-            const response = await fetch('/admin/users/update', {
+            const response = await csrfFetch('/admin/users/update', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'

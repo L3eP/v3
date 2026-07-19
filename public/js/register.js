@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const formData = new FormData(registerForm);
 
         try {
-            const response = await fetch('/register', {
+            const response = await csrfFetch('/register', {
                 method: 'POST',
                 body: formData
             });

@@ -44,7 +44,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         try {
             // Update Profile
-            const profileResponse = await fetch('/update-profile', {
+            const profileResponse = await csrfFetch('/update-profile', {
                 method: 'POST',
                 body: formData
             });
@@ -61,7 +61,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const companyLogoFile = document.getElementById('companyLogo').files[0];
 
                 // Update Name
-                const settingsResponse = await fetch('/settings/company-name', {
+                const settingsResponse = await csrfFetch('/settings/company-name', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ companyName })
@@ -78,7 +78,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const logoFormData = new FormData();
                     logoFormData.append('logo', companyLogoFile);
 
-                    const logoResponse = await fetch('/settings/company-logo', {
+                    const logoResponse = await csrfFetch('/settings/company-logo', {
                         method: 'POST',
                         body: logoFormData
                     });

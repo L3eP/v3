@@ -24,19 +24,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // Check for unauthorized access globally
-    const originalFetch = window.fetch;
-    window.fetch = async function (...args) {
-        const response = await originalFetch(...args);
-        if (response.status === 401) {
-            window.location.href = '/index.html';
-        }
-        return response;
+    // Wrapper fetch dengan auto-redirect 401 — hanya untuk API calls
+    const apiFetch = async (url, opts) => {
+        const res = await fetch(url, opts);
+        if (res.status === 401) window.location.href = '/index.html';
+        return res;
     };
 
     async function fetchTickets() {
         try {
-            const response = await fetch('/tickets');
+            const response = await apiFetch('/tickets');
             const tickets = await response.json();
             window.currentTickets = tickets; // Store ALL tickets for search/recent list
 
@@ -55,14 +52,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             updateStats(monthlyTickets);
             renderChart(monthlyTickets);
 
-            // Recent tickets should probably show ALL recent tickets, not just this month's, 
-            // but the user request specifically said "Card 1 and Card 2". 
-            // Card 3 (Recent Tickets) usually implies global recent.
-            // However, if the user wants "dashboard" to show data per month, maybe they mean everything?
-            // The prompt said "on card 1 and card 2 showing data per month". 
-            // So I will keep renderRecentTickets using the full 'tickets' list or maybe filtered?
-            // "Recent" usually means "latest created", regardless of month, but let's stick to the prompt: "card 1 and card 2".
-            // So Card 3 (Recent) remains untouched (using all tickets).
+            // Render recent tickets (non-Selesai, top 10)
             renderRecentTickets(tickets);
         } catch (error) {
             console.error('Error loading dashboard data:', error);
@@ -83,6 +73,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Calculate Completion Rate
         const completionRate = totalTickets > 0 ? Math.round((totalDone / totalTickets) * 100) : 0;
 
+        // === SLA: Rata-rata waktu penyelesaian (jam) ===
+        const doneTickets = tickets.filter(t => t.status === 'Selesai' && t.dateSelesai);
+        let avgSla = 0;
+        if (doneTickets.length > 0) {
+            const totalHours = doneTickets.reduce((sum, t) => {
+                const start = new Date(t.createdAt);
+                const end = new Date(t.dateSelesai);
+                return sum + (end - start) / (1000 * 60 * 60);
+            }, 0);
+            avgSla = Math.round(totalHours / doneTickets.length);
+        }
+        const slaDays = Math.floor(avgSla / 24);
+        const slaHours = avgSla % 24;
+        const slaText = slaDays > 0 ? `${slaDays}h ${slaHours}j` : `${avgSla} jam`;
+
         // Update DOM
         document.getElementById('totalDone').textContent = totalDone;
         document.getElementById('totalOnProgress').textContent = totalOnProgress;
@@ -92,6 +97,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('newThisWeek').textContent = newThisWeek;
         document.getElementById('completionRate').textContent = `${completionRate}%`;
         document.getElementById('completionBar').style.width = `${completionRate}%`;
+
+        // SLA
+        const slaEl = document.getElementById('avgSla');
+        if (slaEl) {
+            slaEl.textContent = slaText;
+            slaEl.title = `Rata-rata ${avgSla} jam dari ${doneTickets.length} tiket selesai`;
+        }
     }
 
     let chartInstance = null;
@@ -320,7 +332,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     async function fetchTeknisiUsers() {
         try {
-            const response = await fetch('/users');
+            const response = await apiFetch('/users');
             if (!response.ok) throw new Error('Failed to fetch users');
             const users = await response.json();
 
@@ -352,7 +364,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 url += `?username=${encodeURIComponent(username)}`;
             }
 
-            const response = await fetch(url);
+            const response = await apiFetch(url);
             if (!response.ok) throw new Error('Failed to fetch activities');
             const activities = await response.json();
             renderActivityLog(activities);

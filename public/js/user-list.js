@@ -62,11 +62,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    window.deleteUser = async (username) => {
-        if (!confirm(`Are you sure you want to delete user ${username}?`)) return;
+    window.deleteUser = (username) => {
+        showConfirm(`Hapus user "${username}"?`, () => doDelete(username));
+    };
 
+    async function doDelete(username) {
         try {
-            const response = await fetch(`/users/${username}`, {
+            const response = await csrfFetch(`/users/${username}`, {
                 method: 'DELETE'
             });
 
@@ -81,7 +83,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.error('Error deleting user:', error);
             showToast('Error deleting user');
         }
-    };
+    }
 
 
 

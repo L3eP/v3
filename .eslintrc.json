@@ -1,0 +1,21 @@
+{
+  "env": {
+    "node": true,
+    "es2022": true,
+    "browser": true
+  },
+  "extends": ["eslint:recommended"],
+  "rules": {
+    "no-unused-vars": "warn",
+    "no-undef": "error",
+    "no-console": "off",
+    "eqeqeq": ["warn", "always"],
+    "no-var": "warn",
+    "prefer-const": "warn"
+  },
+  "parserOptions": {
+    "ecmaVersion": 2022,
+    "sourceType": "script"
+  },
+  "ignorePatterns": ["node_modules/", "backup/"]
+}

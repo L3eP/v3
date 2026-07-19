@@ -183,7 +183,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         formData.append('createdBy', user.username);
 
         try {
-            const response = await fetch('/tickets', {
+            const response = await csrfFetch('/tickets', {
                 method: 'POST',
                 body: formData
             });

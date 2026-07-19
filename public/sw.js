@@ -11,6 +11,8 @@ const ASSETS = [
     '/register.html',
     '/user-list.html',
     '/settings.html',
+    '/psb.html',
+    '/inventory.html',
     '/css/style.css',
     '/js/script.js',
     '/js/navbar.js',
@@ -24,6 +26,7 @@ const ASSETS = [
     '/js/settings.js',
     '/js/user-list.js',
     '/js/edit-user.js',
+    '/js/psb.js',
     '/manifest.json',
     '/vendor/fontawesome/css/all.min.css'
 ];

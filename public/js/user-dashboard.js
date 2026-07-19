@@ -24,19 +24,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // Check for unauthorized access globally
-    const originalFetch = window.fetch;
-    window.fetch = async function (...args) {
-        const response = await originalFetch(...args);
-        if (response.status === 401) {
-            window.location.href = '/index.html';
-        }
-        return response;
+    // Wrapper fetch dengan auto-redirect 401 — hanya untuk API calls
+    const apiFetch = async (url, opts) => {
+        const res = await fetch(url, opts);
+        if (res.status === 401) window.location.href = '/index.html';
+        return res;
     };
 
     async function fetchTickets() {
         try {
-            const response = await fetch('/tickets');
+            const response = await apiFetch('/tickets');
             const tickets = await response.json();
             renderRecentTickets(tickets, user);
         } catch (error) {
@@ -46,7 +43,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     async function fetchActivities() {
         try {
-            const response = await fetch(`/activities?username=${encodeURIComponent(user.username)}`);
+            const response = await apiFetch(`/activities?username=${encodeURIComponent(user.username)}`);
             const activities = await response.json();
             renderRecentActivity(activities);
         } catch (error) {

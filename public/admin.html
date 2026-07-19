@@ -35,10 +35,6 @@
         .toast { visibility:hidden; min-width:250px; background:#333; color:#fff; text-align:center; border-radius:8px; padding:12px; position:fixed; bottom:30px; left:50%; transform:translateX(-50%); z-index:1000; }
         .toast.show { visibility:visible; animation:fadein .3s; } @keyframes fadein { from{opacity:0} to{opacity:1} }
         .hidden { display:none!important; }
-        .ftth-olt { margin-bottom:12px; background:#f8fafc; border-radius:10px; padding:12px 16px; border:1px solid #e2e8f0; }
-        .ftth-olt-hdr { display:flex; justify-content:space-between; align-items:center; font-weight:600; color:#7c3aed; font-size:.95rem; margin-bottom:8px; }
-        .ftth-odc { display:flex; justify-content:space-between; align-items:center; padding:6px 12px; margin:3px 0 3px 20px; background:#fff; border-radius:6px; border:1px solid #f1f5f9; }
-        .ftth-odp { display:flex; justify-content:space-between; align-items:center; padding:4px 12px 4px 44px; font-size:.88rem; color:#4b5563; }
     </style>
 </head>
 <body class="with-sidebar">
@@ -61,8 +57,12 @@
                 <label style="display:block;margin-bottom:5px;font-weight:500;">Label</label>
                 <input type="text" id="editLabel" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
                 <div id="editGroupWrap" style="margin-top:10px;display:none;">
-                    <label style="display:block;margin-bottom:5px;font-weight:500;">Group</label>
+                    <label style="display:block;margin-bottom:5px;font-weight:500;">Induk</label>
                     <input type="text" id="editGroup" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
+                </div>
+                <div id="editPortWrap" style="margin-top:10px;display:none;">
+                    <label style="display:block;margin-bottom:5px;font-weight:500;">Port di Induk</label>
+                    <input type="text" id="editPort" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;" placeholder="Contoh: Port 3/8">
                 </div>
                 <div id="editCoordWrap" style="margin-top:10px;display:none;">
                     <label style="display:block;margin-bottom:5px;font-weight:500;">Koordinat</label>
@@ -92,6 +92,7 @@
     </div>
 
     <div id="toast" class="toast"></div>
+    <script src="js/csrf.js"></script>
     <script src="js/navbar.js"></script>
     <script src="js/admin.js?2"></script>
 </body>

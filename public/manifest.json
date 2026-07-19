@@ -1,15 +1,22 @@
 {
     "name": "MAYUNG App",
     "short_name": "MAYUNG",
+    "description": "Sistem Ticketing & Manajemen Jaringan MAYUNG",
     "start_url": "/dashboard.html",
     "display": "standalone",
-    "background_color": "#f3f4f6",
-    "theme_color": "#4f46e5",
+    "background_color": "#f8fafc",
+    "theme_color": "#DC2626",
+    "orientation": "any",
+    "categories": ["business", "utilities", "communication"],
     "icons": [
         {
             "src": "images/icon-512.png",
             "sizes": "512x512",
-            "type": "image/png"
+            "type": "image/png",
+            "purpose": "any maskable"
         }
-    ]
+    ],
+    "screenshots": [],
+    "lang": "id-ID",
+    "dir": "ltr"
 }
