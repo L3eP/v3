@@ -32,6 +32,10 @@ const inventoryRoutes = require('./routes/inventory');
 // Middleware to parse JSON bodies
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// CSRF Protection — harus SEBELUM static agar cookie ter-set saat GET halaman
+app.use(csrfMiddleware);
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Security Middleware
@@ -97,8 +101,7 @@ if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-// CSRF Protection (after session, before routes)
-app.use(csrfMiddleware);
+
 
 // Use Routes
 app.use('/', authRoutes);
