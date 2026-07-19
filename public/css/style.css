@@ -221,6 +221,7 @@ a:hover {
 .login-container {
     min-height: 100vh;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     padding: 20px;
@@ -240,6 +241,56 @@ a:hover {
 .login-card h2 {
     margin-bottom: 8px;
     font-size: 1.5rem;
+}
+
+/* Login Branding */
+.login-brand {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 28px;
+}
+
+.login-logo {
+    width: 72px;
+    height: 72px;
+    object-fit: contain;
+    margin-bottom: 16px;
+    border-radius: 16px;
+    animation: loginLogoFadeIn 0.6s ease-out;
+}
+
+@keyframes loginLogoFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.login-company-name {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin-bottom: 4px;
+    letter-spacing: 0.04em;
+}
+
+.login-tagline {
+    font-size: 0.88rem;
+    color: var(--text-muted);
+    margin: 0;
+}
+
+.login-copyright {
+    margin-top: 24px;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    opacity: 0.7;
+    text-align: center;
 }
 
 .subtitle {

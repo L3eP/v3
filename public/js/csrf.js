@@ -40,14 +40,23 @@ function getCsrfToken() {
 }
 
 /**
- * Wrapper fetch dengan CSRF header otomatis
+ * Wrapper fetch dengan CSRF header otomatis.
+ * Jika cookie csrf-token belum ada, otomatis trigger GET dulu
+ * supaya server set cookie, lalu retry request.
  */
-function csrfFetch(url, options = {}) {
+async function csrfFetch(url, options = {}) {
   const method = (options.method || 'GET').toUpperCase();
 
   // Hanya state-changing methods perlu CSRF
   if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
-    const token = getCsrfToken();
+    let token = getCsrfToken();
+
+    // Fallback: jika cookie belum ada, trigger GET untuk set cookie
+    if (!token) {
+      await fetch(window.location.href, { method: 'GET', credentials: 'same-origin' });
+      token = getCsrfToken();
+    }
+
     if (token) {
       options.headers = options.headers || {};
 
