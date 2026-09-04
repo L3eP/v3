@@ -15,16 +15,16 @@ const logger = winston.createLogger({
     transports: [
         new winston.transports.DailyRotateFile({
             filename: path.join(logDir, 'error-%DATE%.log'),
-            datePattern: 'YYYY-WW',
+            datePattern: 'YYYY-MM-DD',
             level: 'error',
             maxSize: '20m',
-            maxFiles: '14d' // Keep for 14 days (approx 2 weeks)
+            maxFiles: '7d' // Retensi mingguan: hapus otomatis setelah 7 hari
         }),
         new winston.transports.DailyRotateFile({
             filename: path.join(logDir, 'app-%DATE%.log'),
-            datePattern: 'YYYY-WW',
+            datePattern: 'YYYY-MM-DD',
             maxSize: '20m',
-            maxFiles: '14d'
+            maxFiles: '7d'
         })
     ]
 });

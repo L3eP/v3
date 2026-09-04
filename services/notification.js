@@ -10,6 +10,7 @@
 const axios = require('axios');
 const db = require('../db');
 const logger = require('../utils/logger');
+const { sanitizePhone } = require('../utils/phone');
 
 const FONNTE_TOKEN = process.env.FONNTE_TOKEN;
 const FONNTE_API = 'https://api.fonnte.com/send';
@@ -25,20 +26,9 @@ async function sendWhatsApp(phone, message) {
     return false;
   }
 
-  // Bersihkan nomor: hapus +, spasi, strip, tanda kurung
-  let cleanPhone = phone.replace(/[+\s\-()]/g, '');
-
-  // Jika diawali 0, ganti dengan 62 (ke format internasional)
-  if (cleanPhone.startsWith('0')) {
-    cleanPhone = '62' + cleanPhone.slice(1);
-  }
-
-  // Jika diawali 62, pastikan tidak ada 0 setelahnya (contoh: 62081 → 6281)
-  if (cleanPhone.startsWith('62') && cleanPhone[2] === '0') {
-    cleanPhone = '62' + cleanPhone.slice(3);
-  }
-
-  if (!cleanPhone || cleanPhone.length < 10) {
+  // Standarisasi nomor ke format 62xx via shared utility
+  const cleanPhone = sanitizePhone(phone);
+  if (!cleanPhone) {
     logger.warn(`Nomor telepon tidak valid: ${phone}`);
     return false;
   }
@@ -46,23 +36,39 @@ async function sendWhatsApp(phone, message) {
   // Fonnte dengan countryCode: target harus nomor lokal (tanpa kode negara)
   const localNumber = cleanPhone.replace(/^62/, '');
 
-  try {
-    const response = await axios.post(FONNTE_API, {
-      target: localNumber,
-      message: message,
-      countryCode: '62'
-    }, {
-      headers: {
-        'Authorization': FONNTE_TOKEN
-      }
-    });
+  // Exponential backoff: 3 attempts (1s, 3s, 7s delay antar percobaan)
+  const MAX_RETRIES = 3;
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const response = await axios.post(FONNTE_API, {
+        target: localNumber,
+        message: message,
+        countryCode: '62'
+      }, {
+        headers: {
+          'Authorization': FONNTE_TOKEN
+        },
+        timeout: 10000 // tanpa ini, endpoint Fonnte yang macet menahan promise tanpa batas
+      });
 
-    logger.info(`WA terkirim ke ${cleanPhone}: ${response.data?.status || 'ok'}`);
-    return true;
-  } catch (error) {
-    logger.error(`Gagal kirim WA ke ${cleanPhone}: ${error.message}`);
-    return false;
+      logger.info(`WA terkirim ke ${cleanPhone}: ${response.data?.status || 'ok'}`);
+      return true;
+    } catch (error) {
+      // 4xx (selain 429) = error permanen (token salah, nomor ditolak) — retry
+      // tidak akan pernah berhasil, jadi jangan buang waktu 1s+3s+7s untuk itu.
+      const status = error.response?.status;
+      const permanent = status && status >= 400 && status < 500 && status !== 429;
+      if (attempt < MAX_RETRIES && !permanent) {
+        const delay = [1000, 3000, 7000][attempt - 1];
+        logger.warn(`WA attempt ${attempt}/${MAX_RETRIES} gagal untuk ${cleanPhone}, retry in ${delay}ms: ${error.message}`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      } else {
+        logger.error(`WA gagal setelah ${attempt} attempt ke ${cleanPhone}: ${error.message}`);
+        return false;
+      }
+    }
   }
+  return false;
 }
 
 /**
@@ -72,7 +78,7 @@ async function sendWhatsApp(phone, message) {
  */
 async function getPhoneByUsername(username) {
   try {
-    const [rows] = await db.query('SELECT phone FROM users WHERE username = ?', [username]);
+    const [rows] = await db.query('SELECT phone FROM users WHERE username = ? AND deleted_at IS NULL', [username]);
     if (rows.length > 0 && rows[0].phone) {
       return rows[0].phone;
     }
@@ -89,7 +95,7 @@ async function getPhoneByUsername(username) {
  */
 async function getAllOperatorPhones() {
   try {
-    const [rows] = await db.query("SELECT phone FROM users WHERE role = 'Operator' AND phone IS NOT NULL AND phone != ''");
+    const [rows] = await db.query("SELECT phone FROM users WHERE role = 'Operator' AND deleted_at IS NULL AND phone IS NOT NULL AND phone != ''");
     return rows.map(r => r.phone).filter(Boolean);
   } catch (error) {
     logger.error('Gagal ambil nomor operator:', error.message);
@@ -168,8 +174,8 @@ async function notifyTicketUpdated(ticketId, oldStatus, newStatus, changedBy, ti
   const creatorPhone = await getPhoneByUsername(ticketData?.created_by || ticketData?.createdBy);
   if (creatorPhone) recipients.add(creatorPhone);
 
-  // 2. PIC (teknisi yang ditugaskan) — jika berbeda dengan pembuat
-  if (creatorPhone && (ticketData?.created_by || ticketData?.createdBy) !== ticketData?.pic) {
+  // 2. PIC (teknisi yang ditugaskan) — selalu notifikasi, independen dari creator
+  if ((ticketData?.created_by || ticketData?.createdBy) !== ticketData?.pic) {
     const picPhone = await getPhoneByUsername(ticketData?.pic);
     if (picPhone) recipients.add(picPhone);
   }

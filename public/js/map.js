@@ -38,7 +38,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap',
-    bounds: ntbBounds
+    bounds: ntbBounds,
+    // Kirim referer penuh ke OSM (dipasangkan dengan header
+    // Referrer-Policy strict-origin-when-cross-origin di server.js).
+    // Tanpa referer, tile server OSM menolak request dengan 403.
+    referrerPolicy: 'no-referrer-when-downgrade'
   }).addTo(map);
 
   // Cek URL params: ?lat=X&lng=Y&name=N — untuk navigasi dari halaman FTTH
@@ -57,11 +61,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     const res = await fetch('/api/geo');
     const data = await res.json();
 
-    // Update stats
-    document.getElementById('statOlt').textContent = data.stats.olt;
-    document.getElementById('statOdc').textContent = data.stats.odc;
-    document.getElementById('statOdp').textContent = data.stats.odp;
-    document.getElementById('statOnu').textContent = data.stats.onu;
+    // Update legend + layer control counts
+    const oltCount = data.stats.olt;
+    const odcCount = data.stats.odc;
+    const odpCount = data.stats.odp;
+    const onuCount = data.stats.onu;
 
     // Isi global lookup + siapkan link navigasi
     (data.olt || []).forEach(o => { if (o.lat && o.lng) deviceCoords[o.name] = { lat: o.lat, lng: o.lng }; });
@@ -73,11 +77,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     const devLink = (name) => {
       const c = deviceCoords[name];
       if (!c) return '';
-      return ` <a href="#" onclick="flyToDevice(${c.lat},${c.lng},'${name.replace(/'/g,"\\'")}');return false;" style="color:#2563eb;text-decoration:underline;cursor:pointer;" title="Klik untuk lihat di peta">📍</a>`;
+      return ` <a href="#" onclick="flyToDevice(${c.lat},${c.lng},'${name.replace(/'/g,"\\'")}');return false;" style="color:var(--odc);text-decoration:underline;cursor:pointer;" title="Klik untuk lihat di peta">📍</a>`;
     };
 
     // Helper: Google Maps link
-    const gmLink = (lat, lng) => `<br><a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank" rel="noopener" style="font-size:0.8rem;color:#2563eb;text-decoration:none;">📍 Buka di Google Maps</a>`;
+    const gmLink = (lat, lng) => `<br><a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank" rel="noopener" style="font-size:0.8rem;color:var(--odc);text-decoration:none;">📍 Buka di Google Maps</a>`;
 
     // Build lookup maps untuk chain koneksi
     const oltByName = {}; (data.olt||[]).forEach(o => oltByName[o.name] = o);
@@ -85,7 +89,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const odpByName = {}; data.odp.forEach(o => odpByName[o.name] = o);
 
     // Bangun chain koneksi dari parent ke child (dengan link navigasi)
-    function buildChain(item, type) {
+    const buildChain = function (item, type) {
       let chain = '';
       let parent = null, parentName = '', parentType = '', parentPort = item.parentPort;
       if (type === 'odc') { parent = oltByName[item.area]; parentName = item.area; parentType = 'OLT'; }
@@ -96,7 +100,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (parentName) {
         const portInfo = parentPort ? ' · ' + parentPort : '';
         const devIcon = parent && parent.lat && parent.lng ? devLink(parentName) : '';
-        chain += `<br><span style="font-size:0.82rem;color:#4f46e5;">⬆ ${parentType}: ${parentName}${portInfo}${devIcon}</span>`;
+        chain += `<br><span style="font-size:0.82rem;color:var(--olt);">⬆ ${parentType}: ${parentName}${portInfo}${devIcon}</span>`;
       }
       // Kakek: OLT dari ODC, atau ODC dari ODP
       if (parent && parentType === 'ODC') {
@@ -105,7 +109,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (gpName) {
           const gp = oltByName[gpName];
           const gpIcon = gp && gp.lat && gp.lng ? devLink(gpName) : '';
-          chain += `<br><span style="font-size:0.78rem;color:#7c3aed;">⬆ OLT: ${gpName}${gpPort ? ' · ' + gpPort : ''}${gpIcon}</span>`;
+          chain += `<br><span style="font-size:0.78rem;color:var(--olt);">⬆ OLT: ${gpName}${gpPort ? ' · ' + gpPort : ''}${gpIcon}</span>`;
         }
       } else if (parent && parentType === 'ODP') {
         const gpName = parent.parentOdc;
@@ -113,14 +117,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (gpName) {
           const gp = odcByName[gpName];
           const gpIcon = gp && gp.lat && gp.lng ? devLink(gpName) : '';
-          chain += `<br><span style="font-size:0.78rem;color:#4f46e5;">⬆ ODC: ${gpName}${gpPort ? ' · ' + gpPort : ''}${gpIcon}</span>`;
+          chain += `<br><span style="font-size:0.78rem;color:var(--olt);">⬆ ODC: ${gpName}${gpPort ? ' · ' + gpPort : ''}${gpIcon}</span>`;
           // Buyut: OLT dari ODC
           if (gp) {
             const ggpName = gp.area;
             if (ggpName) {
               const ggp = oltByName[ggpName];
               const ggpIcon = ggp && ggp.lat && ggp.lng ? devLink(ggpName) : '';
-              chain += `<br><span style="font-size:0.76rem;color:#7c3aed;">⬆ OLT: ${ggpName}${gp.parentPort ? ' · ' + gp.parentPort : ''}${ggpIcon}</span>`;
+              chain += `<br><span style="font-size:0.76rem;color:var(--olt);">⬆ OLT: ${ggpName}${gp.parentPort ? ' · ' + gp.parentPort : ''}${ggpIcon}</span>`;
             }
           }
         }
@@ -134,7 +138,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (!o.lat || !o.lng) return;
       const m = L.circleMarker([o.lat, o.lng], {
         radius: 10, fillColor: '#7c3aed', color: '#fff', weight: 2, fillOpacity: 0.9
-      }).bindPopup(`<b>🖥 OLT</b><br>${o.name}${gmLink(o.lat, o.lng)}`).addTo(oltGroup);
+      }).bindPopup(`<b>🖥 OLT</b><br>${esc(o.name)}
+        ${o.brand ? `<br>🏷 ${esc(o.brand)}` : ''}
+        ${o.ports ? `<br>🔌 ${o.ports} port` : ''}
+        ${gmLink(o.lat, o.lng)}`).addTo(oltGroup);
       markerByName[o.name] = m;
     });
 
@@ -144,7 +151,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (!o.lat || !o.lng) return;
       const mOdc = L.circleMarker([o.lat, o.lng], {
         radius: 8, fillColor: '#2563eb', color: '#fff', weight: 2, fillOpacity: 0.9
-      }).bindPopup(`<b>📡 ODC</b><br>${o.name}${buildChain(o, 'odc')}${gmLink(o.lat, o.lng)}`).addTo(odcGroup);
+      }).bindPopup(`<b>📡 ODC</b><br>${esc(o.name)}${o.parentPort ? `<br>🔗 ${esc(o.parentPort)}` : ''}${buildChain(o, 'odc')}${gmLink(o.lat, o.lng)}`).addTo(odcGroup);
       markerByName[o.name] = mOdc;
     });
 
@@ -154,7 +161,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (!o.lat || !o.lng) return;
       const mOdp = L.circleMarker([o.lat, o.lng], {
         radius: 6, fillColor: '#10b981', color: '#fff', weight: 2, fillOpacity: 0.9
-      }).bindPopup(`<b>🔌 ODP</b><br>${o.name}${buildChain(o, 'odp')}${gmLink(o.lat, o.lng)}`).addTo(odpGroup);
+      }).bindPopup(`<b>🔌 ODP</b><br>${esc(o.name)}${buildChain(o, 'odp')}${gmLink(o.lat, o.lng)}`).addTo(odpGroup);
       markerByName[o.name] = mOdp;
     });
     if (data.odp.length) odpGroup.addTo(map);
@@ -165,10 +172,18 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (!o.lat || !o.lng) return;
       const mOnu = L.circleMarker([o.lat, o.lng], {
         radius: 5, fillColor: '#f59e0b', color: '#fff', weight: 2, fillOpacity: 0.9
-      }).bindPopup(`<b>📶 ONU</b><br>${o.name}${buildChain(o, 'onu')}${gmLink(o.lat, o.lng)}`).addTo(onuGroup);
+      }).bindPopup(`<b>📶 ONU</b><br>${esc(o.name)}${o.serialNumber ? `<br>📟 SN: ${esc(o.serialNumber)}` : ''}${buildChain(o, 'onu')}${gmLink(o.lat, o.lng)}`).addTo(onuGroup);
       markerByName[o.name] = mOnu;
     });
     if (data.onu.length) onuGroup.addTo(map);
+
+    // Layer control — combined filter + legend with counts
+    const overlayMaps = {};
+    overlayMaps["<span style='display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--olt);margin-right:6px;'></span> OLT <span style='float:right;margin-left:8px;font-weight:600;color:#374151;'>"+oltCount+"</span>"] = oltGroup;
+    overlayMaps["<span style='display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--odc);margin-right:6px;'></span> ODC <span style='float:right;margin-left:8px;font-weight:600;color:#374151;'>"+odcCount+"</span>"] = odcGroup;
+    overlayMaps["<span style='display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--odp);margin-right:6px;'></span> ODP <span style='float:right;margin-left:8px;font-weight:600;color:#374151;'>"+odpCount+"</span>"] = odpGroup;
+    overlayMaps["<span style='display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--onu);margin-right:6px;'></span> ONU <span style='float:right;margin-left:8px;font-weight:600;color:#374151;'>"+onuCount+"</span>"] = onuGroup;
+    L.control.layers(null, overlayMaps, { collapsed: false }).addTo(map);
 
     // Jika ada focus dari URL params, cari marker yang sudah ada
     if (hasFocus && focusName) {

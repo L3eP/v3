@@ -1,47 +1,43 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 
 <head>
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#4f46e5">
+    <meta name="theme-color" content="#DC2626">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Settings</title>
-    <link rel="stylesheet" href="css/style.css?v=9">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='28' font-size='28'>📡</text></svg>">
+    <title>Settings - MAYUNG</title>
+    <script>(function(){try{var t=localStorage.getItem('theme');if(t==='dark'||(!t&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
+    <link rel="stylesheet" href="css/style.css?v=55">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="vendor/fontawesome/css/all.min.css">
 </head>
 
 <body class="with-sidebar">
+    <a href="#main" class="skip-nav">Langsung ke konten</a>
     <div id="navbar"></div>
 
-    <div class="login-container">
+    <div id="main" class="login-container">
         <div class="login-card max-w-600">
-            <h2>User Settings</h2>
+            <h1>User Settings</h1>
 
             <form id="settingsForm" enctype="multipart/form-data" class="text-left">
-                <div class="form-group hidden" id="companyNameGroup">
-                    <label>Company Name</label>
-                    <input type="text" id="companyName" name="companyName" placeholder="Enter company name">
-                </div>
-                <div class="form-group hidden" id="companyLogoGroup">
-                    <label>Company Logo</label>
-                    <input type="file" id="companyLogo" name="companyLogo" accept="image/*">
-                    <small class="text-muted">Recommended size: 30px height</small>
-                </div>
                 <div class="form-group">
-                    <label>Username</label>
+                    <label for="settingsUsername">Username</label>
                     <input type="text" id="settingsUsername" name="username" readonly class="input-disabled">
                 </div>
                 <div class="form-group">
-                    <label>Full Name</label>
+                    <label for="settingsFullName">Full Name</label>
                     <input type="text" id="settingsFullName" name="fullName" readonly class="input-disabled">
                 </div>
                 <div class="form-group">
                     <label for="phone">Phone Number</label>
-                    <input type="tel" id="phone" name="phone" placeholder="628xxx atau 08xxx">
+                    <input type="tel" id="phone" name="phone" placeholder="628xxx atau 08xxx" oninput="phoneOnly(this)" maxlength="16">
                 </div>
                 <div class="form-group">
                     <label for="photo">New Profile Photo</label>
@@ -63,7 +59,7 @@
                         placeholder="Enter current password" required>
                 </div>
 
-                <button type="submit" class="login-btn">Save Changes</button>
+                <button type="submit" class="login-btn"><i class="fas fa-save"></i> Save Changes</button>
             </form>
 
             <button class="login-btn btn-gray" onclick="window.location.href='dashboard.html'">Back to
@@ -72,7 +68,7 @@
     </div>
 
     <!-- Modal for Messages -->
-    <div id="messageModal" class="modal">
+    <div id="messageModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
         <div class="modal-content">
             <span class="close-btn">&times;</span>
             <h3 id="modalTitle">Success</h3>
@@ -81,10 +77,11 @@
         </div>
     </div>
 
-    <script src="js/csrf.js"></script>
-    <script src="js/navbar.js"></script>
-    <script src="js/settings.js"></script>
-    <script src="js/toast.js"></script>
+    <script src="js/constants.js?v=2"></script>
+    <script src="js/csrf.js?v=1"></script>
+    <script src="js/toast.js?v=5"></script>
+    <script src="js/navbar.js?v=4"></script>
+    <script src="js/settings.js?v=1"></script>
 </body>
 
 </html>

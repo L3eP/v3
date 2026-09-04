@@ -1,10 +1,18 @@
 const express = require('express');
 const router = express.Router();
+const fs = require('fs');
+const path = require('path');
 const db = require('../db');
 const upload = require('../middleware/upload');
 const { isAuthenticated, isAdmin } = require('../middleware/auth');
 const asyncHandler = require('../middleware/asyncHandler');
-const path = require('path');
+const { mutationLimiter } = require('../middleware/rateLimits');
+const logger = require('../utils/logger');
+const { cleanupUploadOnError } = require('../utils/uploads');
+
+// 3.2 — Rate limiter mutasi (sebelumnya endpoint ini hanya dilindungi limiter
+// global 1000/15min — upload logo 5MB bisa diulang ratusan kali per window)
+router.use(mutationLimiter('settings'));
 
 // Get Company Name (Public or Authenticated)
 router.get('/settings/company-name', asyncHandler(async (req, res) => {
@@ -44,9 +52,26 @@ router.post('/settings/company-logo', isAuthenticated, isAdmin, upload.single('l
         return res.status(400).json({ message: 'No file uploaded' });
     }
 
+    const [prevRows] = await db.query("SELECT setting_value FROM settings WHERE setting_key = 'company_logo'");
     const logoUrl = `/uploads/${req.file.filename}`;
 
-    await db.query("INSERT INTO settings (setting_key, setting_value) VALUES ('company_logo', ?) ON DUPLICATE KEY UPDATE setting_value = ?", [logoUrl, logoUrl]);
+    try {
+        await db.query("INSERT INTO settings (setting_key, setting_value) VALUES ('company_logo', ?) ON DUPLICATE KEY UPDATE setting_value = ?", [logoUrl, logoUrl]);
+    } catch (err) {
+        cleanupUploadOnError(req);
+        throw err;
+    }
+
+    // Hapus file logo lama — tanpa ini public/uploads tumbuh tanpa batas setiap
+    // kali logo diganti (file lama tidak pernah dipakai lagi tapi tidak dihapus).
+    const prevUrl = prevRows[0] && prevRows[0].setting_value;
+    if (prevUrl && prevUrl.startsWith('/uploads/') && prevUrl !== logoUrl) {
+        const prevPath = path.join(__dirname, '../public', prevUrl);
+        fs.unlink(prevPath, (err) => {
+            if (err && err.code !== 'ENOENT') logger.error('Failed to remove old logo file', { prevUrl, error: err.message });
+        });
+    }
+
     res.json({ message: 'Company logo updated successfully', logoUrl });
 }));
 

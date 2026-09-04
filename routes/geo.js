@@ -7,29 +7,29 @@ const asyncHandler = require('../middleware/asyncHandler');
 // GET /api/geo — Data geografis untuk peta (OLT, ODC, ODP, ONU)
 router.get('/api/geo', isAuthenticated, asyncHandler(async (req, res) => {
   const [olt] = await db.query(
-    `SELECT id, label as name, latitude as lat, longitude as lng
-     FROM reference_options
+    `SELECT id, label as name, brand, total_ports as ports, latitude as lat, longitude as lng
+     FROM ftth_devices
      WHERE type = 'olt' AND latitude IS NOT NULL AND longitude IS NOT NULL
      ORDER BY label`
   );
   const [odc] = await db.query(
     `SELECT id, label as name, group_name as area, parent_port as parentPort,
             latitude as lat, longitude as lng
-     FROM reference_options
+     FROM ftth_devices
      WHERE type = 'odc' AND latitude IS NOT NULL AND longitude IS NOT NULL
      ORDER BY label`
   );
   const [odp] = await db.query(
     `SELECT id, label as name, group_name as parentOdc, parent_port as parentPort,
             latitude as lat, longitude as lng
-     FROM reference_options
+     FROM ftth_devices
      WHERE type = 'odp' AND latitude IS NOT NULL AND longitude IS NOT NULL
      ORDER BY label`
   );
   const [onu] = await db.query(
     `SELECT id, label as name, group_name as parentOdp, parent_port as parentPort,
-            latitude as lat, longitude as lng
-     FROM reference_options
+            serial_number as serialNumber, latitude as lat, longitude as lng
+     FROM ftth_devices
      WHERE type = 'onu' AND latitude IS NOT NULL AND longitude IS NOT NULL
      ORDER BY label`
   );

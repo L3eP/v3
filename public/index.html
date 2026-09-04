@@ -1,31 +1,36 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 
 <head>
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#4f46e5">
+    <meta name="theme-color" content="#DC2626">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login</title>
-    <link rel="stylesheet" href="css/style.css?v=9">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='28' font-size='28'>📡</text></svg>">
+    <title>Login - MAYUNG</title>
+    <script>(function(){try{var t=localStorage.getItem('theme');if(t==='dark'||(!t&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
+    <link rel="stylesheet" href="css/style.css?v=55">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="vendor/fontawesome/css/all.min.css">
 </head>
 
 <body>
-    <div class="login-container">
+    <a href="#main" class="skip-nav">Langsung ke konten</a>
+    <div class="login-container" id="main">
         <div class="login-card">
             <div class="login-brand">
                 <img src="uploads/1765639881969-Screenshot_2025_12_04_at_17.17.07_removebg_preview.png" alt="MAYUNG Logo" class="login-logo">
-                <h2 class="login-company-name">MAYUNG</h2>
+                <h1 class="login-company-name">MAYUNG</h1>
                 <p class="login-tagline">Sistem Ticketing & Manajemen Jaringan</p>
             </div>
             <form id="loginForm">
                 <div class="form-group">
                     <label for="username">Username</label>
-                    <input type="text" id="username" name="username" placeholder="Enter your username" required>
+                    <input type="text" id="username" name="username" placeholder="Enter your username" required autofocus>
                 </div>
                 <div class="form-group">
                     <label for="password">Password</label>
@@ -41,18 +46,10 @@
         document.getElementById('copyrightYear').textContent = new Date().getFullYear();
     </script>
 
-    <!-- Modal for Error Messages -->
-    <div id="errorModal" class="modal">
-        <div class="modal-content">
-            <span class="close-btn">&times;</span>
-            <h3>Login Failed</h3>
-            <p id="errorMessage">Invalid credentials.</p>
-            <button class="modal-ok-btn">Try Again</button>
-        </div>
-    </div>
-
-    <script src="js/csrf.js"></script>
-    <script src="js/script.js"></script>
+    <script src="js/constants.js?v=2"></script>
+    <script src="js/csrf.js?v=1"></script>
+    <script src="js/toast.js?v=5"></script>
+    <script src="js/script.js?v=1"></script>
 </body>
 
 </html>

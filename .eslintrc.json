@@ -17,5 +17,47 @@
     "ecmaVersion": 2022,
     "sourceType": "script"
   },
-  "ignorePatterns": ["node_modules/", "backup/"]
+  "ignorePatterns": ["node_modules/", "backup/"],
+  "globals": {
+    "ROLES": "readonly",
+    "getTheme": "readonly",
+    "toggleTheme": "readonly",
+    "formatId": "readonly",
+    "isPrivileged": "readonly",
+    "phoneOnly": "readonly",
+    "validatePhone": "readonly",
+    "apiFetch": "readonly",
+    "getCookie": "readonly",
+    "getCsrfToken": "readonly",
+    "csrfFetch": "readonly",
+    "esc": "readonly",
+    "debounce": "readonly",
+    "setLoading": "readonly",
+    "getModalElements": "readonly",
+    "showModal": "readonly",
+    "showToast": "readonly",
+    "showConfirm": "readonly",
+    "syncScrollLock": "readonly",
+    "getTopModal": "readonly",
+    "getTopLightbox": "readonly",
+    "isFormDirty": "readonly",
+    "closeModalWithDraftCheck": "readonly",
+    "closeLightbox": "readonly",
+    "initModalSystem": "readonly",
+    "L": "readonly",
+    "Chart": "readonly",
+    "goHome": "readonly",
+    "goSection": "readonly",
+    "goType": "readonly",
+    "saveItem": "readonly",
+    "closeEditModal": "readonly"
+  },
+  "overrides": [
+    {
+      "files": ["test/**/*.js"],
+      "env": {
+        "mocha": true
+      }
+    }
+  ]
 }
