@@ -6,6 +6,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     const user = JSON.parse(userStr);
+    const isPrivileged = user.role === ROLES.OWNER || user.role === ROLES.OPERATOR;
+
+    // Role-adaptive: hub priviliged disembunyikan untuk Teknisi,
+    // strip "Tugas Saya" ditampilkan sebaliknya.
+    if (!isPrivileged) {
+        document.querySelectorAll('.privileged-only').forEach(el => el.classList.add('hidden'));
+    }
+    const teknisiHub = document.getElementById('teknisiHub');
+    if (teknisiHub) teknisiHub.classList.toggle('hidden', isPrivileged);
 
     // Logout functionality
     const logoutBtn = document.getElementById('logoutBtn');
@@ -13,7 +22,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         logoutBtn.addEventListener('click', async (e) => {
             e.preventDefault();
             try {
-                const response = await fetch('/logout', { method: 'POST' });
+                const response = await csrfFetch('/logout', { method: 'POST' });
                 const result = await response.json();
                 if (result.redirect) {
                     window.location.href = result.redirect;
@@ -31,86 +40,178 @@ document.addEventListener('DOMContentLoaded', async () => {
         return res;
     };
 
-    async function fetchTickets() {
+    const setText = (id, v) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = v;
+    };
+
+    // ======================================================================
+    // 1) Stats bulanan — SATU ambilan agregat dari /api/stats/month
+    // ======================================================================
+    async function fetchStats(quiet = false) {
         try {
-            const response = await apiFetch('/tickets');
-            const tickets = await response.json();
-            window.currentTickets = tickets; // Store ALL tickets for search/recent list
-
-            // Filter for Current Month for Stats and Chart
-            const now = new Date();
-            const currentMonth = now.getMonth();
-            const currentYear = now.getFullYear();
-
-            const monthlyTickets = tickets.filter(t => {
-                const d = new Date(t.createdAt);
-                return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-            });
-
-            window.monthlyTickets = monthlyTickets; // Store for chart updates
-
-            updateStats(monthlyTickets);
-            renderChart(monthlyTickets);
-
-            // Render recent tickets (non-Selesai, top 10)
-            renderRecentTickets(tickets);
+            const res = await apiFetch('/api/stats/month');
+            if (!res.ok) throw new Error('Stats failed');
+            const stats = await res.json();
+            window.stats = stats;
+            if (isPrivileged) renderHeroCards(stats);
+            else renderTeknisiStrip(stats.teknisi || {}, stats.sla ? stats.sla.avgHours : null);
         } catch (error) {
-            console.error('Error loading dashboard data:', error);
+            console.error('Error loading stats:', error);
+            if (!quiet) {
+                showModal('Error', 'Gagal memuat statistik dashboard. Coba lagi?', 'error', () => fetchStats());
+            }
         }
     }
 
-    function updateStats(tickets) {
-        const totalDone = tickets.filter(t => t.status === 'Selesai').length;
-        const totalOnProgress = tickets.filter(t => t.status === 'Dikerjakan').length;
-        const totalPending = tickets.filter(t => t.status === 'Pending' || t.status === 'Terlapor').length;
-        const totalTickets = tickets.length;
+    function renderHeroCards(s) {
+        // Antrian + aging
+        setText('heroAntrianTotal', s.totalOpen);
+        setText('agingToday', s.aging.today);
+        setText('aging12', s.aging.oneTwoDays);
+        setText('agingOver', s.aging.older);
+        setText('bdTerlapor', s.statusBreakdown['Terlapor'] || 0);
+        setText('bdDikerjakan', s.statusBreakdown['Dikerjakan'] || 0);
+        setText('bdPending', s.statusBreakdown['Pending'] || 0);
 
-        // Calculate New This Week
-        const oneWeekAgo = new Date();
-        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-        const newThisWeek = tickets.filter(t => new Date(t.createdAt) >= oneWeekAgo).length;
+        // Selesai bulan ini + rasio + pekan ini
+        setText('heroSelesai', s.done.month);
+        const aktifTotal = s.totalOpen + s.done.month;
+        const rasio = aktifTotal > 0 ? Math.round((s.done.month / aktifTotal) * 100) : 0;
+        setText('selesaiRasio', `${rasio}%`);
+        const bar = document.getElementById('selesaiRasioBar');
+        if (bar) bar.style.width = `${Math.min(100, rasio)}%`;
+        setText('selesaiPekanIni', s.done.week);
+        setText('selesaiBulanLabel', new Date().toLocaleDateString('id-ID', { month: 'long' }));
 
-        // Calculate Completion Rate
-        const completionRate = totalTickets > 0 ? Math.round((totalDone / totalTickets) * 100) : 0;
-
-        // === SLA: Rata-rata waktu penyelesaian (jam) ===
-        const doneTickets = tickets.filter(t => t.status === 'Selesai' && t.dateSelesai);
-        let avgSla = 0;
-        if (doneTickets.length > 0) {
-            const totalHours = doneTickets.reduce((sum, t) => {
-                const start = new Date(t.createdAt);
-                const end = new Date(t.dateSelesai);
-                return sum + (end - start) / (1000 * 60 * 60);
-            }, 0);
-            avgSla = Math.round(totalHours / doneTickets.length);
-        }
-        const slaDays = Math.floor(avgSla / 24);
-        const slaHours = avgSla % 24;
-        const slaText = slaDays > 0 ? `${slaDays}h ${slaHours}j` : `${avgSla} jam`;
-
-        // Update DOM
-        document.getElementById('totalDone').textContent = totalDone;
-        document.getElementById('totalOnProgress').textContent = totalOnProgress;
-        document.getElementById('totalPending').textContent = totalPending;
-        document.getElementById('totalTickets').textContent = totalTickets;
-
-        document.getElementById('newThisWeek').textContent = newThisWeek;
-        document.getElementById('completionRate').textContent = `${completionRate}%`;
-        document.getElementById('completionBar').style.width = `${completionRate}%`;
-
-        // SLA
-        const slaEl = document.getElementById('avgSla');
-        if (slaEl) {
-            slaEl.textContent = slaText;
-            slaEl.title = `Rata-rata ${avgSla} jam dari ${doneTickets.length} tiket selesai`;
+        // SLA — fallback jujur: belum bermakna sebelum ada tiket selesai
+        const slaEl = document.getElementById('heroSla');
+        const sub = document.getElementById('slaSubtext');
+        if (s.sla.doneCount > 0 && s.sla.avgHours !== null) {
+            slaEl.textContent = formatHours(s.sla.avgHours);
+            sub.textContent = `${s.sla.doneCount} tiket selesai dihitung`;
+        } else {
+            slaEl.textContent = '—';
+            sub.textContent = 'menunggu data selesai';
         }
     }
 
+    // "3 h 12 j" kalau ≥1 hari, "18 jam" kalau di bawah itu — dipakai hero
+    // card (SLA tim) maupun strip Teknisi (SLA pribadi) supaya formatnya konsisten.
+    function formatHours(hours) {
+        const days = Math.floor(hours / 24);
+        const rem = Math.round(hours % 24);
+        return days > 0 ? `${days} h ${rem} j` : `${Math.round(hours)} jam`;
+    }
+
+    function renderTeknisiStrip(t, teamSlaAvgHours) {
+        setText('tMyOpen', t.myOpen ?? '–');
+        setText('tMyAttention', t.myAttention ?? '–');
+        setText('tMyDoneMonth', t.myDoneMonth ?? '–');
+        setText('tMyActivitiesToday', t.myActivitiesToday ?? '–');
+
+        // Warna tiap kartu sekarang statis lewat class di dashboard.html (biru
+        // info / merah perlu-perhatian / hijau selesai / amber SLA) — bukan
+        // di-toggle kondisional lagi. Enam kartu sama-sama berwarna supaya
+        // baris terasa satu set, bukan satu kartu mencolok di antara yang polos.
+
+        // SLA saya vs SLA tim — angka baru bermakna kalau ada pembanding,
+        // bukan berdiri sendiri.
+        const slaLabelEl = document.getElementById('tMySlaLabel');
+        if (t.mySlaAvgHours !== null && t.mySlaAvgHours !== undefined) {
+            setText('tMySla', formatHours(t.mySlaAvgHours));
+            if (slaLabelEl) {
+                slaLabelEl.textContent = (teamSlaAvgHours !== null && teamSlaAvgHours !== undefined)
+                    ? `SLA saya (tim: ${formatHours(teamSlaAvgHours)})`
+                    : 'rata-rata SLA saya';
+            }
+        } else {
+            setText('tMySla', '—');
+            if (slaLabelEl) slaLabelEl.textContent = 'SLA saya — belum ada tiket selesai';
+        }
+        setText('tMyWeekActivities', t.myWeekActivities ?? '–');
+    }
+
+    // ======================================================================
+    // 2) Chart "Tren Bulan Ini" — paket data terbatas (100 tiket terakhir)
+    // ======================================================================
     let chartInstance = null;
     let currentChartType = 'bar'; // Default type
 
-    function renderChart(tickets, groupBy = 'subNode') {
-        const ctx = document.getElementById('ticketsChart').getContext('2d');
+    // Palette diambil dari token CSS (bukan array hex hardcoded)
+    function chartPalette() {
+        const cs = getComputedStyle(document.documentElement);
+        const token = (name, fallback) => cs.getPropertyValue(name).trim() || fallback;
+        return [
+            token('--primary-color', '#DC2626'),
+            token('--accent-violet', '#7C3AED'),
+            token('--sem-warn-strong', '#B45309'),
+            token('--sem-success-strong', '#047857'),
+            token('--sem-info-strong', '#1D4ED8'),
+            token('--sem-danger-strong', '#B91C1C')
+        ];
+    }
+
+    function hexToRgba(hex, alpha) {
+        const m = /^#?([0-9a-f]{6})$/i.exec(String(hex).trim());
+        if (!m) return `rgba(220, 38, 38, ${alpha})`;
+        const n = parseInt(m[1], 16);
+        return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+    }
+
+    // Chart.js dimuat LAZY: sebelumnya <script> eager di <head> (~200 KB,
+    // render-blocking di landing page), padahal chart hanya untuk Owner/Operator
+    // dan butuh data yang datang belakangan. Sekarang: tak pernah dimuat oleh
+    // Teknisi, dan dialog pemuatannya tidak memblokir parse halaman.
+    let chartLibPromise = null;
+    function loadChartLib() {
+        if (window.Chart) return Promise.resolve(window.Chart);
+        if (!chartLibPromise) {
+            chartLibPromise = new Promise((resolve, reject) => {
+                const s = document.createElement('script');
+                s.src = 'https://cdn.jsdelivr.net/npm/chart.js';
+                s.async = true;
+                s.onload = () => resolve(window.Chart);
+                s.onerror = () => {
+                    chartLibPromise = null;
+                    reject(new Error('Gagal memuat Chart.js'));
+                };
+                document.head.appendChild(s);
+            });
+        }
+        return chartLibPromise;
+    }
+
+    async function fetchChartTickets() {
+        if (!isPrivileged) return;
+        try {
+            const res = await apiFetch('/tickets?page=1&limit=100&sort=createdAt&order=desc');
+            if (!res.ok) throw new Error('Chart failed');
+            const data = await res.json();
+            const tickets = Array.isArray(data) ? data : (data.data || []);
+            window.monthlyTickets = tickets;
+            const chartSelect = document.getElementById('chartGroupBy');
+            renderChart(tickets, chartSelect ? chartSelect.value : 'subNode');
+        } catch (error) {
+            console.error('Error loading chart data:', error);
+        }
+    }
+
+    async function renderChart(tickets, groupBy = 'subNode') {
+        const ctx = document.getElementById('ticketsChart');
+        if (!ctx) return;
+
+        // Chart.js diunduh saat pertama kali chart benar-benar dirender
+        try {
+            await loadChartLib();
+        } catch (e) {
+            const summaryElement = document.getElementById('chartSummary');
+            if (summaryElement) summaryElement.textContent = 'Grafik gagal dimuat — cek koneksi internet.';
+            console.warn('Chart.js load failed:', e);
+            return;
+        }
+
+        const palette = chartPalette();
 
         // Aggregate data
         const counts = {};
@@ -122,7 +223,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const labels = Object.keys(counts);
         const data = Object.values(counts);
 
-        // Find top category for summary
+        // Kategori terbesar untuk ringkasan
         let topCategory = '';
         let maxCount = 0;
         for (const [key, value] of Object.entries(counts)) {
@@ -132,13 +233,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
-        // Update Summary Text
         const summaryElement = document.getElementById('chartSummary');
         if (summaryElement) {
             if (maxCount > 0) {
-                summaryElement.innerHTML = `Most tickets are in <strong>${topCategory}</strong> with <strong>${maxCount}</strong> tickets.`;
+                summaryElement.innerHTML = `Mayoritas tiket di <strong>${esc(topCategory)}</strong> (${esc(maxCount)} tiket, dari ${tickets.length} terbaru).`;
             } else {
-                summaryElement.textContent = 'No data available for chart.';
+                summaryElement.textContent = 'Belum ada data tren bulan ini.';
             }
         }
 
@@ -147,29 +247,23 @@ document.addEventListener('DOMContentLoaded', async () => {
             chartInstance.destroy();
         }
 
-        // Update title suffix
         const suffixMap = {
             'subNode': 'Sub-Node',
             'odc': 'ODC',
             'aktifitas': 'Aktifitas'
         };
-        const suffixElement = document.getElementById('chartTitleSuffix');
-        if (suffixElement) {
-            suffixElement.textContent = suffixMap[groupBy] || groupBy;
-        }
 
-        // Chart Config
         const chartConfig = {
             type: currentChartType,
             data: {
                 labels: labels,
                 datasets: [{
-                    label: `Trend by ${suffixMap[groupBy]}`,
+                    label: `Tren per ${suffixMap[groupBy] || groupBy}`,
                     data: data,
-                    backgroundColor: currentChartType === 'pie' ?
-                        ['#DC2626', '#EA580C', '#D97706', '#65A30D', '#059669', '#0891B2', '#2563EB', '#7C3AED', '#DB2777'] :
-                        'rgba(220, 38, 38, 0.8)',
-                    borderColor: currentChartType === 'pie' ? '#ffffff' : 'rgba(220, 38, 38, 1)',
+                    backgroundColor: currentChartType === 'pie'
+                        ? labels.map((_, i) => palette[i % palette.length])
+                        : hexToRgba(palette[0], 0.8),
+                    borderColor: currentChartType === 'pie' ? '#ffffff' : palette[0],
                     borderWidth: 1
                 }]
             },
@@ -202,39 +296,40 @@ document.addEventListener('DOMContentLoaded', async () => {
         chartInstance = new Chart(ctx, chartConfig);
     }
 
-    // Event listener for chart grouping
+if (isPrivileged) {
+    // Event listener untuk pemilihan grup chart
     const chartSelect = document.getElementById('chartGroupBy');
     if (chartSelect) {
-        chartSelect.addEventListener('change', (e) => {
+        chartSelect.addEventListener('change', async (e) => {
             if (window.monthlyTickets) {
-                renderChart(window.monthlyTickets, e.target.value);
+                await renderChart(window.monthlyTickets, e.target.value);
             }
         });
     }
 
-    // Chart Type Toggles
+    // Toggle tipe chart
     const btnBar = document.getElementById('btnChartBar');
     const btnPie = document.getElementById('btnChartPie');
 
     if (btnBar && btnPie) {
-        btnBar.addEventListener('click', () => {
+        btnBar.addEventListener('click', async () => {
             if (currentChartType !== 'bar') {
                 currentChartType = 'bar';
                 btnBar.classList.add('active');
                 btnPie.classList.remove('active');
                 if (window.monthlyTickets && chartSelect) {
-                    renderChart(window.monthlyTickets, chartSelect.value);
+                    await renderChart(window.monthlyTickets, chartSelect.value);
                 }
             }
         });
 
-        btnPie.addEventListener('click', () => {
+        btnPie.addEventListener('click', async () => {
             if (currentChartType !== 'pie') {
                 currentChartType = 'pie';
                 btnPie.classList.add('active');
                 btnBar.classList.remove('active');
                 if (window.monthlyTickets && chartSelect) {
-                    renderChart(window.monthlyTickets, chartSelect.value);
+                    await renderChart(window.monthlyTickets, chartSelect.value);
                 }
             }
         });
@@ -247,51 +342,57 @@ document.addEventListener('DOMContentLoaded', async () => {
             const canvas = document.getElementById('ticketsChart');
             if (canvas) {
                 const link = document.createElement('a');
-                link.download = 'chart-export.png';
+                link.download = `dashboard-chart-${new Date().toISOString().split('T')[0]}.png`;
                 link.href = canvas.toDataURL('image/png');
                 link.click();
             }
         });
     }
+}
 
-    // Search Functionality
-    const searchInput = document.getElementById('ticketSearch');
-    if (searchInput) {
-        searchInput.addEventListener('input', (e) => {
-            const searchTerm = e.target.value.toLowerCase();
-            if (window.currentTickets) {
-                const filtered = window.currentTickets.filter(t =>
-                    t.id.toString().includes(searchTerm) ||
-                    t.aktifitas.toLowerCase().includes(searchTerm) ||
-                    t.subNode.toLowerCase().includes(searchTerm)
-                );
-                renderRecentTickets(filtered);
-            }
-        });
+    // ======================================================================
+    // 3) Recent Tickets — slice server-side (10 teratas, pencarian 'q')
+    // Filter status (sembunyikan Selesai) berlaku utk SEMUA role, bukan cuma
+    // Owner/Operator — sebelumnya Teknisi ikut melihat tiketnya yang sudah
+    // Selesai di widget ini, tidak konsisten dengan versi Owner/Operator.
+    // ======================================================================
+    async function fetchRecentTickets(q = '') {
+        let url = '/tickets?page=1&limit=10&status=Terlapor,Dikerjakan,Pending';
+        if (q) url += `&search=${encodeURIComponent(q)}`;
+        try {
+            const res = await apiFetch(url);
+            if (!res.ok) throw new Error('Recent failed');
+            const data = await res.json();
+            window.currentTickets = data.data || [];
+            renderRecentTickets(window.currentTickets);
+        } catch (error) {
+            console.error('Error loading recent tickets:', error);
+        }
+    }
+
+    const recentSearchInput = document.getElementById('ticketSearch');
+    if (recentSearchInput) {
+        recentSearchInput.addEventListener('input', debounce((e) => {
+            fetchRecentTickets(e.target.value.trim());
+        }, 300));
     }
 
     function renderRecentTickets(tickets) {
-        // Filter out 'Selesai' (Done) tickets
-        tickets = tickets.filter(t => t.status !== 'Selesai');
-
         const recentList = document.getElementById('recentTicketsList');
         const emptyState = document.getElementById('emptyState');
+        if (!recentList) return;
         recentList.innerHTML = '';
 
         if (tickets.length === 0) {
             recentList.classList.add('hidden');
-            emptyState.classList.remove('hidden');
+            if (emptyState) emptyState.classList.remove('hidden');
             return;
         }
 
         recentList.classList.remove('hidden');
-        emptyState.classList.add('hidden');
+        if (emptyState) emptyState.classList.add('hidden');
 
-        // Sort by date desc and take top 10 (or all if filtered)
-        // If searching, show all matches up to a limit? Let's keep it simple: top 10 of filtered.
-        const recent = tickets.slice(0, 10);
-
-        recent.forEach(ticket => {
+        tickets.forEach(ticket => {
             const li = document.createElement('li');
             const statusClass = `status-${ticket.status.toLowerCase().replace(' ', '-')}`;
 
@@ -303,100 +404,74 @@ document.addEventListener('DOMContentLoaded', async () => {
             else statusIcon = '<i class="fas fa-exclamation-circle"></i>';
 
             li.innerHTML = `
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <div class="stat-icon" style="width: 32px; height: 32px; background: #f1f5f9; font-size: 0.9rem; color: var(--text-muted);">
+                <a class="dash-item-link" href="/ticket-details.html?id=${Number(ticket.id)}">
+                    <div class="dash-item-icon">
                         <i class="fas fa-ticket-alt"></i>
                     </div>
-                    <div>
-                        <strong style="display: block; color: var(--text-main);">#${ticket.id} ${ticket.aktifitas}</strong>
-                        <small style="color: var(--text-muted); display: flex; align-items: center; gap: 5px;">
-                            <i class="far fa-building"></i> ${ticket.subNode} 
-                            <span style="margin: 0 4px;">•</span> 
+                    <div class="flex-1">
+                        <strong class="dash-item-title">${formatId(ticket.id)} ${esc(ticket.aktifitas)}</strong>
+                        <small class="dash-item-meta">
+                            <i class="far fa-building"></i> ${esc(ticket.subNode)}
+                            <span class="dash-item-sep">•</span>
                             <i class="far fa-calendar-alt"></i> ${new Date(ticket.createdAt).toLocaleDateString()}
                         </small>
                     </div>
-                </div>
-                <span class="status-badge ${statusClass}" style="display: flex; align-items: center; gap: 5px;">
-                    ${statusIcon} ${ticket.status}
-                </span>
+                    <span class="status-badge ${statusClass} dash-item-badge">
+                        ${statusIcon} ${esc(ticket.status)}
+                    </span>
+                </a>
             `;
-            li.onclick = () => window.location.href = `/ticket-details.html?id=${ticket.id}`;
-            li.style.cursor = 'pointer';
             recentList.appendChild(li);
         });
     }
 
-    fetchTickets();
-    fetchActivities();
-    fetchTeknisiUsers();
-
-    async function fetchTeknisiUsers() {
+    // ======================================================================
+    // 4) Activity Log — slice server-side (10 teratas, pencarian 'q')
+    //    Teknisi otomatis dibatasi ke aktivitasnya sendiri oleh server.
+    // ======================================================================
+    async function fetchActivities(q = '') {
+        let url = '/activities?page=1&limit=10';
+        if (q) url += `&search=${encodeURIComponent(q)}`;
         try {
-            const response = await apiFetch('/users');
-            if (!response.ok) throw new Error('Failed to fetch users');
-            const users = await response.json();
-
-            // Filter for Teknisi only
-            const teknisiUsers = users.filter(u => u.role === 'Teknisi');
-
-            const filterSelect = document.getElementById('activityUserFilter');
-            if (filterSelect) {
-                teknisiUsers.forEach(user => {
-                    const option = document.createElement('option');
-                    option.value = user.username;
-                    option.textContent = user.username; // Or user.fullName if preferred
-                    filterSelect.appendChild(option);
-                });
-
-                filterSelect.addEventListener('change', (e) => {
-                    fetchActivities(e.target.value);
-                });
-            }
-        } catch (error) {
-            console.error('Error loading users for filter:', error);
-        }
-    }
-
-    async function fetchActivities(username = '') {
-        try {
-            let url = '/activities';
-            if (username) {
-                url += `?username=${encodeURIComponent(username)}`;
-            }
-
-            const response = await apiFetch(url);
-            if (!response.ok) throw new Error('Failed to fetch activities');
-            const activities = await response.json();
-            renderActivityLog(activities);
+            const res = await apiFetch(url);
+            if (!res.ok) throw new Error('Activities failed');
+            const activities = await res.json();
+            window._allActivities = activities.data || [];
+            renderActivityLog(window._allActivities);
         } catch (error) {
             console.error('Error loading activities:', error);
             document.getElementById('activityLogList').innerHTML = `<li class="p-4 text-center text-danger">Error loading activities</li>`;
         }
     }
 
+    const activitySearchInput = document.getElementById('activitySearch');
+    if (activitySearchInput) {
+        activitySearchInput.addEventListener('input', debounce((e) => {
+            fetchActivities(e.target.value.trim());
+        }, 300));
+    }
+
     function renderActivityLog(activities) {
         const activityList = document.getElementById('activityLogList');
+        if (!activityList) return;
         if (!activities || activities.length === 0) {
             activityList.innerHTML = `<li class="p-4 text-center text-muted">No recent activity</li>`;
             return;
         }
 
         activityList.innerHTML = '';
-        // Show top 10 activities
-        const recentActivities = activities.slice(0, 10);
-
-        recentActivities.forEach(activity => {
+        activities.forEach(activity => {
             const li = document.createElement('li');
             li.innerHTML = `
-                <div style="display: flex; align-items: start; gap: 12px;">
-                    <div class="stat-icon bg-info-light" style="width: 32px; height: 32px; font-size: 0.9rem;">
+                <div class="dash-item-row-start">
+                    <div class="dash-item-icon bg-info-light">
                         <i class="fas fa-user-clock text-info"></i>
                     </div>
                     <div>
-                        <strong style="display: block; color: var(--text-main); font-size: 0.95rem;">${activity.description}</strong>
-                         <small style="color: var(--text-muted); display: flex; align-items: center; gap: 5px;">
-                            <i class="fas fa-user-circle"></i> ${activity.username}
-                            <span style="margin: 0 4px;">•</span>
+                        <strong class="dash-item-title sm">${esc(activity.description)}</strong>
+                         <small class="dash-item-meta">
+                            <i class="fas fa-user-circle"></i> ${esc(activity.username)}
+                            <span class="dash-item-sep">•</span>
                             <i class="far fa-clock"></i> ${new Date(activity.date).toLocaleString()}
                         </small>
                     </div>
@@ -405,4 +480,100 @@ document.addEventListener('DOMContentLoaded', async () => {
             activityList.appendChild(li);
         });
     }
+
+    // ======================================================================
+    // 5) Quick Log Activity Modal
+    // ======================================================================
+    const quickLogBtn = document.getElementById('quickLogBtn');
+    const quickLogForm = document.getElementById('quickLogForm');
+    if (quickLogBtn && quickLogForm) {
+        quickLogBtn.addEventListener('click', () => {
+            // Dropdown memakai tiket terbuka yang sudah dimuat (slice)
+            const select = document.getElementById('qlTicketId');
+            if (select && window.currentTickets) {
+                select.innerHTML = '<option value="">— No Ticket (General) —</option>';
+                window.currentTickets
+                    .filter(t => t.status !== 'Selesai')
+                    .forEach(t => {
+                        const opt = document.createElement('option');
+                        opt.value = t.id;
+                        opt.textContent = `${t.lokasi} — ${t.aktifitas}`;
+                        select.appendChild(opt);
+                    });
+            }
+            document.getElementById('quickLogModal').classList.add('show');
+        });
+
+        quickLogForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const description = document.getElementById('qlDescription').value.trim();
+            if (!description) return;
+
+            const btn = quickLogForm.querySelector('.login-btn');
+            setLoading(btn, true, 'Logging...');
+
+            try {
+                const r = await csrfFetch('/activities', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        description,
+                        username: user.username,
+                        ticket_id: document.getElementById('qlTicketId').value || ''
+                    })
+                });
+                if (r.ok) {
+                    const data = await r.json();
+                    showToast(
+                        data.autoTransition
+                            ? `Activity logged! Tiket #${data.autoTransition.ticketId} otomatis dimulai (Dikerjakan).`
+                            : 'Activity logged!',
+                        'success'
+                    );
+                    quickLogForm.reset();
+                    document.getElementById('quickLogModal').classList.remove('show');
+                    fetchActivities(); // Refresh log
+                    if (data.autoTransition) fetchStats(true); // status tiket ikut berubah — hero card jangan basi
+                } else {
+                    showToast('Failed to log activity', 'error');
+                }
+            } catch (e) {
+                showToast('Error logging activity', 'error');
+            } finally {
+                setLoading(btn, false);
+            }
+        });
+    }
+
+    // ======================================================================
+    // 6) Auto-refresh 60 detik (semua ambilan sudah dibatasi — slice data)
+    // ======================================================================
+    function updateLastUpdate() {
+        const el = document.getElementById('lastUpdate');
+        if (el) el.innerHTML = `<i class="far fa-clock"></i> ${new Date().toLocaleTimeString()}`;
+    }
+
+    setInterval(async () => {
+        try {
+            await Promise.all([
+                fetchStats(true),
+                fetchRecentTickets((document.getElementById('ticketSearch')?.value || '').trim()),
+                fetchActivities((document.getElementById('activitySearch')?.value || '').trim()),
+                fetchChartTickets()
+            ]);
+            updateLastUpdate();
+        } catch (e) {
+            // Silent fail — jangan ganggu user dengan error polling
+            console.warn('Polling error:', e);
+        }
+    }, 60000);
+
+    // ===== Muat awal =====
+    fetchStats();
+    fetchChartTickets();
+    fetchRecentTickets();
+    fetchActivities();
+
+    // Update timestamp setelah fetch pertama
+    setTimeout(updateLastUpdate, 1000);
 });

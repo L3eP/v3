@@ -1,85 +1,137 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#4f46e5">
+  <meta name="theme-color" content="#DC2626">
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Inventory - MAYUNG</title>
-  <link rel="stylesheet" href="css/style.css?v=9">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='28' font-size='28'>📡</text></svg>">
+    <title>Inventory - MAYUNG</title>
+  <script>(function(){try{var t=localStorage.getItem('theme');if(t==='dark'||(!t&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
+    <link rel="stylesheet" href="css/style.css?v=55">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="vendor/fontawesome/css/all.min.css">
-  <style>
-    .inv-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; align-items:start; }
-    .inv-card { background:var(--surface-color); padding:24px; border-radius:var(--radius-lg); border:1px solid var(--border-color); }
-    .inv-item { display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid var(--border-color); gap:12px; }
-    .inv-info { flex:1; }
-    .inv-name { font-weight:600; font-size:.95rem; }
-    .inv-meta { font-size:.8rem; color:var(--text-muted); }
-    .inv-stock { font-weight:700; font-size:1.1rem; }
-    .inv-low { color:#ef4444; }
-    .inv-ok { color:#10b981; }
-    @media (max-width:768px) { .inv-grid { grid-template-columns:1fr; } }
-  </style>
 </head>
 <body class="with-sidebar">
+    <a href="#main" class="skip-nav">Langsung ke konten</a>
   <div id="navbar"></div>
-  <div class="dashboard-container">
+  <div id="main" class="dashboard-container">
     <div style="margin-bottom:24px;">
-      <h1 style="margin:0;font-size:1.5rem;"><i class="fas fa-boxes" style="color:#0891b2;"></i> Inventory</h1>
-      <p style="color:var(--text-muted);margin:5px 0 0 0;">Manajemen stok perangkat</p>
+      <h1 class="page-title"><i class="fas fa-boxes" style="color:var(--accent-cyan);"></i> Inventory</h1>
+      <p class="page-sub">Manajemen stok perangkat</p>
     </div>
 
     <div class="inv-grid">
-      <div class="inv-card">
-        <h3 style="margin:0 0 16px 0;font-size:1.05rem;"><i class="fas fa-plus-circle" style="color:#10b981;"></i> Tambah Item</h3>
-        <div style="display:flex;flex-direction:column;gap:10px;">
-          <div style="display:flex;gap:8px;">
-            <select id="invDeviceType" class="filter-select" style="flex:1;">
-              <option value="ODP">ODP</option>
-              <option value="ONU">ONU</option>
-              <option value="Kabel">Kabel (m)</option>
-              <option value="Splice">Splice</option>
-              <option value="Connector">Connector</option>
-              <option value="Lainnya">Lainnya</option>
-            </select>
-            <input type="text" id="invDeviceName" placeholder="Nama/model perangkat" class="filter-select" style="flex:2;">
-          </div>
-          <div style="display:flex;gap:8px;">
-            <input type="number" id="invTotalStock" placeholder="Jumlah stok" class="filter-select" style="flex:1;" min="0">
-            <input type="text" id="invLocation" placeholder="Lokasi penyimpanan" class="filter-select" style="flex:2;">
-          </div>
-          <textarea id="invNotes" rows="2" placeholder="Catatan (opsional)" class="filter-select" style="resize:vertical;"></textarea>
-          <button id="invSubmitBtn" class="login-btn" style="width:auto;padding:10px 24px;">
-            <i class="fas fa-save"></i> Tambah ke Inventory
-          </button>
-        </div>
-      </div>
-
-      <div class="inv-card">
-        <h3 style="margin:0 0 16px 0;font-size:1.05rem;">
-          <i class="fas fa-list" style="color:#2563eb;"></i> Daftar Stok
+      <div class="inv-card" style="grid-column:1/-1;">
+        <h2 style="margin:0 0 16px 0;font-size:1.125rem;display:flex;flex-wrap:wrap;align-items:center;gap:12px;">
+          <i class="fas fa-list" style="color:var(--accent-cyan);"></i> Daftar Stok
           <span id="invCount" style="font-weight:400;color:var(--text-muted);font-size:.9rem;"></span>
-        </h3>
+          <div class="export-buttons">
+            <button class="btn-export btn-csv" onclick="exportCsv()">CSV</button>
+            <button class="btn-export btn-pdf" onclick="exportPdf()">PDF</button>
+            <button id="invAddBtn" class="login-btn" style="width:auto;"><i class="fas fa-plus-circle"></i> Tambah Item</button>
+          </div>
+        </h2>
         <div id="invListContainer" style="max-height:600px;overflow-y:auto;"></div>
       </div>
     </div>
   </div>
 
-  <!-- Confirm Modal -->
-  <div id="confirmModal" class="modal">
-    <div class="modal-content" style="max-width:400px;">
-      <h3 style="color:#ef4444;">Hapus Item</h3>
-      <p id="confirmMessage" style="margin:15px 0;">Yakin ingin menghapus?</p>
-      <div style="display:flex;gap:10px;justify-content:flex-end;">
-        <button class="login-btn" style="background:#6b7280;" id="cancelDelBtn">Batal</button>
-        <button class="login-btn" style="background:#ef4444;" id="confirmDelBtn">Hapus</button>
+  <!-- Add Inventory Modal -->
+  <div id="addInvModal" class="modal" role="dialog" aria-modal="true" aria-label="Tambah Item Inventory">
+    <div class="modal-content" style="max-width:450px;text-align:left;">
+      <h3 style="margin:0 0 16px 0;color:var(--accent-cyan);"><i class="fas fa-plus-circle"></i> Tambah Item Inventory</h3>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div class="flex-row">
+          <div class="flex-1">
+            <label class="field-label" for="invDeviceType">Tipe Perangkat</label>
+            <select id="invDeviceType" class="field">
+              <option value="">Pilih Tipe</option>
+            </select>
+          </div>
+          <div class="flex-2">
+            <label class="field-label" for="invDeviceName">Nama/model perangkat</label>
+            <input type="text" id="invDeviceName" placeholder="Nama/model perangkat" class="field">
+          </div>
+        </div>
+        <!-- Field dinamis per tipe -->
+        <div id="invAddAttrs" style="display:none;flex-direction:column;gap:8px;padding:10px;border:1px dashed var(--input-border);border-radius:8px;background:var(--bg-subtle);"></div>
+        <div class="flex-row">
+          <div class="flex-1">
+            <label class="field-label" for="invTotalStock">Jumlah stok</label>
+            <input type="number" id="invTotalStock" placeholder="Jumlah stok" class="field" min="0">
+          </div>
+          <div class="flex-2">
+            <label class="field-label" for="invLocation">Lokasi penyimpanan</label>
+            <input type="text" id="invLocation" placeholder="Lokasi penyimpanan" class="field">
+          </div>
+        </div>
+        <div>
+          <label class="field-label" for="invNotes">Catatan (opsional)</label>
+          <textarea id="invNotes" rows="2" placeholder="Catatan (opsional)" class="field resize-v"></textarea>
+        </div>
+      </div>
+      <div class="form-footer">
+        <button class="btn-secondary" onclick="document.getElementById('addInvModal').classList.remove('show')">Batal</button>
+        <button id="invSubmitBtn" class="login-btn" style="width:auto;"><i class="fas fa-save"></i> Tambah</button>
       </div>
     </div>
   </div>
 
-  <script src="js/csrf.js"></script>
-  <script src="js/navbar.js"></script>
-  <script src="js/inventory.js"></script>
+  <!-- Edit Inventory Modal -->
+  <div id="editInvModal" class="modal" role="dialog" aria-modal="true" aria-label="Edit Item Inventory">
+    <div class="modal-content" style="max-width:450px;text-align:left;">
+      <h3 style="margin:0 0 16px 0;color:var(--accent-cyan);"><i class="fas fa-edit"></i> Edit Item Inventory</h3>
+      <form id="editInvForm" style="display:flex;flex-direction:column;gap:10px;">
+        <input type="hidden" id="editInvId">
+        <div class="flex-row">
+          <div class="flex-1">
+            <label class="field-label" for="editInvDeviceType">Tipe Perangkat</label>
+            <select id="editInvDeviceType" class="field">
+              <option value="">Pilih Tipe</option>
+            </select>
+          </div>
+          <div class="flex-2">
+            <label class="field-label" for="editInvDeviceName">Nama/model perangkat</label>
+            <input type="text" id="editInvDeviceName" placeholder="Nama/model perangkat" class="field">
+          </div>
+        </div>
+        <!-- Field dinamis per tipe -->
+        <div id="editInvAttrs" style="display:none;flex-direction:column;gap:8px;padding:10px;border:1px dashed var(--input-border);border-radius:8px;background:var(--bg-subtle);"></div>
+        <div class="flex-row">
+          <div class="flex-1">
+            <label class="field-label" for="editInvTotalStock">Total stok</label>
+            <input type="number" id="editInvTotalStock" placeholder="Total stok" class="field" min="0">
+          </div>
+          <div class="flex-1">
+            <label class="field-label" for="editInvUsedStock">Stok terpakai</label>
+            <input type="number" id="editInvUsedStock" placeholder="Stok terpakai" class="field" min="0">
+          </div>
+        </div>
+        <div>
+          <label class="field-label" for="editInvLocation">Lokasi penyimpanan</label>
+          <input type="text" id="editInvLocation" placeholder="Lokasi penyimpanan" class="field">
+        </div>
+        <div>
+          <label class="field-label" for="editInvNotes">Catatan (opsional)</label>
+          <textarea id="editInvNotes" rows="2" placeholder="Catatan (opsional)" class="field resize-v"></textarea>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px;">
+          <button type="button" class="btn-secondary" onclick="document.getElementById('editInvModal').classList.remove('show')">Batal</button>
+          <button type="submit" class="login-btn" style="width:auto;"><i class="fas fa-save"></i> Simpan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="js/constants.js?v=2"></script>
+  <script src="js/csrf.js?v=1"></script>
+  <script src="js/toast.js?v=5"></script>
+  <!-- jsPDF + autotable dimuat lazy via pdf-loader.js saat Export PDF diklik -->
+  <script src="js/pdf-loader.js?v=1"></script>
+  <script src="js/navbar.js?v=4"></script>
+  <script src="js/inventory.js?v=3"></script>
 </body>
 </html>

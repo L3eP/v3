@@ -3,20 +3,26 @@
  *
  * Cara kerja:
  * 1. GET request → server set cookie `csrf-token` jika belum ada
- * 2. Frontend membaca cookie, kirim sebagai:
- *    - Header `X-CSRF-Token` untuk JSON/urlencoded requests
- *    - Field `_csrf_token` untuk FormData (multipart) requests
+ * 2. Frontend membaca cookie, kirim sebagai header `X-CSRF-Token`
+ *    (termasuk untuk FormData/multipart — lihat js/csrf.js)
  * 3. POST/PUT/PATCH/DELETE → server validasi
  *
  * Frontend:
  *   Gunakan csrfFetch() dari js/csrf.js untuk semua state-changing request.
+ *
+ * Catatan: middleware ini mounted SEBELUM body parser multipart (multer
+ * berjalan per-route, setelah middleware ini), jadi req.body selalu undefined
+ * di sini untuk request multipart — karena itu token HARUS lewat header, tidak
+ * bisa lewat field body untuk FormData.
  */
 
 const crypto = require('crypto');
 
 const CSRF_COOKIE_NAME = 'csrf-token';
 const CSRF_HEADER_NAME = 'x-csrf-token';
-const CSRF_BODY_FIELD = '_csrf_token';
+
+// 3.1 — cookie CSRF ikut NODE_ENV: Secure hanya saat production (HTTPS)
+const IS_PROD = process.env.NODE_ENV === 'production';
 
 function generateToken() {
   return crypto.randomBytes(32).toString('hex');
@@ -44,7 +50,7 @@ function csrfMiddleware(req, res, next) {
       res.cookie(CSRF_COOKIE_NAME, generateToken(), {
         httpOnly: false,
         sameSite: 'strict',
-        secure: false,
+        secure: IS_PROD,
         maxAge: 24 * 60 * 60 * 1000
       });
     }
@@ -55,11 +61,7 @@ function csrfMiddleware(req, res, next) {
   const cookies = parseCookies(req.headers.cookie);
   const cookieToken = cookies[CSRF_COOKIE_NAME];
 
-  // Cek header dulu, lalu body (untuk FormData)
-  let headerToken = req.headers[CSRF_HEADER_NAME];
-  if (!headerToken) {
-    headerToken = req.body ? req.body[CSRF_BODY_FIELD] : undefined;
-  }
+  const headerToken = req.headers[CSRF_HEADER_NAME];
 
   if (!cookieToken || !headerToken) {
     return res.status(403).json({ message: 'CSRF token missing' });
@@ -72,6 +74,15 @@ function csrfMiddleware(req, res, next) {
   } catch {
     return res.status(403).json({ message: 'CSRF token invalid' });
   }
+
+  // Rotate token setelah validasi sukses — cegah replay attack
+  const newToken = generateToken();
+  res.cookie(CSRF_COOKIE_NAME, newToken, {
+    httpOnly: false,
+    sameSite: 'strict',
+    secure: IS_PROD,
+    maxAge: 24 * 60 * 60 * 1000
+  });
 
   next();
 }

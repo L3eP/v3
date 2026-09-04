@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='28' font-size='28'>📡</text></svg>">
+    <title>Offline - MAYUNG</title>
+    <script>(function(){try{var t=localStorage.getItem('theme');if(t==='dark'||(!t&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
+    <link rel="stylesheet" href="css/style.css?v=55">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+            text-align: center;
+        }
+
+        #offlineMain {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .offline-icon {
+            font-size: 4rem;
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            opacity: 0.6;
+        }
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 12px;
+            color: var(--text-main);
+        }
+        p {
+            color: var(--text-muted);
+            margin-bottom: 24px;
+            max-width: 400px;
+        }
+    </style>
+</head>
+<body>
+    <a href="#offlineMain" class="skip-nav">Langsung ke konten</a>
+    <main id="offlineMain">
+        <div class="offline-icon">📡</div>
+        <h1>Koneksi Terputus</h1>
+        <p>Anda sedang offline. Beberapa fitur mungkin tidak tersedia. Silakan periksa koneksi internet Anda dan coba lagi.</p>
+        <button type="button" class="login-btn" style="width:auto;" onclick="window.location.reload()">Coba Lagi</button>
+    </main>
+</body>
+</html>

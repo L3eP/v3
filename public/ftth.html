@@ -1,98 +1,124 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#4f46e5">
+    <meta name="theme-color" content="#DC2626">
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='28' font-size='28'>📡</text></svg>">
     <title>Jaringan FTTH - MAYUNG</title>
-    <link rel="stylesheet" href="css/style.css?v=9">
+    <script>(function(){try{var t=localStorage.getItem('theme');if(t==='dark'||(!t&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
+    <link rel="stylesheet" href="css/style.css?v=55">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="vendor/fontawesome/css/all.min.css">
-    <style>
-        .ftth-tabs { display:flex; gap:4px; margin-bottom:20px; border-bottom:2px solid #e5e7eb; overflow-x:auto; }
-        .ftth-tab { padding:10px 20px; border:none; background:none; cursor:pointer; font-size:.95rem; color:var(--text-muted); border-bottom:2px solid transparent; margin-bottom:-2px; white-space:nowrap; transition:all .2s; }
-        .ftth-tab:hover { color:var(--text-main); background:#f9fafb; border-radius:8px 8px 0 0; }
-        .ftth-tab.active { color:#4f46e5; border-bottom-color:#4f46e5; font-weight:600; }
-        .ftth-tab i { margin-right:6px; }
-        .ftth-panel { display:none; }
-        .ftth-panel.active { display:block; }
-        .ftth-card { background:#fff; border-radius:12px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,.1); }
-        .ftth-card h3 { margin:0 0 15px 0; display:flex; align-items:center; gap:8px; }
-        .ftth-count { font-size:.8rem; color:var(--text-muted); font-weight:400; }
-        .ftth-item { display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border-color); }
-        .ftth-label { display:flex; align-items:center; gap:8px; }
-        .ftth-group { font-size:.8rem; color:var(--text-muted); background:#e5e7eb; padding:2px 8px; border-radius:4px; }
-        .ftth-actions { display:flex; gap:5px; }
-        .ftth-actions button { background:none; border:none; cursor:pointer; padding:4px 8px; border-radius:4px; font-size:.85rem; }
-        .ftth-edit { color:#2563eb; } .ftth-edit:hover { background:#dbeafe; }
-        .ftth-del { color:#ef4444; } .ftth-del:hover { background:#fee2e2; }
-        .ftth-add { margin-top:10px; padding:8px 16px; background:#f3f4f6; border:1px dashed #d1d5db; border-radius:8px; cursor:pointer; width:100%; color:var(--text-muted); }
-        .ftth-add:hover { background:#e5e7eb; color:var(--text-main); }
-        .ftth-inline { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
-        .ftth-input { flex:1; min-width:120px; padding:6px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:.9rem; }
-        .ftth-save { background:#10b981; color:#fff; border:none; border-radius:6px; cursor:pointer; padding:6px 14px; }
-        .ftth-cancel { background:#6b7280; color:#fff; border:none; border-radius:6px; cursor:pointer; padding:6px 14px; }
-        .ftth-empty { color:var(--text-muted); font-size:.9rem; padding:10px 0; text-align:center; }
-        .ftth-toast { visibility:hidden; min-width:250px; background:#333; color:#fff; text-align:center; border-radius:8px; padding:12px; position:fixed; bottom:30px; left:50%; transform:translateX(-50%); z-index:1000; }
-        .ftth-show { visibility:visible; animation:fadein .3s; }
-        @keyframes fadein { from{opacity:0} to{opacity:1} }
-    </style>
 </head>
 <body class="with-sidebar">
+    <a href="#main" class="skip-nav">Langsung ke konten</a>
     <div id="navbar"></div>
-    <div class="dashboard-container">
-        <h1 style="margin:0 0 5px 0;font-size:1.5rem;"><i class="fas fa-network-wired" style="color:#059669;"></i> Jaringan FTTH</h1>
-        <p style="color:var(--text-muted);margin:0 0 20px 0;">Kelola infrastruktur jaringan</p>
-        <div class="ftth-tabs" id="ftthTabs"></div>
-        <div id="ftthPanels"></div>
+    <div id="main" class="dashboard-container">
+        <h1 class="sr-only">Jaringan FTTH</h1>
+        <div id="ftthHome"></div>
+        <div id="ftthDetail" class="hidden"></div>
     </div>
-    <div id="ftthToast" class="ftth-toast"></div>
 
     <!-- Edit Modal -->
-    <div id="editModal" class="modal">
+    <div id="editModal" class="modal" role="dialog" aria-modal="true" aria-label="Edit perangkat">
         <div class="modal-content" style="max-width:450px;">
             <h3 id="editModalTitle">Edit</h3>
-            <div style="margin:15px 0;">
-                <label style="display:block;margin-bottom:5px;font-weight:500;">Label</label>
-                <input type="text" id="editLabel" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
-                <div id="editGroupWrap" style="margin-top:10px;display:none;">
-                    <label style="display:block;margin-bottom:5px;font-weight:500;">Group</label>
-                    <input type="text" id="editGroup" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
+            <div class="modal-body">
+                <label for="editLabel">Label</label>
+                <input type="text" id="editLabel" class="field">
+                <div id="editGroupWrap" class="ftth-field-wrap hidden">
+                    <label for="editGroup">Group</label>
+                    <input type="text" id="editGroup" class="field">
                 </div>
-                <div id="editPortWrap" style="margin-top:10px;display:none;">
-                    <label style="display:block;margin-bottom:5px;font-weight:500;">Port di Induk</label>
-                    <input type="text" id="editPort" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;" placeholder="Contoh: Port 3/8">
+                <div id="editPortWrap" class="ftth-field-wrap hidden">
+                    <label for="editPort">Port di Induk</label>
+                    <input type="text" id="editPort" class="field" placeholder="Contoh: Port 3/8">
                 </div>
-                <div id="editCoordWrap" style="margin-top:10px;display:none;">
-                    <label style="display:block;margin-bottom:5px;font-weight:500;">Koordinat</label>
-                    <div style="display:flex;gap:8px;">
-                        <input type="text" id="editLat" style="flex:1;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;" placeholder="Latitude">
-                        <input type="text" id="editLng" style="flex:1;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;" placeholder="Longitude">
+                <div id="editCoordWrap" class="ftth-field-wrap hidden">
+                    <label for="editLat">Koordinat</label>
+                    <div class="flex-row">
+                        <input type="text" id="editLat" aria-label="Latitude" class="field flex-1" placeholder="Latitude">
+                        <input type="text" id="editLng" aria-label="Longitude" class="field flex-1" placeholder="Longitude">
                     </div>
                 </div>
+                <div id="editBrandWrap" class="ftth-field-wrap hidden">
+                    <label for="editBrand">Brand OLT</label>
+                    <input type="text" id="editBrand" class="field" placeholder="Huawei/ZTE/FS">
+                </div>
+                <div id="editPortsWrap" class="ftth-field-wrap hidden">
+                    <label for="editPorts">Jumlah Port</label>
+                    <input type="number" id="editPorts" class="field" placeholder="16/32/48" min="1">
+                </div>
+                <div id="editSnWrap" class="ftth-field-wrap hidden">
+                    <label for="editSn">Serial Number ONU</label>
+                    <input type="text" id="editSn" class="field" placeholder="SN ONU">
+                </div>
             </div>
-            <div style="display:flex;gap:10px;justify-content:flex-end;">
-                <button class="login-btn" style="background:#6b7280;" id="cancelEditBtn">Cancel</button>
+            <div class="flex-end">
+                <button class="btn-secondary" id="cancelEditBtn">Batal</button>
                 <button class="login-btn" id="saveEditBtn">Save</button>
             </div>
         </div>
     </div>
 
-    <!-- Confirm Modal -->
-    <div id="confirmModal" class="modal">
-        <div class="modal-content" style="max-width:400px;">
-            <h3 style="color:#ef4444;">Confirm Delete</h3>
-            <p id="confirmMessage" style="margin:15px 0;">Are you sure?</p>
-            <div style="display:flex;gap:10px;justify-content:flex-end;">
-                <button class="login-btn" style="background:#6b7280;" id="cancelDelBtn">Cancel</button>
-                <button class="login-btn" style="background:#ef4444;" id="confirmDelBtn">Delete</button>
+    <!-- Add Modal -->
+    <div id="addModal" class="modal" role="dialog" aria-modal="true" aria-label="Tambah perangkat">
+        <div class="modal-content" style="max-width:520px;">
+            <h3 id="addModalTitle">Tambah</h3>
+            <div class="modal-body">
+                <label for="addLabel">Label</label>
+                <input type="text" id="addLabel" class="field" placeholder="Nama perangkat" autofocus>
+
+                <div id="addGroupWrap" class="ftth-field-wrap hidden">
+                    <label for="addGroup">Induk</label>
+                    <select id="addGroup" class="field"></select>
+                </div>
+
+                <div id="addAvailPorts" class="ftth-field-wrap-sm hidden"></div>
+
+                <div id="addPortWrap" class="ftth-field-wrap hidden">
+                    <label for="addPort">Port di Induk</label>
+                    <input type="text" id="addPort" class="field" placeholder="Klik port tersedia di atas" readonly>
+                </div>
+
+                <div id="addBrandWrap" class="ftth-field-wrap hidden">
+                    <label for="addBrand">Brand OLT</label>
+                    <input type="text" id="addBrand" class="field" placeholder="Huawei / ZTE / FS">
+                </div>
+
+                <div id="addPortsWrap" class="ftth-field-wrap hidden">
+                    <label for="addPorts">Jumlah Port</label>
+                    <input type="number" id="addPorts" class="field" placeholder="16 / 32 / 48" min="1">
+                </div>
+
+                <div id="addSnWrap" class="ftth-field-wrap hidden">
+                    <label for="addSn">Serial Number ONU</label>
+                    <input type="text" id="addSn" class="field" placeholder="SN ONU">
+                </div>
+
+                <div id="addCoordWrap" class="ftth-field-wrap">
+                    <label >Koordinat (opsional)</label>
+                    <div class="flex-row">
+                        <input type="text" id="addLat" aria-label="Latitude" class="field flex-1" placeholder="Latitude">
+                        <input type="text" id="addLng" aria-label="Longitude" class="field flex-1" placeholder="Longitude">
+                    </div>
+                </div>
+            </div>
+            <div class="flex-end">
+                <button class="btn-secondary" id="cancelAddBtn">Batal</button>
+                <button class="login-btn" id="saveAddBtn"><i class="fas fa-save"></i> Simpan</button>
             </div>
         </div>
     </div>
 
-    <script src="js/csrf.js"></script>
-    <script src="js/navbar.js"></script>
-    <script src="js/ftth.js"></script>
+    <script src="js/constants.js?v=2"></script>
+    <script src="js/csrf.js?v=1"></script>
+    <script src="js/toast.js?v=5"></script>
+    <script src="js/navbar.js?v=4"></script>
+    <script src="js/ftth.js?v=3"></script>
 </body>
 </html>

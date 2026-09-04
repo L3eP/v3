@@ -1,56 +1,45 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 
 <head>
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#4f46e5">
+    <meta name="theme-color" content="#DC2626">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>User List</title>
-    <link rel="stylesheet" href="css/style.css?v=9">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
-    <style>
-        .user-photo-small {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            object-fit: cover;
-        }
-
-        .role-select {
-            padding: 6px 12px;
-            border-radius: 6px;
-            border: 1px solid #d1d5db;
-            background-color: white;
-            font-size: 0.9rem;
-            cursor: pointer;
-        }
-
-        .role-select:focus {
-            outline: none;
-            border-color: #4f46e5;
-        }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='28' font-size='28'>📡</text></svg>">
+    <title>User List - MAYUNG</title>
+    <script>(function(){try{var t=localStorage.getItem('theme');if(t==='dark'||(!t&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
+    <link rel="stylesheet" href="css/style.css?v=55">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="vendor/fontawesome/css/all.min.css">
 </head>
 
 <body class="with-sidebar">
+    <a href="#main" class="skip-nav">Langsung ke konten</a>
     <div id="navbar"></div>
 
-    <div class="dashboard-container">
-        <!-- <h1>User Management</h1> -->
+    <div id="main" class="dashboard-container">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+            <h1 class="page-title"><i class="fas fa-users" style="color:var(--accent-blue);"></i> Users</h1>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
+                <input type="text" id="userSearch" class="filter-select" placeholder="Cari user..." aria-label="Cari user" style="width:200px;font-size:.85rem;" oninput="filterUsers()">
+                <button id="addUserBtn" class="login-btn" style="width:auto;"><i class="fas fa-user-plus"></i> Add User</button>
+            </div>
+        </div>
 
         <div class="table-responsive">
             <table class="user-table">
                 <thead>
                     <tr>
-                        <th>Photo</th>
-                        <th>Full Name</th>
-                        <th>Username</th>
-                        <th>Role</th>
-                        <th>Actions</th>
+                        <th scope="col">Photo</th>
+                        <th scope="col">Full Name</th>
+                        <th scope="col">Username</th>
+                        <th scope="col">Role</th>
+                        <th scope="col">Actions</th>
                     </tr>
                 </thead>
                 <tbody id="userTableBody">
@@ -60,16 +49,89 @@
         </div>
     </div>
 
-    <!-- Toast Notification -->
-    <div id="toast"
-        style="visibility: hidden; min-width: 250px; margin-left: -125px; background-color: #333; color: #fff; text-align: center; border-radius: 8px; padding: 16px; position: fixed; z-index: 1; left: 50%; bottom: 30px; font-size: 17px;">
-        Role updated successfully
+    <!-- Edit User Modal -->
+    <div id="editUserModal" class="modal" role="dialog" aria-modal="true" aria-label="Edit User">
+        <div class="modal-content" style="max-width:500px;text-align:left;">
+            <h3 class="modal-title">Edit User</h3>
+            <form id="editUserForm">
+                <input type="hidden" id="editOriginalUsername">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="editUsername">Username</label>
+                        <input type="text" id="editUsername" class="filter-select" readonly style="background:#f3f4f6;">
+                    </div>
+                    <div class="form-group">
+                        <label for="editFullName">Full Name</label>
+                        <input type="text" id="editFullName" class="filter-select" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editPhone">Phone</label>
+                        <input type="tel" id="editPhone" class="filter-select" placeholder="628xx" oninput="phoneOnly(this)" maxlength="16">
+                    </div>
+                    <div class="form-group">
+                        <label for="editRole">Role</label>
+                        <select id="editRole" class="filter-select">
+                            <option value="Teknisi">Teknisi</option>
+                            <option value="Operator">Operator</option>
+                            <option value="Owner">Owner</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="editDefaultSubNode">Wilayah (Sub-Node) <small style="color:var(--text-muted);font-weight:400;">untuk auto-PIC</small></label>
+                        <select id="editDefaultSubNode" class="filter-select">
+                            <option value="">— Tidak ditentukan —</option>
+                        </select>
+                    </div>
+                    <div class="form-group col-full">
+                        <label for="editPassword">New Password <small style="color:var(--text-muted);font-weight:400;">(kosongkan jika tidak diubah)</small></label>
+                        <input type="password" id="editPassword" class="filter-select" placeholder="Min 6 karakter">
+                    </div>
+                </div>
+                <div class="flex-end" style="margin-top:20px">
+                    <button type="button" class="btn-secondary" onclick="closeEditModal()" style="width:auto;">Batal</button>
+                    <button type="submit" class="login-btn" style="width:auto;"><i class="fas fa-save"></i> Simpan</button>
+                </div>
+            </form>
+        </div>
     </div>
 
-    <script src="js/toast.js"></script>
-    <script src="js/csrf.js"></script>
-    <script src="js/navbar.js"></script>
-    <script src="js/user-list.js?v=1"></script>
+    <!-- Add User Modal -->
+    <div id="addUserModal" class="modal" role="dialog" aria-modal="true" aria-label="Add User">
+        <div class="modal-content" style="max-width:500px;text-align:left;">
+            <h3 class="modal-title"><i class="fas fa-user-plus"></i> Add User</h3>
+            <form id="addUserForm">
+                <div style="display:flex;flex-direction:column;gap:12px;">
+                    <div class="grid-2">
+                        <input type="text" id="auFullName" aria-label="Nama Lengkap" placeholder="Nama Lengkap *" class="field">
+                        <input type="text" id="auUsername" aria-label="Username" placeholder="Username *" class="field">
+                    </div>
+                    <input type="password" id="auPassword" aria-label="Password" placeholder="Password * (min 6 karakter)" class="field">
+                    <div class="grid-2">
+                        <input type="tel" id="auPhone" aria-label="No Telepon" placeholder="No Telepon (628xx)" class="field" oninput="phoneOnly(this)" maxlength="16">
+                        <select id="auRole" aria-label="Role" class="field">
+                            <option value="Teknisi">Teknisi</option>
+                            <option value="Operator">Operator</option>
+                            <option value="Owner">Owner</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="auPhoto">Foto Profil (opsional)</label>
+                        <input type="file" id="auPhoto" accept="image/*" class="field" style="padding:6px;">
+                    </div>
+                </div>
+                <div class="flex-end" style="margin-top:20px">
+                    <button type="button" class="btn-secondary" onclick="closeAddUserModal()" style="width:auto;">Batal</button>
+                    <button type="submit" class="login-btn" style="width:auto;"><i class="fas fa-user-plus"></i> Buat User</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/constants.js?v=2"></script>
+    <script src="js/csrf.js?v=1"></script>
+    <script src="js/toast.js?v=5"></script>
+    <script src="js/navbar.js?v=4"></script>
+    <script src="js/user-list.js?v=4"></script>
 </body>
 
 </html>

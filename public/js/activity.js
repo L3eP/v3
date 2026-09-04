@@ -10,26 +10,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   const exportCsvBtn = document.getElementById("exportCsvBtn");
   const exportPdfBtn = document.getElementById("exportPdfBtn");
 
-  // Modal elements
-  const modal = document.getElementById("modal");
-  const modalTitle = document.getElementById("modalTitle");
-  const modalMessage = document.getElementById("modalMessage");
-  const modalOkBtn = document.getElementById("modalOkBtn");
-
   let allTickets = [];
   let myActivities = [];
-
-  function showModal(title, message, isError = false) {
-    modalTitle.textContent = title;
-    modalTitle.style.color = isError ? "#ef4444" : "#10b981";
-    modalMessage.textContent = message;
-    modalOkBtn.style.backgroundColor = isError ? "#ef4444" : "#10b981";
-    modal.classList.add("show");
-  }
-
-  modalOkBtn.addEventListener("click", () => {
-    modal.classList.remove("show");
-  });
+  const ACTIVITIES_PER_PAGE = 10;
+  let currentPage = 1;
 
   function renderActivityList(activities) {
     const listContainer = document.getElementById("activityList");
@@ -51,31 +35,45 @@ document.addEventListener("DOMContentLoaded", async () => {
       (a, b) => new Date(b.date) - new Date(a.date),
     );
 
-    const isPrivileged = user.role === "Owner" || user.role === "Operator";
+    if (sorted.length === 0) {
+      listContainer.classList.add("hidden");
+      emptyState.classList.remove("hidden");
+      renderPagination(0);
+      return;
+    }
 
-    sorted.forEach((activity) => {
+    // Pagination client-side: data utuh, tampilan dibatasi per halaman
+    const totalPages = Math.ceil(sorted.length / ACTIVITIES_PER_PAGE);
+    if (currentPage > totalPages) currentPage = totalPages;
+    const startIndex = (currentPage - 1) * ACTIVITIES_PER_PAGE;
+    const pageItems = sorted.slice(startIndex, startIndex + ACTIVITIES_PER_PAGE);
+
+    const isPrivileged = user.role === ROLES.OWNER || user.role === ROLES.OPERATOR;
+    const isOwner = user.role === ROLES.OWNER;
+
+    pageItems.forEach((activity) => {
       const li = document.createElement("li");
 
       let deleteBtnHtml = "";
-      if (isPrivileged) {
+      if (isOwner) {
         deleteBtnHtml = `
-                    <button class="btn-delete-activity" data-id="${activity.id}" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 5px;">
+                    <button class="btn-delete-activity" data-id="${activity.id}" title="Hapus aktivitas" aria-label="Hapus aktivitas">
                         <i class="fas fa-trash-alt"></i>
                     </button>
                 `;
       }
 
       li.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: start; width: 100%;">
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        <div class="stat-icon" style="width: 32px; height: 32px; background: #f1f5f9; font-size: 0.9rem; color: var(--text-muted);">
+                <div class="dash-item-row-start spread">
+                    <div class="dash-item-row">
+                        <div class="dash-item-icon">
                             <i class="fas fa-history"></i>
                         </div>
                         <div>
-                            <strong style="display: block; color: var(--text-main);">
-                                ${activity.username ? `<span class="text-primary">${activity.username}</span>: ` : ""}${activity.description}
+                            <strong class="dash-item-title">
+                                ${activity.username ? `<span class="text-primary">${esc(activity.username)}</span>: ` : ""}${esc(activity.description)}
                             </strong>
-                            <small style="color: var(--text-muted); display: flex; align-items: center; gap: 5px;">
+                            <small class="dash-item-meta">
                                 <i class="far fa-calendar-alt"></i> ${new Date(activity.date).toLocaleString()}
                             </small>
                         </div>
@@ -87,32 +85,98 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     // Add event listeners for delete buttons
-    if (isPrivileged) {
+    if (isOwner) {
       document.querySelectorAll(".btn-delete-activity").forEach((btn) => {
         btn.addEventListener("click", async (e) => {
           const id = e.currentTarget.getAttribute("data-id");
-          if (confirm("Are you sure you want to delete this activity log?")) {
-            // Simple confirm for now
-            await deleteActivity(id);
-          }
+          showConfirm("Are you sure you want to delete this activity log?", () => deleteActivity(id));
         });
       });
     }
+
+    renderPagination(sorted.length);
+  }
+
+  // Kontrol pagination (markup sama dengan ticket-list: ul.pagination > li.page-item > a.page-link)
+  function renderPagination(total) {
+    const controls = document.getElementById("activityPagination");
+    controls.innerHTML = "";
+    if (!total) return;
+
+    const totalPages = Math.max(1, Math.ceil(total / ACTIVITIES_PER_PAGE));
+    if (totalPages <= 1) return;
+
+    // Info jumlah
+    const info = document.createElement("li");
+    info.className = "page-item disabled";
+    info.innerHTML = `<a class="page-link" href="#">${total} aktivitas</a>`;
+    controls.appendChild(info);
+
+    // Tombol sebelumnya
+    const prev = document.createElement("li");
+    prev.className = `page-item ${currentPage === 1 ? "disabled" : ""}`;
+    prev.innerHTML = `<a class="page-link" href="#" aria-label="Sebelumnya"><span aria-hidden="true">&laquo;</span></a>`;
+    prev.querySelector("a").addEventListener("click", (e) => {
+      e.preventDefault();
+      if (currentPage > 1) {
+        currentPage--;
+        goToPage();
+      }
+    });
+    controls.appendChild(prev);
+
+    // Nomor halaman (maks 7 tombol)
+    const maxVisiblePages = 7;
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+    for (let i = startPage; i <= endPage; i++) {
+      const li = document.createElement("li");
+      li.className = `page-item ${i === currentPage ? "active" : ""}`;
+      li.innerHTML = `<a class="page-link" href="#">${i}</a>`;
+      li.querySelector("a").addEventListener("click", (e) => {
+        e.preventDefault();
+        if (i !== currentPage) {
+          currentPage = i;
+          goToPage();
+        }
+      });
+      controls.appendChild(li);
+    }
+
+    // Tombol berikutnya
+    const next = document.createElement("li");
+    next.className = `page-item ${currentPage === totalPages ? "disabled" : ""}`;
+    next.innerHTML = `<a class="page-link" href="#" aria-label="Berikutnya"><span aria-hidden="true">&raquo;</span></a>`;
+    next.querySelector("a").addEventListener("click", (e) => {
+      e.preventDefault();
+      if (currentPage < totalPages) {
+        currentPage++;
+        goToPage();
+      }
+    });
+    controls.appendChild(next);
+  }
+
+  // Pindah halaman: render ulang + gulir ke daftar agar nyaman di mobile
+  function goToPage() {
+    renderActivityList(filterActivities());
+    document.querySelector(".activity-list-card")?.scrollIntoView({ block: "start", behavior: "smooth" });
   }
 
   async function deleteActivity(id) {
     try {
       const response = await csrfFetch(`/activities/${id}`, { method: "DELETE" });
       if (response.ok) {
-        showModal("Success", "Activity deleted successfully");
+        showModal("Success", "Activity deleted successfully", "success");
         fetchActivities(); // Refresh list
       } else {
         const res = await response.json();
-        showModal("Error", res.message || "Failed to delete activity", true);
+        showModal("Error", res.message || "Failed to delete activity", "error");
       }
     } catch (error) {
       console.error("Error deleting activity:", error);
-      showModal("Error", "An error occurred while deleting", true);
+      showModal("Error", "An error occurred while deleting", "error");
     }
   }
 
@@ -121,7 +185,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       let url = "/activities";
       // If NOT privileged, filter by own username.
       // If Privileged, fetch all (backend defaults to Teknisi logs if no username)
-      if (user.role !== "Owner" && user.role !== "Operator") {
+      if (user.role !== ROLES.OWNER && user.role !== ROLES.OPERATOR) {
         url += `?username=${encodeURIComponent(user.username)}`;
       }
 
@@ -130,7 +194,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       renderActivityList(myActivities);
     } catch (error) {
       console.error("Error fetching activities:", error);
-      showModal("Error", "Failed to load activities", true);
+      showModal("Error", "Failed to load activities", "error");
     }
   }
 
@@ -156,33 +220,38 @@ document.addEventListener("DOMContentLoaded", async () => {
       });
 
       if (response.ok) {
-        showModal("Success", "Activity logged successfully!");
+        const data = await response.json();
+        const msg = data.autoTransition
+          ? `Activity logged! Tiket #${data.autoTransition.ticketId} otomatis dimulai (${data.autoTransition.oldStatus} → Dikerjakan).`
+          : "Activity logged successfully!";
+        showModal("Success", msg, "success");
         activityForm.reset();
         fetchActivities();
       } else {
-        showModal("Error", "Failed to log activity", true);
+        showModal("Error", "Failed to log activity", "error");
       }
     } catch (error) {
       console.error("Error logging activity:", error);
-      showModal("Error", "An error occurred", true);
+      showModal("Error", "An error occurred", "error");
     }
   });
 
   // Export CSV
   exportCsvBtn.addEventListener("click", () => {
-    if (myActivities.length === 0) {
-      showModal("Info", "No activities to export", false);
+    const filtered = filterActivities();
+    if (filtered.length === 0) {
+      showModal("Info", "No activities to export", "info");
       return;
     }
 
     const headers = ["Date & Time", "Ticket", "Description"];
     const csvContent = [
       headers.join(","),
-      ...myActivities.map((a) =>
+      ...filtered.map((a) =>
         [
-          `"${new Date(a.date).toLocaleString()}"`, // Escape date
-          `"${(a.aktifitas || "").replace(/"/g, '""').replace(/\n/g, " ")}"`, // Escape aktifitas
-          `"${(a.description || "").replace(/"/g, '""').replace(/\n/g, " ")}"`, // Escape description
+          `"${new Date(a.date).toLocaleString()}"`,
+          `"${(a.aktifitas || "").replace(/"/g, '""').replace(/\n/g, " ")}"`,
+          `"${(a.description || "").replace(/"/g, '""').replace(/\n/g, " ")}"`,
         ].join(","),
       ),
     ].join("\n");
@@ -196,10 +265,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     link.click();
   });
 
-  // Export PDF
-  exportPdfBtn.addEventListener("click", () => {
-    if (myActivities.length === 0) {
-      showModal("Info", "No activities to export", false);
+  // Export PDF — library dimuat lazy saat export diklik (lihat pdf-loader.js)
+  exportPdfBtn.addEventListener("click", async () => {
+    const filtered = filterActivities();
+    if (filtered.length === 0) {
+      showModal("Info", "No activities to export", "info");
+      return;
+    }
+
+    try {
+      await window.loadPdfLibs();
+    } catch (e) {
+      showModal("Error", e.message || "Gagal memuat library PDF", "error");
       return;
     }
 
@@ -211,7 +288,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     doc.text(`User: ${user.fullName} (${user.username})`, 14, 22);
     doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 27);
 
-    const tableData = myActivities.map((a) => [
+    const tableData = filtered.map((a) => [
       new Date(a.date).toLocaleString(),
       a.aktifitas,
       a.description,
@@ -249,6 +326,62 @@ document.addEventListener("DOMContentLoaded", async () => {
     activeTickets.forEach((ticket) => {
       const label = `${ticket.lokasi} — ${ticket.aktifitas} — ${ticket.pic}`;
       ticketSelect.appendChild(new Option(label, ticket.id));
+    });
+  }
+
+  // Search filter untuk activity list
+  // Filter function: search + date range
+  function filterActivities() {
+    const term = (document.getElementById('activitySearch')?.value || '').toLowerCase();
+    const startDate = document.getElementById('activityStartDate')?.value;
+    const endDate = document.getElementById('activityEndDate')?.value;
+
+    return myActivities.filter(a => {
+      // Search filter
+      if (term && !(a.description || '').toLowerCase().includes(term) &&
+          !(a.username || '').toLowerCase().includes(term) &&
+          !(a.aktifitas || '').toLowerCase().includes(term)) {
+        return false;
+      }
+      // Date filter
+      const d = new Date(a.date);
+      if (startDate && d < new Date(startDate)) return false;
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59); // include end date fully
+        if (d > end) return false;
+      }
+      return true;
+    });
+  }
+
+  function applyFilters() {
+    currentPage = 1; // Filter berubah → kembali ke halaman 1
+    renderActivityList(filterActivities());
+  }
+
+  const searchInput = document.getElementById('activitySearch');
+  if (searchInput) {
+    searchInput.addEventListener('input', debounce(applyFilters, 300));
+  }
+
+  // Date filter listeners
+  const startDateInput = document.getElementById('activityStartDate');
+  const endDateInput = document.getElementById('activityEndDate');
+  if (startDateInput) {
+    startDateInput.addEventListener('change', () => {
+      if (endDateInput && startDateInput.value && endDateInput.value && startDateInput.value > endDateInput.value) {
+        endDateInput.value = startDateInput.value;
+      }
+      applyFilters();
+    });
+  }
+  if (endDateInput) {
+    endDateInput.addEventListener('change', () => {
+      if (startDateInput && startDateInput.value && endDateInput.value && endDateInput.value < startDateInput.value) {
+        endDateInput.value = startDateInput.value;
+      }
+      applyFilters();
     });
   }
 

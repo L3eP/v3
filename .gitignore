@@ -61,10 +61,41 @@ CLAUDE.md
 !/docs/code_documentation_en.md
 !/docs/code_documentation_id.md
 
-# Scripts — migration & internal tools
-/scripts/*.sql
-/scripts/*.sh
-/scripts/migrate_history.js
+# Scripts — temporary migration files only
+/scripts/migrasi.sql
 
-# Backup internal
+# Backup internal — SELURUH folder arsip lokal (audit lama, sprint docs,
+# notes, zip screenshot sidang, dsb). Diignore satu direktori sekaligus,
+# bukan per-nama-file — pola per-nama sebelumnya (AUDIT-*.md, SPRINT*.md,
+# dst di bawah ini) sudah kebobolan begitu file baru ditambah di folder ini
+# (mis. DESIGN.md/PRODUCT.md/jejak-eksekusi-mayung*.zip sempat lolos filter).
+/_arsip/
 /backup/
+myownbackup20062026.zip
+README_OLD.md
+AUDIT-*.md
+SPRINT*.md
+.CLAUDE.md.swp
+VERIFIKASI-AUDIT.md
+notes_*
+graphify-out/
+docs/ERD*
+.agents/
+.impeccable/
+
+# Tool lokal lain (AI assistant configs) — setara .claude/ di atas
+.codex/
+
+# Database production & hasil migrasinya — PII pelanggan (nama, alamat,
+# no. HP) dan hash password akun sungguhan. JANGAN pernah masuk repo.
+Fri4Sep2026.sql
+migration_to_current_schema.sql
+*.sql.gz
+/dumps/
+
+# Runbook operasional — menyebut path/nama service server production,
+# disimpan lokal saja, bukan di repo kode.
+DEPLOY-MIGRATION.md
+
+# Lock file skill Claude Code — state tool lokal, bukan bagian aplikasi.
+skills-lock.json

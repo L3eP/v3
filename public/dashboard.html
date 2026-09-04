@@ -1,179 +1,222 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 
 <head>
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#4f46e5">
+    <meta name="theme-color" content="#DC2626">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard</title>
-    <link rel="stylesheet" href="css/style.css?v=9">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='28' font-size='28'>📡</text></svg>">
+    <title>Dashboard - MAYUNG</title>
+    <script>(function(){try{var t=localStorage.getItem('theme');if(t==='dark'||(!t&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
+    <link rel="stylesheet" href="css/style.css?v=55">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="vendor/fontawesome/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Chart.js tidak lagi <script> eager di head — dimuat lazy oleh dashboard.js
+         hanya untuk Owner/Operator saat chart pertama dirender -->
 </head>
 
 <body class="with-sidebar">
+    <a href="#main" class="skip-nav">Langsung ke konten</a>
     <div id="navbar"></div>
 
-    <div class="dashboard-container">
-        <!-- <h1>Dashboard Overview</h1> -->
+    <div class="dashboard-container" id="main">
+        <div class="dashboard-header">
+            <h1 class="dashboard-title"><i class="fas fa-chart-bar text-primary"></i> Dashboard</h1>
+            <span id="lastUpdate" class="dashboard-last-update"><i class="far fa-clock"></i> Memuat...</span>
+        </div>
 
-        <div class="stats-grid">
-            <!-- Card 1: Ticket Statistics -->
-            <div class="stat-card">
+        <!-- Hub: kesehatan & antrian — adaptif per role -->
+        <div class="dashboard-hero-grid" id="hubStats">
+
+            <!-- Owner/Operator: Antrian -->
+            <section class="stat-card hero-card privileged-only" aria-label="Antrian tiket terbuka">
                 <div class="card-header-icon">
-                    <h3>Tickets Overview (This Month)</h3>
-                    <i class="fas fa-ticket-alt"></i>
+                    <h2>Antrian</h2>
+                    <i class="fas fa-inbox"></i>
                 </div>
-
-                <div class="stats-grid-inner">
-                    <!-- Total -->
-                    <div class="stat-item">
-                        <div class="stat-icon bg-primary-light">
-                            <i class="fas fa-layer-group text-primary"></i>
-                        </div>
-                        <div class="stat-info">
-                            <p class="stat-label">Total</p>
-                            <p class="stat-number-sm" id="totalTickets">0</p>
-                        </div>
-                    </div>
-
-                    <!-- Done -->
-                    <div class="stat-item">
-                        <div class="stat-icon bg-success-light">
-                            <i class="fas fa-check-circle text-success"></i>
-                        </div>
-                        <div class="stat-info">
-                            <p class="stat-label">Done</p>
-                            <p class="stat-number-sm" id="totalDone">0</p>
-                        </div>
-                    </div>
-
-                    <!-- On Progress -->
-                    <div class="stat-item">
-                        <div class="stat-icon bg-info-light">
-                            <i class="fas fa-spinner text-info"></i>
-                        </div>
-                        <div class="stat-info">
-                            <p class="stat-label">On Progress</p>
-                            <p class="stat-number-sm" id="totalOnProgress">0</p>
-                        </div>
-                    </div>
-
-                    <!-- Pending -->
-                    <div class="stat-item">
-                        <div class="stat-icon bg-warning-light">
-                            <i class="fas fa-clock text-warning"></i>
-                        </div>
-                        <div class="stat-info">
-                            <p class="stat-label">Pending</p>
-                            <p class="stat-number-sm" id="totalPending">0</p>
-                        </div>
-                    </div>
+                <p class="hero-metric" id="heroAntrianTotal">–</p>
+                <p class="hero-subtitle">tiket terbuka (Terlapor / Dikerjakan / Pending)</p>
+                <div class="hero-aging">
+                    <span class="age-chip age-now"><b id="agingToday">–</b> hari ini</span>
+                    <span class="age-chip age-mid"><b id="aging12">–</b> 1–2 hari</span>
+                    <span class="age-chip age-old"><b id="agingOver">–</b> &gt;2 hari</span>
                 </div>
+                <div class="hero-breakdown">
+                    <span class="status-badge status-terlapor">Terlapor <b id="bdTerlapor">–</b></span>
+                    <span class="status-badge status-dikerjakan">Dikerjakan <b id="bdDikerjakan">–</b></span>
+                    <span class="status-badge status-pending">Pending <b id="bdPending">–</b></span>
+                </div>
+            </section>
 
-                <div class="stat-footer">
+            <!-- Owner/Operator: Selesai bulan ini -->
+            <section class="stat-card hero-card privileged-only" aria-label="Tiket selesai bulan ini">
+                <div class="card-header-icon">
+                    <h2>Selesai Bulan Ini</h2>
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <p class="hero-metric" id="heroSelesai">–</p>
+                <p class="hero-subtitle">ditandai selesai sejak 1 <span id="selesaiBulanLabel">…</span></p>
+                <div class="hero-bar">
                     <div class="progress-label">
-                        <span>Completion Rate</span>
-                        <span id="completionRate">0%</span>
+                        <span>rasio vs tiket aktif</span>
+                        <span id="selesaiRasio">–</span>
                     </div>
                     <div class="progress-bar-bg">
-                        <div class="progress-bar-fill" id="completionBar" style="width: 0%"></div>
+                        <div class="progress-bar-fill" id="selesaiRasioBar" style="width:0%"></div>
                     </div>
-                    <p class="stat-note mt-2">
-                        <i class="fas fa-arrow-up text-success"></i>
-                        <span id="newThisWeek">0</span> new this week
-                    </p>
                 </div>
-            </div>
+                <p class="stat-note"><i class="fas fa-arrow-up text-success"></i> <span id="selesaiPekanIni">–</span> baru pekan ini</p>
+            </section>
 
-            <!-- Card 2: SLA -->
-            <div class="stat-card">
+            <!-- Owner/Operator: SLA rata-rata -->
+            <section class="stat-card hero-card privileged-only" aria-label="Estimasi waktu penyelesaian rata-rata">
                 <div class="card-header-icon">
-                    <h3>SLA — Rata-rata Penyelesaian</h3>
-                    <i class="fas fa-clock text-primary"></i>
+                    <h2>SLA Rata-rata</h2>
+                    <i class="fas fa-stopwatch"></i>
                 </div>
-                <div style="text-align:center;padding:20px 0;">
-                    <div style="font-size:2.2rem;font-weight:700;color:var(--primary-color);" id="avgSla">—</div>
-                    <div style="font-size:.85rem;color:var(--text-muted);margin-top:4px;">dari tiket selesai bulan ini</div>
-                </div>
-            </div>
+                <p class="hero-metric" id="heroSla">–</p>
+                <p class="hero-subtitle" id="slaSubtext">menunggu data selesai</p>
+            </section>
 
-            <!-- Card 3: Chart -->
-            <div class="stat-card">
-                <div class="card-header-actions">
-                    <div class="header-title-group">
-                        <h3>Trend by <span id="chartTitleSuffix">Sub-Node</span></h3>
-                        <select id="chartGroupBy" class="chart-select">
-                            <option value="subNode">Sub-Node</option>
-                            <option value="odc">ODC</option>
-                            <option value="aktifitas">Aktifitas</option>
-                        </select>
+            <!-- Teknisi: Tugas Saya (strip) -->
+            <section class="stat-card hero-card teknisi-strip hidden" id="teknisiHub" aria-label="Ringkasan tugas saya">
+                <div class="card-header-icon">
+                    <h2>Tugas Saya</h2>
+                    <i class="fas fa-user-cog"></i>
+                </div>
+                <div class="teknisi-strip-cols">
+                    <div class="tstrip-item bg-info-light">
+                        <p class="stat-number-sm text-info" id="tMyOpen">–</p>
+                        <p class="stat-label">tiket terbuka</p>
                     </div>
-                    <div class="chart-controls">
-                        <button id="btnChartBar" class="btn-icon active" title="Bar Chart"><i
-                                class="fas fa-chart-bar"></i></button>
-                        <button id="btnChartPie" class="btn-icon" title="Pie Chart"><i
-                                class="fas fa-chart-pie"></i></button>
-                        <button id="btnDownloadChart" class="btn-icon" title="Download Chart"><i
-                                class="fas fa-download"></i></button>
+                    <div class="tstrip-item bg-danger-light">
+                        <p class="stat-number-sm text-danger-strong" id="tMyAttention">–</p>
+                        <p class="stat-label">perlu perhatian (dibuat &gt;2 hari lalu / Critical)</p>
+                    </div>
+                    <div class="tstrip-item bg-success-light">
+                        <p class="stat-number-sm text-success" id="tMyDoneMonth">–</p>
+                        <p class="stat-label">selesai bulan ini (saya)</p>
+                    </div>
+                    <div class="tstrip-item bg-warning-light">
+                        <p class="stat-number-sm text-warning" id="tMySla">–</p>
+                        <p class="stat-label" id="tMySlaLabel">rata-rata SLA saya</p>
+                    </div>
+                    <div class="tstrip-item bg-info-light">
+                        <p class="stat-number-sm text-info" id="tMyActivitiesToday">–</p>
+                        <p class="stat-label">aktivitas hari ini</p>
+                    </div>
+                    <div class="tstrip-item bg-info-light">
+                        <p class="stat-number-sm text-info" id="tMyWeekActivities">–</p>
+                        <p class="stat-label">aktivitas pekan ini</p>
                     </div>
                 </div>
-                <div class="chart-container">
-                    <canvas id="ticketsChart"></canvas>
-                </div>
-                <p id="chartSummary" class="chart-summary-text">Loading insights...</p>
-            </div>
+            </section>
         </div>
 
-        <!-- Card 3: Recent Tickets -->
-        <div class="stat-card text-left col-span-full">
+        <!-- Chart: tren bulan ini (sekunder, paket data terbatas) -->
+        <section class="stat-card privileged-only" aria-label="Tren tiket bulan ini">
             <div class="card-header-actions">
-                <h3>Recent Tickets</h3>
-                <div class="header-actions-right">
-                    <div class="search-wrapper">
-                        <input type="text" id="ticketSearch" placeholder="Search tickets..." class="search-input">
-                    </div>
-                    <a href="/ticket-list.html" class="view-all-link">View All <i class="fas fa-arrow-right"></i></a>
-                </div>
-            </div>
-            <div class="table-responsive">
-                <ul class="activity-list" id="recentTicketsList">
-                    <!-- Populated by JS -->
-                </ul>
-                <div id="emptyState" class="empty-state hidden">
-                    <i class="fas fa-search"></i>
-                    <p>No tickets found matching your search.</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Card 4: Activity Log -->
-        <div class="stat-card text-left col-span-full mt-8">
-            <div class="card-header-actions">
-                <h3>Activity Log</h3>
-                <div class="header-actions-right">
-                    <select id="activityUserFilter" class="chart-select" style="width: auto;">
-                        <option value="">All Users</option>
-                        <!-- Populated by JS -->
+                <div class="header-title-group">
+                    <h2 class="card-title">Tren Bulan Ini</h2>
+                    <select id="chartGroupBy" class="chart-select" aria-label="Grupkan tren menurut">
+                        <option value="subNode">Sub-Node</option>
+                        <option value="odc">ODC</option>
+                        <option value="aktifitas">Aktifitas</option>
                     </select>
                 </div>
+                <div class="chart-controls">
+                    <button id="btnChartBar" class="btn-icon active" aria-label="Bar Chart" title="Bar Chart"><i
+                            class="fas fa-chart-bar"></i></button>
+                    <button id="btnChartPie" class="btn-icon" aria-label="Pie Chart" title="Pie Chart"><i
+                            class="fas fa-chart-pie"></i></button>
+                    <button id="btnDownloadChart" class="btn-icon" aria-label="Download Chart" title="Download Chart"><i
+                            class="fas fa-download"></i></button>
+                </div>
             </div>
-            <div class="table-responsive">
-                <ul class="activity-list" id="activityLogList">
-                    <li class="p-4 text-center text-muted">Loading activities...</li>
-                </ul>
+            <div class="chart-container">
+                <canvas id="ticketsChart" role="img" aria-label="Grafik tren tiket bulan ini"></canvas>
             </div>
+            <p id="chartSummary" class="chart-summary-text">Loading insights...</p>
+        </section>
+
+        <div class="dashboard-bottom-grid">
+
+            <!-- Card 3: Recent Tickets -->
+            <div class="stat-card text-left">
+                <div class="card-header-actions">
+                    <h2 class="card-title">Recent Tickets</h2>
+                    <div class="header-actions-right">
+                        <div class="search-wrapper">
+                            <input type="text" id="ticketSearch" placeholder="Search tickets..." class="search-input" aria-label="Cari tiket">
+                        </div>
+                        <a href="/ticket-list.html" class="view-all-link">View All <i class="fas fa-arrow-right"></i></a>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <ul class="activity-list" id="recentTicketsList">
+                        <!-- Populated by JS -->
+                    </ul>
+                    <div id="emptyState" class="empty-state hidden">
+                        <i class="fas fa-search"></i>
+                        <p>No tickets found matching your search.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card 4: Activity Log -->
+            <div class="stat-card text-left">
+                <div class="card-header-actions">
+                    <h2 class="card-title">Activity Log</h2>
+                    <div class="header-actions-right">
+                        <button id="quickLogBtn" class="btn-small btn-primary quick-log-btn"><i class="fas fa-history"></i> Quick Log</button>
+                        <div class="search-wrapper">
+                            <input type="text" id="activitySearch" class="search-input" placeholder="Cari aktivitas..." aria-label="Cari aktivitas">
+                        </div>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <ul class="activity-list" id="activityLogList">
+                        <li class="p-4 text-center text-muted">Loading activities...</li>
+                    </ul>
+                </div>
+            </div>
+
         </div>
     </div>
+
+    <!-- Quick Log Activity Modal -->
+    <div id="quickLogModal" class="modal" role="dialog" aria-modal="true" aria-label="Log aktivitas">
+        <div class="modal-content modal-content-sm">
+            <h3 class="modal-title"><i class="fas fa-history"></i> Log Activity</h3>
+            <form id="quickLogForm">
+                <div class="form-group">
+                    <label for="qlDescription">Deskripsi</label>
+                    <textarea id="qlDescription" rows="2" class="filter-select form-control" required placeholder="Apa yang dikerjakan?"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="qlTicketId">Ticket (opsional)</label>
+                    <select id="qlTicketId" class="filter-select form-control">
+                        <option value="">— No Ticket (General) —</option>
+                    </select>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary modal-btn" onclick="document.getElementById('quickLogModal').classList.remove('show')">Batal</button>
+                    <button type="submit" class="login-btn modal-btn"><i class="fas fa-save"></i> Log</button>
+                </div>
+            </form>
+        </div>
     </div>
 
-    <script src="js/csrf.js"></script>
-    <script src="js/navbar.js"></script>
-    <script src="js/dashboard.js"></script>
+    <script src="js/constants.js?v=2"></script>
+    <script src="js/csrf.js?v=1"></script>
+    <script src="js/toast.js?v=5"></script>
+    <script src="js/navbar.js?v=4"></script>
+    <script src="js/dashboard.js?v=6"></script>
 </body>
 
 </html>

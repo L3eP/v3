@@ -10,10 +10,22 @@
     "categories": ["business", "utilities", "communication"],
     "icons": [
         {
-            "src": "uploads/1765639881969-Screenshot_2025_12_04_at_17.17.07_removebg_preview.png",
-            "sizes": "416x416",
+            "src": "images/icon-192.png",
+            "sizes": "192x192",
             "type": "image/png",
-            "purpose": "any maskable"
+            "purpose": "any"
+        },
+        {
+            "src": "images/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "images/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
         }
     ],
     "screenshots": [],

@@ -1,209 +1,169 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 
 <head>
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#4f46e5">
+    <meta name="theme-color" content="#DC2626">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='28' font-size='28'>📡</text></svg>">
     <title>Ticket Details - MAYUNG</title>
-    <link rel="stylesheet" href="css/style.css?v=9">
+    <script>(function(){try{var t=localStorage.getItem('theme');if(t==='dark'||(!t&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
+    <link rel="stylesheet" href="css/style.css?v=55">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="vendor/fontawesome/css/all.min.css">
 </head>
 
 <body class="with-sidebar">
+    <a href="#main" class="skip-nav">Langsung ke konten</a>
     <div id="navbar"></div>
 
-    <div class="dashboard-container">
-        <div class="details-card">
-            <div class="detail-header">
-                <div>
-                    <h2 id="ticketSubject" class="detail-title">Loading...</h2>
-                    <p id="ticketMeta" class="detail-meta">Created by ... on ...</p>
-                </div>
+    <div id="main" class="dashboard-container">
+        <!-- Top action bar -->
+        <div class="td-topbar">
+            <a href="ticket-list.html" class="back-btn" title="Kembali ke daftar"><i class="fas fa-arrow-left"></i></a>
+            <span id="ticketIdDisplay" class="td-id">#—</span>
+            <div class="td-actions">
+                <button id="editTicketBtn" class="btn-warning btn-small"><i class="fas fa-edit"></i> Edit</button>
+                <button id="deleteTicketBtn" class="btn-danger btn-small"><i class="fas fa-trash-alt"></i> Hapus</button>
+            </div>
+        </div>
+
+        <!-- Hero card -->
+        <div class="td-hero">
+            <div class="td-hero-top">
+                <h1 id="ticketSubject" class="td-title">Loading...</h1>
                 <span id="ticketStatusBadge" class="status-badge">...</span>
             </div>
+            <p id="ticketMeta" class="td-meta">Created by ... on ...</p>
 
-            <div class="detail-grid">
-                <div class="detail-item">
-                    <label>Priority</label>
-                    <span id="ticketPriority" class="detail-value">...</span>
+            <div class="td-grid">
+                <div class="td-cell">
+                    <span class="td-cell-label"><i class="fas fa-flag"></i> Priority</span>
+                    <b id="ticketPriority" class="td-cell-value">...</b>
                 </div>
-                <div class="detail-item">
-                    <label>Sub-node</label>
-                    <p id="ticketSubNode" class="detail-value">...</p>
+                <div class="td-cell">
+                    <span class="td-cell-label"><i class="fas fa-sitemap"></i> Sub-Node</span>
+                    <b id="ticketSubNode" class="td-cell-value">...</b>
                 </div>
-                <div class="detail-item">
-                    <label>ODC</label>
-                    <p id="ticketOdc" class="detail-value">...</p>
+                <div class="td-cell">
+                    <span class="td-cell-label"><i class="fas fa-network-wired"></i> ODC</span>
+                    <b id="ticketOdc" class="td-cell-value">...</b>
                 </div>
-                <div class="detail-item">
-                    <label>Lokasi</label>
-                    <p id="ticketLokasi" class="detail-value">...</p>
+                <div class="td-cell">
+                    <span class="td-cell-label"><i class="fas fa-map-marker-alt"></i> Lokasi</span>
+                    <b id="ticketLokasi" class="td-cell-value">...</b>
                 </div>
-                <div class="detail-item">
-                    <label>PIC</label>
-                    <p id="ticketPic" class="detail-value">...</p>
+                <div class="td-cell">
+                    <span class="td-cell-label"><i class="fas fa-user"></i> PIC</span>
+                    <b id="ticketPic" class="td-cell-value">...</b>
                 </div>
             </div>
+        </div>
 
-            <div class="detail-item detail-section">
-                <label>Info</label>
-                <p id="ticketDescription" class="detail-info-box">...</p>
-            </div>
+        <!-- Info -->
+        <div class="td-card">
+            <div class="td-card-header"><i class="fas fa-info-circle"></i> Info</div>
+            <p id="ticketDescription" class="td-info">...</p>
+        </div>
 
-            <div id="evidenceSection" class="detail-item" style="margin-top: 24px; display: none;">
-                <label>Evidence</label>
-                <div style="margin-top: 10px;">
-                    <img id="evidenceImage" src="" alt="Evidence" class="evidence-img">
-                </div>
-            </div>
+        <!-- Evidence -->
+        <div id="evidenceSection" class="td-card" style="display:none;">
+            <div class="td-card-header"><i class="fas fa-image"></i> Evidence</div>
+            <img id="evidenceImage" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="Evidence" class="td-evidence" loading="lazy">
+        </div>
 
-            <div class="detail-item" style="margin-top: 24px;">
-                <label>Status History</label>
-                <ul id="statusHistoryList" class="activity-list" style="margin-top: 10px;">
-                    <li class="text-muted">Loading history...</li>
-                </ul>
-            </div>
-
-            <div class="action-buttons">
-                <div class="action-group-left">
-                    <a href="ticket-list.html" class="btn-secondary btn-small">
-                        <i class="fas fa-arrow-left"></i> Back to List
-                    </a>
-                </div>
-                <div class="action-group-right">
-                    <button id="editTicketBtn" class="btn-warning btn-small">
-                        <i class="fas fa-edit"></i> Edit Ticket
-                    </button>
-                    <button id="deleteTicketBtn" class="btn-danger btn-small">
-                        <i class="fas fa-trash-alt"></i> Delete Ticket
-                    </button>
-                </div>
-            </div>
+        <!-- Status timeline -->
+        <div class="td-card">
+            <div class="td-card-header"><i class="fas fa-history"></i> Riwayat Status</div>
+            <ul id="statusHistoryList" class="td-timeline">
+                <li class="text-muted">Loading history...</li>
+            </ul>
         </div>
     </div>
 
     <!-- Edit Modal -->
-    <div id="editModal" class="modal">
-        <div class="modal-content modal-lg">
-            <h3>Edit Ticket</h3>
+    <div id="editModal" class="modal" role="dialog" aria-modal="true" aria-label="Edit Ticket">
+        <div class="modal-content" style="max-width:500px;text-align:left;">
+            <h3 class="modal-title"><i class="fas fa-edit"></i> Edit Ticket</h3>
             <form id="editTicketForm">
-                <div class="form-grid">
-                    <div class="form-group">
+                <div style="display:flex;flex-direction:column;gap:12px;">
+                    <div>
                         <label for="editAktifitas">Aktifitas</label>
-                        <select id="editAktifitas" name="aktifitas" required>
-                            <option value="PSB">PSB</option>
-                            <option value="Maintenance">Maintenance</option>
-                            <option value="loss">loss</option>
-                            <option value="migrasi">migrasi</option>
+                        <select id="editAktifitas" name="aktifitas" required class="field" onchange="onEditAktifitasChange()">
+                            <option value="">Pilih Aktifitas</option>
                         </select>
                     </div>
-
-                    <div class="form-group">
-                        <label for="editSubNode">Sub-node</label>
-                        <select id="editSubNode" name="subNode" required>
-                            <option value="ANJ">ANJ</option>
-                            <option value="SKM">SKM</option>
-                            <option value="JRG">JRG</option>
-                            <option value="DMS">DMS</option>
-                            <option value="SKJ">SKJ</option>
-                            <option value="RKM">RKM</option>
-                            <option value="MBL">MBL</option>
+                    <div id="editPsbWrap" style="display:none;">
+                        <label for="editPsbSelect">👤 Pelanggan PSB</label>
+                        <select id="editPsbSelect" class="field" onchange="onEditPsbSelect()">
+                            <option value="">— Pilih Pelanggan —</option>
                         </select>
+                        <div id="editPsbInfo" style="font-size:.8rem;color:var(--text-muted);margin-top:4px;"></div>
                     </div>
-
-                    <div class="form-group">
-                        <label for="editOdc">ODC</label>
-                        <select id="editOdc" name="odc" required>
-                            <optgroup label="OLT JRG">
-                                <option value="ODC 1 - rumah p enjel">ODC 1 - rumah p enjel</option>
-                                <option value="ODC 2 - h. Marjan">ODC 2 - h. Marjan</option>
-                                <option value="ODC 3 - depan kubur sekarteja">ODC 3 - depan kubur sekarteja</option>
-                                <option value="ODC 4 - sekarteja">ODC 4 - sekarteja</option>
-                            </optgroup>
-
-                            <optgroup label="OLT SKM">
-                                <option value="ODC 5 - rumah amak unet">ODC 5 - rumah amak unet</option>
-                                <option value="ODC 6 - indomaret sukamulia">ODC 6 - indomaret sukamulia</option>
-                                <option value="ODC 7 - rumah epol">ODC 7 - rumah epol</option>
-                                <option value="ODC 8 - orong piter induk">ODC 8 - orong piter induk</option>
-                            </optgroup>
-
-                            <optgroup label="OLT HNM">
-                                <option value="ODC 9 - BTN Hanum">ODC 9 - BTN Hanum</option>
-                                <option value="ODC 10 - BTN sekar anyar">ODC 10 - BTN sekar anyar</option>
-                                <option value="ODC 11 - BTN sekar anyar">ODC 11 - BTN sekar anyar</option>
-                                <option value="ODC 12 - Anjani">ODC 12 - Anjani</option>
-                            </optgroup>
-
-                            <optgroup label="OLT DMS">
-                                <option value="ODC 13 - rumah pandi">ODC 13 - rumah pandi</option>
-                                <option value="ODC 14 - Rekat lauk">ODC 14 - Rekat lauk</option>
-                            </optgroup>
-
-                            <optgroup label="OLT HIOSO">
-                                <option value="ODC 15 - Gubuk Lauk Masjid">ODC 15 - Gubuk Lauk Masjid</option>
-                            </optgroup>
-                        </select>
+                    <div class="grid-2">
+                        <div>
+                            <label for="editSubNode">Sub-node</label>
+                            <select id="editSubNode" name="subNode" required class="field"><option value="">Pilih</option></select>
+                        </div>
+                        <div>
+                            <label for="editPriority">Priority</label>
+                            <select id="editPriority" name="priority" required class="field"><option value="">Pilih</option></select>
+                        </div>
                     </div>
-
-                    <div class="form-group">
+                    <div class="grid-2">
+                        <div>
+                            <label for="editOdc">ODC</label>
+                            <select id="editOdc" name="odc" required class="field" onchange="onEditOdcChange()"><option value="">Pilih ODC</option></select>
+                        </div>
+                        <div>
+                            <label for="editOdp">ODP (opsional)</label>
+                            <select id="editOdp" name="odp" class="field"><option value="">Pilih ODP</option></select>
+                        </div>
+                    </div>
+                    <div>
                         <label for="editLokasi">Lokasi</label>
-                        <input type="text" id="editLokasi" name="lokasi" required>
+                        <input type="text" id="editLokasi" name="lokasi" required placeholder="e.g. Gubuk Lauk, Sekarteja" class="field">
                     </div>
-
-                    <div class="form-group">
-                        <label for="editPic">PIC</label>
-                        <select id="editPic" name="pic" required>
-                            <!-- Populated dynamically -->
-                        </select>
+                    <div class="grid-2">
+                        <div>
+                            <label for="editPic">PIC</label>
+                            <select id="editPic" name="pic" required class="field"><option value="">Select PIC</option></select>
+                        </div>
+                        <div>
+                            <label for="editStatus">Status</label>
+                            <select id="editStatus" name="status" class="field">
+                                <option value="Terlapor">Terlapor</option>
+                                <option value="Dikerjakan">Dikerjakan</option>
+                                <option value="Selesai">Selesai</option>
+                                <option value="Pending">Pending</option>
+                            </select>
+                        </div>
                     </div>
-
-                    <div class="form-group">
-                        <label for="editPriority">Priority</label>
-                        <select id="editPriority" name="priority" required>
-                            <option value="Low">Low</option>
-                            <option value="Moderate">Moderate</option>
-                            <option value="Critical">Critical</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="editStatus">Status</label>
-                        <select id="editStatus" name="status">
-                            <option value="Terlapor">Terlapor</option>
-                            <option value="Dikerjakan">Dikerjakan</option>
-                            <option value="Selesai">Selesai</option>
-                            <option value="Pending">Pending</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group form-full-width">
+                    <div>
                         <label for="editInfo">Info</label>
-                        <textarea id="editInfo" name="info" rows="4" required></textarea>
+                        <textarea id="editInfo" name="info" rows="3" required placeholder="Detailed description..." class="field resize-v"></textarea>
                     </div>
-
-                    <div class="form-group form-full-width">
-                        <label for="editEvidence">Update Evidence (Optional)</label>
-                        <input type="file" id="editEvidence" name="evidence" accept="image/*">
+                    <div>
+                        <label for="editEvidence">Evidence (opsional)</label>
+                        <input type="file" id="editEvidence" name="evidence" accept="image/*" class="field" style="padding:6px;" onchange="onEditEvidenceChange()">
+                        <img id="editEvidencePreview" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="Pratinjau bukti" loading="lazy" style="display:none;max-width:180px;max-height:120px;margin-top:6px;border-radius:6px;border:1px solid var(--border-color);">
                     </div>
                 </div>
-
-                <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
-                    <button type="button" id="cancelEditBtn" class="modal-ok-btn"
-                        style="background: #9ca3af;">Cancel</button>
-                    <button type="submit" class="modal-ok-btn">Save Changes</button>
+                <div class="form-footer">
+                    <button type="button" id="cancelEditBtn" class="btn-secondary" style="width:auto;">Batal</button>
+                    <button type="submit" class="login-btn" style="width:auto;"><i class="fas fa-save"></i> Update Ticket</button>
                 </div>
             </form>
         </div>
     </div>
 
     <!-- Success/Error Modal -->
-    <div id="modal" class="modal">
+    <div id="modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
         <div class="modal-content">
             <h3 id="modalTitle">Error</h3>
             <p id="modalMessage">Something went wrong.</p>
@@ -211,10 +171,11 @@
         </div>
     </div>
 
-    <script src="js/csrf.js"></script>
-    <script src="js/navbar.js"></script>
-    <script src="js/ticket-details.js"></script>
-    <script src="js/toast.js"></script>
+    <script src="js/constants.js?v=2"></script>
+    <script src="js/csrf.js?v=1"></script>
+    <script src="js/toast.js?v=5"></script>
+    <script src="js/navbar.js?v=4"></script>
+    <script src="js/ticket-details.js?v=3"></script>
 </body>
 
 </html>

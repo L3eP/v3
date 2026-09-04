@@ -1,99 +1,144 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#4f46e5">
+    <meta name="theme-color" content="#DC2626">
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Panel - MAYUNG</title>
-    <link rel="stylesheet" href="css/style.css?v=9">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='28' font-size='28'>📡</text></svg>">
+    <title>Referensi - MAYUNG</title>
+    <script>(function(){try{var t=localStorage.getItem('theme');if(t==='dark'||(!t&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
+    <link rel="stylesheet" href="css/style.css?v=55">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="vendor/fontawesome/css/all.min.css">
     <style>
-        .admin-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:16px; margin-top:20px; }
-        .admin-card { background:#fff; border-radius:14px; padding:24px 16px; box-shadow:0 1px 3px rgba(0,0,0,0.08); cursor:pointer; transition:all 0.2s; border:1px solid #f3f4f6; text-align:center; }
-        .admin-card:hover { transform:translateY(-2px); box-shadow:0 4px 12px rgba(0,0,0,0.12); }
-        .admin-card-icon { font-size:2rem; margin-bottom:8px; }
-        .admin-card-title { font-weight:600; font-size:.95rem; color:var(--text-main); }
-        .admin-card-count { font-size:1.8rem; font-weight:700; margin-top:6px; }
-        .admin-card-sub { font-size:.78rem; color:var(--text-muted); margin-top:4px; }
-        .back-btn { background:none; border:none; cursor:pointer; color:var(--text-muted); font-size:1.2rem; padding:8px; border-radius:8px; }
-        .back-btn:hover { background:#f3f4f6; color:var(--text-main); }
         .ref-item { display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border-color); }
         .ref-item:last-child { border-bottom:none; }
         .ref-label { display:flex; align-items:center; gap:8px; }
         .ref-actions { display:flex; gap:5px; }
         .ref-actions button { background:none; border:none; cursor:pointer; padding:4px 8px; border-radius:4px; font-size:.85rem; }
-        .btn-edit-ref { color:#2563eb; } .btn-edit-ref:hover { background:#dbeafe; }
-        .btn-del-ref { color:#ef4444; } .btn-del-ref:hover { background:#fee2e2; }
-        .btn-sm { padding:4px 10px; border:none; border-radius:6px; cursor:pointer; font-size:.8rem; }
-        .btn-add-ref { margin-top:10px; padding:8px 16px; background:#f3f4f6; border:1px dashed #d1d5db; border-radius:8px; cursor:pointer; width:100%; color:var(--text-muted); }
-        .btn-add-ref:hover { background:#e5e7eb; color:var(--text-main); }
-        .inline-form { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
-        .inline-form input,.inline-form select { flex:1; min-width:120px; padding:6px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:.9rem; }
+        .btn-add-ref { margin-top:10px; padding:8px 16px; background:var(--bg-subtle); border:1px dashed var(--input-border); border-radius:8px; cursor:pointer; width:100%; color:var(--text-muted); }
+        .btn-add-ref:hover { background:var(--border-color); color:var(--text-main); }
         .btn-save { background:#10b981; color:#fff; } .btn-cancel { background:#6b7280; color:#fff; }
-        .toast { visibility:hidden; min-width:250px; background:#333; color:#fff; text-align:center; border-radius:8px; padding:12px; position:fixed; bottom:30px; left:50%; transform:translateX(-50%); z-index:1000; }
-        .toast.show { visibility:visible; animation:fadein .3s; } @keyframes fadein { from{opacity:0} to{opacity:1} }
-        .hidden { display:none!important; }
     </style>
 </head>
 <body class="with-sidebar">
+    <a href="#main" class="skip-nav">Langsung ke konten</a>
     <div id="navbar"></div>
-    <div class="dashboard-container">
+    <div id="main" class="dashboard-container">
         <div id="adminHome">
-            <div style="margin-bottom:20px;">
-                <h1 style="margin:0;font-size:1.5rem;"><i class="fas fa-cogs"></i> Admin Panel</h1>
-                <p style="color:var(--text-muted);margin:5px 0 0 0;">Pilih kategori untuk mengelola data</p>
+            <div class="ref-page-header">
+                <div>
+                    <h1 class="page-title"><i class="fas fa-book"></i> Referensi</h1>
+                    <p class="page-sub">Kelola data referensi (Aktifitas, Sub-Node, Priority)</p>
+                </div>
+                <button type="button" id="themeToggleBtn" class="theme-toggle-btn" aria-pressed="false">
+                    <i class="fas fa-moon" aria-hidden="true"></i>
+                    <span id="themeToggleLabel">Mode Gelap</span>
+                </button>
             </div>
             <div class="admin-grid" id="cardGrid"></div>
         </div>
         <div id="adminDetail" class="hidden"></div>
     </div>
 
-    <div id="editModal" class="modal">
+    <div id="editModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="editModalTitle">
         <div class="modal-content" style="max-width:450px;">
             <h3 id="editModalTitle">Edit</h3>
-            <div id="editModalBody" style="margin:15px 0;">
-                <label style="display:block;margin-bottom:5px;font-weight:500;">Label</label>
-                <input type="text" id="editLabel" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
+            <div id="editModalBody" class="modal-body">
+                <label for="editLabel">Label</label>
+                <input type="text" id="editLabel" aria-label="Label" class="field">
                 <div id="editGroupWrap" style="margin-top:10px;display:none;">
-                    <label style="display:block;margin-bottom:5px;font-weight:500;">Induk</label>
-                    <input type="text" id="editGroup" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;">
+                    <label for="editGroup">Induk</label>
+                    <input type="text" id="editGroup" aria-label="Group" class="field">
                 </div>
                 <div id="editPortWrap" style="margin-top:10px;display:none;">
-                    <label style="display:block;margin-bottom:5px;font-weight:500;">Port di Induk</label>
-                    <input type="text" id="editPort" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;" placeholder="Contoh: Port 3/8">
+                    <label for="editPort">Port di Induk</label>
+                    <input type="text" id="editPort" aria-label="Port di Induk" class="field" placeholder="Contoh: Port 3/8">
                 </div>
                 <div id="editCoordWrap" style="margin-top:10px;display:none;">
-                    <label style="display:block;margin-bottom:5px;font-weight:500;">Koordinat</label>
-                    <div style="display:flex;gap:8px;">
-                        <input type="text" id="editLat" style="flex:1;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;" placeholder="Latitude">
-                        <input type="text" id="editLng" style="flex:1;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;" placeholder="Longitude">
+                    <label >Koordinat</label>
+                    <div class="flex-row">
+                        <input type="text" id="editLat" aria-label="Latitude" class="field flex-1" placeholder="Latitude">
+                        <input type="text" id="editLng" aria-label="Longitude" class="field flex-1" placeholder="Longitude">
                     </div>
                 </div>
             </div>
             <div id="addFormContainer" style="display:none;"></div>
             <div style="display:flex;gap:10px;justify-content:flex-end;">
-                <button class="login-btn" style="background:#6b7280;" id="cancelEditBtn">Cancel</button>
+                <button class="btn-secondary" id="cancelEditBtn">Batal</button>
                 <button class="login-btn" id="saveEditBtn">Save</button>
             </div>
         </div>
     </div>
 
-    <div id="confirmModal" class="modal">
-        <div class="modal-content" style="max-width:400px;">
-            <h3 style="color:#ef4444;">Confirm Delete</h3>
-            <p id="confirmMessage" style="margin:15px 0;">Are you sure?</p>
-            <div style="display:flex;gap:10px;justify-content:flex-end;">
-                <button class="login-btn" style="background:#6b7280;" id="cancelDelBtn">Cancel</button>
-                <button class="login-btn" style="background:#ef4444;" id="confirmDelBtn">Delete</button>
+    <!-- Company Settings Modal -->
+    <div id="companyModal" class="modal" role="dialog" aria-modal="true" aria-label="Company Settings">
+        <div class="modal-content" style="max-width:450px;text-align:left;">
+            <h3 class="modal-title"><i class="fas fa-building"></i> Company Settings</h3>
+            <form id="companyForm" style="display:flex;flex-direction:column;gap:14px;">
+                <div class="flex-col">
+                    <label class="field-label" for="companyName">Nama Perusahaan</label>
+                    <input type="text" id="companyName" aria-label="Nama perusahaan" placeholder="Masukkan nama perusahaan" class="field-lg">
+                </div>
+                <div class="flex-col">
+                    <label class="field-label" for="companyLogo">Logo Perusahaan</label>
+                    <input type="file" id="companyLogo" aria-label="Logo perusahaan" accept="image/*" class="field" style="padding:8px;">
+                    <small class="text-muted-sm">Ukuran recomended: 100x100px</small>
+                    <img id="logoPreview" alt="Pratinjau logo" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" style="width:96px;height:96px;object-fit:cover;border-radius:8px;border:2px solid var(--border-color);margin-top:4px;display:none;">
+                </div>
+                <div class="flex-end" style="margin-top:8px">
+                    <button type="button" class="btn-secondary" onclick="document.getElementById('companyModal').classList.remove('show')" style="width:auto;">Batal</button>
+                    <button type="submit" class="login-btn" style="width:auto;"><i class="fas fa-save"></i> Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Reference Modal -->
+    <div id="addRefModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="addRefTitle">
+        <div class="modal-content" style="max-width:450px;text-align:left;">
+            <h3 id="addRefTitle" class="modal-title"><i class="fas fa-plus-circle"></i> Tambah</h3>
+            <form id="addRefForm" style="display:flex;flex-direction:column;gap:12px;">
+                <div class="flex-col">
+                    <label class="field-label" for="addRefLabel">Label</label>
+                    <input type="text" id="addRefLabel" aria-label="Label" placeholder="Masukkan label" class="field-lg">
+                </div>
+                <div id="addRefCoordWrap" style="display:none;flex-direction:column;gap:6px;">
+                    <label class="field-label">Koordinat (opsional)</label>
+                    <div class="flex-row">
+                        <input type="text" id="addRefLat" aria-label="Latitude" placeholder="Latitude" class="field-lg flex-1">
+                        <input type="text" id="addRefLng" aria-label="Longitude" placeholder="Longitude" class="field-lg flex-1">
+                    </div>
+                </div>
+                <div class="flex-end" style="margin-top:8px">
+                    <button type="button" class="btn-secondary" onclick="document.getElementById('addRefModal').classList.remove('show')" style="width:auto;">Batal</button>
+                    <button type="submit" class="login-btn" style="width:auto;"><i class="fas fa-save"></i> Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Audit Log Modal -->
+    <div id="auditModal" class="modal" role="dialog" aria-modal="true" aria-label="Log Audit">
+        <div class="modal-content" style="max-width:600px;text-align:left;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <h3 style="margin:0;color:var(--primary-color);"><i class="fas fa-history"></i> Log Audit <span id="auditCount" class="text-muted-sm"></span></h3>
+                <button class="btn-secondary" style="padding:6px 12px;" onclick="document.getElementById('auditModal').classList.remove('show')">✕</button>
+            </div>
+            <div style="border-bottom:1px solid var(--border-color);margin-bottom:12px;"></div>
+            <div id="auditList" style="max-height:65vh;overflow-y:auto;">
+                <div class="empty-state"><i class="fas fa-spinner fa-spin" style="font-size:2rem;display:block;margin-bottom:10px;"></i>Memuat...</div>
             </div>
         </div>
     </div>
 
-    <div id="toast" class="toast"></div>
-    <script src="js/csrf.js"></script>
-    <script src="js/navbar.js"></script>
-    <script src="js/admin.js?2"></script>
+    <script src="js/constants.js?v=2"></script>
+    <script src="js/csrf.js?v=1"></script>
+    <script src="js/toast.js?v=5"></script>
+    <script src="js/navbar.js?v=4"></script>
+    <script src="js/admin.js?v=3"></script>
 </body>
 </html>

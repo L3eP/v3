@@ -1,87 +1,152 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 
 <head>
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#4f46e5">
+    <meta name="theme-color" content="#DC2626">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='28' font-size='28'>📡</text></svg>">
     <title>Ticket List - MAYUNG</title>
-    <link rel="stylesheet" href="css/style.css?v=9">
+    <script>(function(){try{var t=localStorage.getItem('theme');if(t==='dark'||(!t&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
+    <link rel="stylesheet" href="css/style.css?v=55">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="vendor/fontawesome/css/all.min.css">
 </head>
 
 <body class="with-sidebar">
+    <a href="#main" class="skip-nav">Langsung ke konten</a>
     <div id="navbar"></div>
 
-    <div class="dashboard-container">
+    <div class="dashboard-container" id="main">
 
+        <div class="dashboard-header">
+            <h1 class="dashboard-title"><i class="fas fa-ticket-alt text-primary"></i> Ticket List</h1>
+            <button id="btnNewTicket" class="btn-small btn-primary quick-log-btn"><i class="fas fa-plus-circle"></i> New
+                Ticket</button>
+        </div>
 
         <!-- Filter Bar -->
         <div class="filter-bar">
-            <div class="filter-group" style="flex: 2; min-width: 200px;">
-                <label for="searchInput" class="filter-label">Search</label>
-                <div style="position: relative;">
-                    <i class="fas fa-search"
-                        style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #9ca3af;"></i>
-                    <input type="text" id="searchInput" class="filter-select" placeholder="Search tickets..."
-                        style="padding-left: 35px; width: 100%;">
+            <div class="filter-row">
+                <div class="filter-group filter-group-search">
+                    <label for="searchInput" class="filter-label">Cari</label>
+                    <div class="search-wrapper">
+                        <i class="fas fa-search search-icon" aria-hidden="true"></i>
+                        <input type="text" id="searchInput" class="filter-select search-input-lg"
+                            placeholder="Cari tiket...">
+                    </div>
+                </div>
+                <div class="filter-group">
+                    <label for="statusFilter" class="filter-label">Status</label>
+                    <select id="statusFilter" class="filter-select">
+                        <option value="All">Semua</option>
+                        <option value="Terlapor">Terlapor</option>
+                        <option value="Dikerjakan">Dikerjakan</option>
+                        <option value="Selesai">Selesai</option>
+                        <option value="Pending">Pending</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="priorityFilter" class="filter-label">Priority</label>
+                    <select id="priorityFilter" class="filter-select">
+                        <option value="All">Semua</option>
+                        <option value="Urgent">Urgent</option>
+                        <option value="Critical">Critical</option>
+                        <option value="Moderate">Moderate</option>
+                        <option value="Low">Low</option>
+                    </select>
+                </div>
+                <div class="filter-group-date">
+                    <label class="filter-label">Rentang Tanggal</label>
+                    <div class="range-pair">
+                        <input type="date" id="startDateFilter" class="filter-select" aria-label="Dari tanggal">
+                        <input type="date" id="endDateFilter" class="filter-select" aria-label="Sampai tanggal">
+                    </div>
                 </div>
             </div>
-            <div class="filter-group">
-                <label for="statusFilter" class="filter-label">Status</label>
-                <select id="statusFilter" class="filter-select">
-                    <option value="All">All Statuses</option>
-                    <option value="Terlapor">Terlapor</option>
-                    <option value="Dikerjakan">Dikerjakan</option>
-                    <option value="Selesai">Selesai</option>
-                    <option value="Pending">Pending</option>
+            <div class="filter-actions">
+                <button id="btnBulanIni" class="btn-small btn-secondary filter-btn-month" title="Filter bulan ini"
+                    aria-pressed="false">
+                    <i class="fas fa-calendar-alt"></i> Bulan Ini
+                </button>
+                <!-- Sort mobile: header tersortir tak terlihat di layout kartu ≤640px,
+                     toolbar mengambil alih urutannya (sinkron dengan header) -->
+                <select id="sortSelect" class="filter-select mobile-sort-select" aria-label="Urutkan tiket">
+                    <option value="createdAt|desc">Terbaru dulu</option>
+                    <option value="createdAt|asc">Terlama dulu</option>
+                    <option value="id|asc">ID naik</option>
+                    <option value="subNode|asc">Sub-node</option>
+                    <option value="priority|asc">Priority</option>
+                    <option value="status|asc">Status</option>
                 </select>
             </div>
-            <div class="filter-group">
-                <label for="priorityFilter" class="filter-label">Priority</label>
-                <select id="priorityFilter" class="filter-select">
-                    <option value="All">All Priorities</option>
-                    <option value="Critical">Critical</option>
-                    <option value="Moderate">Moderate</option>
-                    <option value="Low">Low</option>
-                </select>
-            </div>
-            <div class="filter-group">
-                <label for="startDateFilter" class="filter-label">Start Date</label>
-                <input type="date" id="startDateFilter" class="filter-select">
-            </div>
-            <div class="filter-group">
-                <label for="endDateFilter" class="filter-label">End Date</label>
-                <input type="date" id="endDateFilter" class="filter-select">
-            </div>
-            <div class="export-buttons">
-                <select id="exportScope" class="filter-select" style="width:auto;min-width:100px;">
-                    <option value="all">Semua (filter aktif)</option>
-                    <option value="month">Bulan ini</option>
-                </select>
-                <button id="exportCsvBtn" class="btn-export btn-csv">CSV</button>
-                <button id="exportPdfBtn" class="btn-export btn-pdf">PDF</button>
-            </div>
+            <!-- Ekspor: baris penuh di desktop; pada <=640px dilipat jadi toggle
+                 (JS ticket-list.js menyinkronkan open/closed per breakpoint) -->
+            <details id="exportGroup" class="export-group" open>
+                <summary><i class="fas fa-download" aria-hidden="true"></i> Ekspor <i
+                        class="fas fa-chevron-down" aria-hidden="true"></i></summary>
+                <div class="export-buttons">
+                    <select id="exportScope" class="filter-select export-scope-select" aria-label="Ruang lingkup ekspor">
+                        <option value="all">Semua (filter aktif)</option>
+                        <option value="month">Bulan ini</option>
+                    </select>
+                    <button id="exportCsvBtn" type="button" class="btn-export btn-csv"><i class="fas fa-file-csv"></i>
+                        CSV</button>
+                    <button id="exportPdfBtn" type="button" class="btn-export btn-pdf"><i class="fas fa-file-pdf"></i>
+                        PDF</button>
+                </div>
+            </details>
+        </div>
+
+        <!-- Strip hasil: ringkasan jumlah + filter aktif + Reset (selalu dirender) -->
+        <div id="resultsStrip" class="results-strip" role="status" aria-live="polite">
+            <span id="resultsStripText"><b>…</b> tiket</span>
+            <button type="button" id="resetStripBtn" class="btn-small btn-secondary hidden"><i class="fas fa-times"></i>
+                Reset</button>
+        </div>
+
+        <!-- Strip progres ekspor: eksplisit selama loop permintaan.
+             Live region POLITE saja (bukan role="status") — resultsStrip di atas
+             adalah satu-satunya region status halaman, hindari pengumuman ganda. -->
+        <div id="exportStatus" class="export-status-strip hidden" aria-live="polite">
+            <i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
+            <span id="exportStatusText">Mengekspor… memuat tiket</span>
+            <button type="button" id="exportCancelBtn" class="btn-small btn-secondary export-cancel-btn"><i
+                    class="fas fa-times" aria-hidden="true"></i> Batal</button>
         </div>
 
         <div class="table-responsive">
             <table class="user-table">
                 <thead>
                     <tr>
-                        <th data-sort="id" class="sortable-header">ID <i class="fas fa-sort"></i></th>
-                        <th data-sort="aktifitas" class="sortable-header">Aktifitas <i class="fas fa-sort"></i></th>
-                        <th data-sort="subNode" class="sortable-header">Sub-node <i class="fas fa-sort"></i></th>
-                        <th>ODC</th>
-                        <th>Lokasi</th>
-                        <th>PIC</th>
-                        <th data-sort="priority" class="sortable-header">Priority <i class="fas fa-sort"></i></th>
-                        <th data-sort="status" class="sortable-header">Status <i class="fas fa-sort"></i></th>
-                        <th data-sort="createdAt" class="sortable-header">Date <i class="fas fa-sort"></i></th>
-                        <th>Action</th>
+                        <th scope="col" data-sort="id" class="sortable-header" aria-sort="none" style="width: 70px; min-width: 70px;"><button type="button"
+                                class="th-sort-btn">ID<i class="fas fa-sort th-sort-icon"
+                                    aria-hidden="true"></i></button></th>
+                        <th scope="col" data-sort="aktifitas" class="sortable-header" aria-sort="none" style="width: 150px; min-width: 130px;"><button
+                                type="button" class="th-sort-btn">Aktifitas<i class="fas fa-sort th-sort-icon"
+                                    aria-hidden="true"></i></button></th>
+                        <th scope="col" data-sort="subNode" class="sortable-header" aria-sort="none" style="width: 120px; min-width: 100px;"><button
+                                type="button" class="th-sort-btn">Sub-node<i class="fas fa-sort th-sort-icon"
+                                    aria-hidden="true"></i></button></th>
+                        <th scope="col" style="width: 90px; min-width: 80px;">ODC</th>
+                        <th scope="col" style="width: 230px; min-width: 180px;">Lokasi</th>
+                        <th scope="col" style="width: 120px; min-width: 100px;">PIC</th>
+                        <th scope="col" data-sort="priority" class="sortable-header" aria-sort="none" style="width: 110px; min-width: 100px;"><button
+                                type="button" class="th-sort-btn">Priority<i class="fas fa-sort th-sort-icon"
+                                    aria-hidden="true"></i></button></th>
+                        <th scope="col" data-sort="status" class="sortable-header" aria-sort="none" style="width: 130px; min-width: 120px;"><button
+                                type="button" class="th-sort-btn">Status<i class="fas fa-sort th-sort-icon"
+                                    aria-hidden="true"></i></button></th>
+                        <th scope="col" data-sort="createdAt" class="sortable-header" aria-sort="none" style="width: 100px; min-width: 95px;"><button
+                                type="button" class="th-sort-btn">Date<i class="fas fa-sort th-sort-icon"
+                                    aria-hidden="true"></i></button></th>
+                        <th scope="col" style="width: 160px; min-width: 160px;">Action</th>
                     </tr>
                 </thead>
                 <tbody id="ticketTableBody">
@@ -98,11 +163,129 @@
         </nav>
     </div>
 
-    <script src="js/csrf.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
-    <script src="js/navbar.js"></script>
-    <script src="js/ticket-list.js"></script>
+    <!-- New Ticket Modal -->
+    <div id="newTicketModal" class="modal" role="dialog" aria-modal="true" aria-label="Buat Tiket Baru">
+        <div class="modal-content modal-content-md">
+            <h3 class="modal-title"><i class="fas fa-plus-circle"></i> Buat Tiket Baru</h3>
+            <form id="newTicketForm">
+                <div class="modal-form-grid">
+                    <div class="form-group">
+                        <label for="ntAktifitas">Aktifitas</label>
+                        <select id="ntAktifitas" name="aktifitas" required class="filter-select form-control"
+                            onchange="onAktifitasChange()">
+                            <option value="">Pilih Aktifitas</option>
+                        </select>
+                    </div>
+                    <div id="ntPsbWrap" class="form-group hidden">
+                        <label for="ntPsbSelect"><i class="fas fa-user"></i> Pelanggan PSB</label>
+                        <select id="ntPsbSelect" name="psbId" class="filter-select form-control" onchange="onPsbSelect()">
+                            <option value="">— Pilih Pelanggan —</option>
+                        </select>
+                        <div id="ntPsbInfo" class="text-muted-sm mt-1"></div>
+                    </div>
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label for="ntSubNode">Sub-node</label>
+                            <select id="ntSubNode" name="subNode" required class="filter-select form-control">
+                                <option value="">Pilih</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="ntPriority">Priority</label>
+                            <select id="ntPriority" name="priority" required class="filter-select form-control">
+                                <option value="">Pilih</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label for="ntOdc">ODC</label>
+                            <select id="ntOdc" name="odc" required class="filter-select form-control">
+                                <option value="">Pilih ODC</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="ntOdp">ODP (opsional)</label>
+                            <select id="ntOdp" name="odp" class="filter-select form-control">
+                                <option value="">Pilih ODP</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="ntLokasi">Lokasi</label>
+                        <input type="text" id="ntLokasi" name="lokasi" required placeholder="e.g. Gubuk Lauk, Sekarteja"
+                            class="filter-select form-control">
+                    </div>
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label for="ntPic">PIC <span id="ntPicAuto" class="text-muted-sm"></span></label>
+                            <select id="ntPic" name="pic" required class="filter-select form-control">
+                                <option value="">Pilih PIC</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="ntStatus">Status</label>
+                            <select id="ntStatus" name="status" class="filter-select form-control">
+                                <!-- Create hanya menerima Terlapor/Pending — transisi
+                                     status lain berjalan lewat POST /tickets/:id/update -->
+                                <option value="Terlapor">Terlapor</option>
+                                <option value="Pending">Pending</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="ntInfo">Info</label>
+                        <textarea id="ntInfo" name="info" rows="3" required placeholder="Detailed description..."
+                            class="filter-select form-control resize-v"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="ntEvidence">Evidence (opsional)</label>
+                        <input type="file" id="ntEvidence" name="evidence" accept="image/*"
+                            class="filter-select form-control">
+                        <img id="ntEvidencePreview" class="evidence-preview-img hidden"
+                            src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E"
+                            alt="Preview Evidence">
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary modal-btn"
+                        onclick="document.getElementById('newTicketModal').classList.remove('show')">Batal</button>
+                    <button type="submit" class="login-btn modal-btn"><i class="fas fa-save"></i> Create Ticket</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Tandai Selesai (stepper) — foto bukti opsional -->
+    <div id="completeTicketModal" class="modal" role="dialog" aria-modal="true" aria-label="Tandai selesai">
+        <div class="modal-content modal-content-sm">
+            <h3 class="modal-title"><i class="fas fa-check-circle text-success"></i> Tandai Selesai</h3>
+            <p id="ctTicketRef" class="text-muted-sm ticket-ref-line"></p>
+            <form id="completeTicketForm">
+                <div class="form-group">
+                    <label for="ctEvidence">Tambahkan foto bukti? <span class="text-muted-sm">(opsional)</span></label>
+                    <input type="file" id="ctEvidence" name="evidence" accept="image/*"
+                        class="filter-select form-control" aria-describedby="ctHint">
+                    <p id="ctHint" class="text-muted-sm mt-1"><i class="fas fa-camera"></i> Foto bukti opsional — Simpan
+                        tanpa foto jika tidak ada, atau Batal untuk menutup tanpa mengubah status.</p>
+                    <img id="ctEvidencePreview" class="evidence-preview-img hidden"
+                        src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E" alt="Preview bukti foto">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" id="ctSkipBtn" class="btn-secondary modal-btn">Batal</button>
+                    <button type="submit" class="login-btn modal-btn"><i class="fas fa-check"></i> Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/constants.js?v=2"></script>
+    <script src="js/csrf.js?v=1"></script>
+    <script src="js/toast.js?v=5"></script>
+    <!-- jsPDF + autotable dimuat lazy via pdf-loader.js saat Export PDF diklik -->
+    <script src="js/pdf-loader.js?v=1"></script>
+    <script src="js/navbar.js?v=4"></script>
+    <script src="js/ticket-list.js?v=12"></script>
 </body>
 
 </html>
