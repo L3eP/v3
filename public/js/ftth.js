@@ -2,6 +2,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   const user = JSON.parse(localStorage.getItem('user'));
   if (!user) { window.location.href = 'index.html'; return; }
   const isOwner = user.role === ROLES.OWNER;
+  // Tambah/Edit perangkat FTTH: POST/PUT /api/ftth mensyaratkan isOwnerOrOperator
+  // di backend (routes/ftth.js) — Teknisi cuma bisa baca. Tombol Tambah
+  // disembunyikan di sini juga supaya Teknisi tidak mengklik lalu kena 403.
+  const canWrite = isPrivileged(user.role);
 
   const homeEl = document.getElementById('ftthHome');
   const detailEl = document.getElementById('ftthDetail');
@@ -27,8 +31,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       <div class="ftth-wrap">
         <div class="ftth-head">
           <h1 class="page-title"><i class="fas fa-network-wired" style="color:var(--olt);"></i> Jaringan FTTH</h1>
+          <div class="export-buttons">
+            <button type="button" class="btn-export btn-csv" onclick="exportTopologyCsv()"><i class="fas fa-file-csv"></i> CSV</button>
+            <button type="button" class="btn-export btn-pdf" onclick="exportTopologyPdf()"><i class="fas fa-file-pdf"></i> PDF</button>
+          </div>
         </div>
-        <p class="ftth-subhead">Pilih kategori untuk kelola perangkat</p>
+        <p class="ftth-subhead">Pilih kategori untuk kelola perangkat, atau ekspor seluruh topologi (OLT–ODC–ODP–ONU) untuk evaluasi.</p>
       </div>
       <div class="ftth-card-grid" id="ftthCardGrid">`;
     const grid = document.getElementById('ftthCardGrid') || homeEl.querySelector('.ftth-card-grid');
@@ -75,7 +83,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           <i class="fas fa-search ftth-search-icon"></i>
           <input type="text" id="ftthSearch" aria-label="Cari ${cfg.title}" class="filter-select ftth-search-input" placeholder="Cari ${cfg.title}..." oninput="searchDetail('${type}')">
         </div>
-        <button class="login-btn btn-header" onclick="showForm('${type}')"><i class="fas fa-plus-circle"></i> Tambah ${cfg.title}</button>
+        ${canWrite ? `<button class="login-btn btn-header" onclick="showForm('${type}')"><i class="fas fa-plus-circle"></i> Tambah ${cfg.title}</button>` : ''}
       </div>
     </div>`;
 
@@ -354,6 +362,104 @@ document.addEventListener('DOMContentLoaded', async () => {
       homeEl.innerHTML = '<div style="color:#ef4444;padding:20px;text-align:center;">Gagal load data</div>';
     }
   }
+
+  // ==================== EXPORT TOPOLOGI (evaluasi pencatatan) ====================
+  // Semua data sudah termuat lewat GET /api/ftth (loadData) — tidak perlu fetch
+  // ulang. Diurutkan OLT→ODC→ODP→ONU, di dalam tiap tipe diurutkan per induk
+  // (group) supaya hierarki topologi tetap terbaca di file hasil ekspor.
+  function buildTopologyRows() {
+    const rows = [];
+    TYPES.forEach(type => {
+      const items = [...(allData[type] || [])].sort((a, b) => {
+        const g = (a.group || '').localeCompare(b.group || '');
+        return g !== 0 ? g : (a.label || '').localeCompare(b.label || '');
+      });
+      items.forEach(i => {
+        rows.push({
+          type: TYPE_CONFIG[type].title,
+          label: i.label || '',
+          group: i.group || '',
+          parentPort: i.parentPort || '',
+          brand: i.brand || '',
+          totalPorts: i.totalPorts || '',
+          serialNumber: i.serialNumber || '',
+          lat: i.lat != null ? i.lat : '',
+          lng: i.lng != null ? i.lng : '',
+          status: i.isDraft ? 'Draft' : 'Terkonfirmasi'
+        });
+      });
+    });
+    return rows;
+  }
+
+  window.exportTopologyCsv = function () {
+    const rows = buildTopologyRows();
+    if (!rows.length) { toast('Belum ada data FTTH untuk diekspor', 'info'); return; }
+
+    const headers = ['Tipe', 'Label', 'Induk', 'Port di Induk', 'Brand', 'Jumlah Port', 'Serial Number', 'Latitude', 'Longitude', 'Status'];
+    const esc2 = (v) => `"${String(v).replace(/"/g, '""').replace(/\n/g, ' ')}"`;
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(r => [
+        esc2(r.type), esc2(r.label), esc2(r.group), esc2(r.parentPort),
+        esc2(r.brand), r.totalPorts, esc2(r.serialNumber), r.lat, r.lng, esc2(r.status)
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob(['﻿' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `topologi_ftth_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    toast(`${rows.length} perangkat → CSV terunduh`);
+  };
+
+  window.exportTopologyPdf = async function () {
+    const rows = buildTopologyRows();
+    if (!rows.length) { toast('Belum ada data FTTH untuk diekspor', 'info'); return; }
+
+    try {
+      await window.loadPdfLibs();
+    } catch (e) {
+      toast(e.message || 'Gagal memuat library PDF', 'error');
+      return;
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    doc.text('Topologi Jaringan FTTH', 14, 15);
+    doc.setFontSize(10);
+    doc.text(`Diekspor oleh: ${user.fullName} (${user.username})`, 14, 22);
+    doc.text(`Tanggal: ${new Date().toLocaleDateString('id-ID')}`, 14, 27);
+
+    let startY = 33;
+    TYPES.forEach(type => {
+      const items = rows.filter(r => r.type === TYPE_CONFIG[type].title);
+      if (!items.length) return;
+
+      // Cegah heading section "menggantung" sendirian di kaki halaman
+      // sementara tabelnya terdorong autoTable ke halaman berikutnya.
+      if (startY > 270) { doc.addPage(); startY = 20; }
+
+      doc.setFontSize(11);
+      doc.text(`${TYPE_CONFIG[type].title} (${items.length})`, 14, startY);
+
+      doc.autoTable({
+        head: [['Label', 'Induk', 'Port di Induk', 'Brand', 'Jumlah Port', 'Serial Number', 'Status']],
+        body: items.map(r => [r.label, r.group, r.parentPort, r.brand, r.totalPorts, r.serialNumber, r.status]),
+        startY: startY + 4,
+        theme: 'grid',
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [79, 70, 229] },
+        margin: { top: 20 }
+      });
+
+      startY = doc.lastAutoTable.finalY + 12;
+    });
+
+    doc.save(`topologi_ftth_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
 
   await loadData();
   renderCards();
