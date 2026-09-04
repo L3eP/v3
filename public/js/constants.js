@@ -1,8 +1,9 @@
 /**
  * Dark mode — state disimpan di localStorage('theme'), diterapkan lewat
- * atribut data-theme di <html>. Toggle-nya cuma ada di halaman Referensi
- * (admin.html), tapi state-nya berlaku di seluruh app karena localStorage
- * dibagi lintas halaman satu origin.
+ * atribut data-theme di <html>. Toggle-nya cuma ada di halaman Settings
+ * (satu-satunya halaman yang bisa diakses semua role), tapi state-nya
+ * berlaku di seluruh app karena localStorage dibagi lintas halaman satu
+ * origin.
  */
 const THEME_KEY = 'theme';
 
@@ -111,4 +112,44 @@ async function apiFetch(url, options = {}) {
     return res; // tetap return agar caller bisa handle
   }
   return res;
+}
+
+/**
+ * Tambahkan tombol "intip" (mata) ke satu input password — user bisa lihat
+ * persis apa yang mereka ketik sebelum submit. Ini pelengkap fix trim()
+ * spasi tak sengaja (routes/auth.js, routes/users.js): trim menutup celah
+ * spasi yang TIDAK TERLIHAT, tombol ini membantu user langsung MELIHAT
+ * kalau ada salah ketik lain (typo, huruf besar/kecil salah, dst) sebelum
+ * password tersimpan/dipakai.
+ *
+ * Membungkus <input> yang sudah ada dengan wrapper + tombol secara dinamis
+ * (tidak perlu ubah markup di tiap halaman) — id & posisi di form tidak
+ * berubah, aman untuk FormData/serialize yang sudah ada.
+ * @param {string} inputId - id elemen <input type="password">
+ */
+function initPasswordToggle(inputId) {
+  const input = document.getElementById(inputId);
+  if (!input || input.dataset.peekWired) return;
+  input.dataset.peekWired = '1';
+
+  const wrap = document.createElement('div');
+  wrap.className = 'password-field-wrap';
+  input.parentNode.insertBefore(wrap, input);
+  wrap.appendChild(input);
+
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'password-toggle-btn';
+  btn.setAttribute('aria-label', 'Tampilkan password');
+  btn.innerHTML = '<i class="fas fa-eye" aria-hidden="true"></i>';
+  wrap.appendChild(btn);
+
+  btn.addEventListener('click', () => {
+    const showing = input.type === 'text';
+    input.type = showing ? 'password' : 'text';
+    btn.innerHTML = showing
+      ? '<i class="fas fa-eye" aria-hidden="true"></i>'
+      : '<i class="fas fa-eye-slash" aria-hidden="true"></i>';
+    btn.setAttribute('aria-label', showing ? 'Tampilkan password' : 'Sembunyikan password');
+  });
 }

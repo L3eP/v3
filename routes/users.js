@@ -58,7 +58,13 @@ const mapUser = (user) => {
 
 // Update Profile (dengan rate limit)
 router.post('/update-profile', isAuthenticated, profileUpdateLimiter, upload.single('photo'), asyncHandler(async (req, res) => {
-    const { username, currentPassword, newPassword, phone } = req.body;
+    // .trim() manual (tidak ada validator array di route ini) — spasi tak
+    // sengaja di awal/akhir username/password diabaikan, konsisten dengan
+    // /login dan /admin/users/update (lihat komentar di routes/auth.js).
+    const username = (req.body.username || '').trim();
+    const currentPassword = (req.body.currentPassword || '').trim();
+    const newPassword = (req.body.newPassword || '').trim();
+    const { phone } = req.body;
     const photo = req.file ? `/uploads/${req.file.filename}` : null;
 
     if (req.session.user.username !== username) {
@@ -240,7 +246,12 @@ router.post('/admin/users/update', isAuthenticated, isOwnerOrOperator, [
     body('role').optional().isIn(['Owner', 'Operator', 'Teknisi']).withMessage('Invalid role'),
     body('phone').optional().trim().escape(),
     body('defaultSubNode').optional({ checkFalsy: true }).trim().escape(),
+    // .trim() dulu sebelum validasi — spasi tak sengaja di awal/akhir (mis.
+    // ke-autofill atau ke-paste) diabaikan, konsisten dengan /login supaya
+    // password yang di-set di sini selalu bisa dipakai login (lihat komentar
+    // di routes/auth.js /login).
     body('password').optional()
+        .trim()
         .isLength({ min: 8 }).withMessage('Password minimal 8 karakter')
         .matches(/(?=.*[A-Za-z])(?=.*\d)/).withMessage('Password harus mengandung huruf dan angka')
 ], asyncHandler(async (req, res) => {

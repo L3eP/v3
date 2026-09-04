@@ -1,5 +1,7 @@
 document.addEventListener('DOMContentLoaded', async () => {
     const settingsForm = document.getElementById('settingsForm');
+    initPasswordToggle('newPassword');
+    initPasswordToggle('currentPassword');
 
     // ==================== DARK MODE TOGGLE ====================
     // Settings adalah satu-satunya halaman yang bisa diakses SEMUA role

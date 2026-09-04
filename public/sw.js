@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mayung-app-v52'; // Increment — toggle dark mode dipindah dari Referensi (Owner-only) ke Settings (satu-satunya halaman yang bisa diakses semua role, lewat dropdown profil sidebar)
+const CACHE_NAME = 'mayung-app-v53'; // Increment — trim spasi tak sengaja di username/password (login, register, update-profile, admin/users/update) + tombol intip password di semua field password
 const ASSETS = [
     '/',
     '/index.html',

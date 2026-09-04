@@ -1,5 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     const loginForm = document.getElementById('loginForm');
+    initPasswordToggle('password');
 
     loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();

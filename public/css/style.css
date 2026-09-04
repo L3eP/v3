@@ -453,6 +453,51 @@ textarea:focus {
     box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
+/* Tombol "intip" password — dipasang dinamis oleh initPasswordToggle()
+   (constants.js), membungkus <input type="password"> yang sudah ada. */
+.password-field-wrap {
+    position: relative;
+    width: 100%;
+}
+
+.password-field-wrap input {
+    padding-right: 42px;
+}
+
+.password-toggle-btn {
+    position: absolute;
+    top: 50%;
+    right: 4px;
+    transform: translateY(-50%);
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.password-toggle-btn:hover {
+    color: var(--primary-color);
+}
+
+@media (pointer: coarse) {
+    .password-toggle-btn {
+        width: 44px;
+        height: 44px;
+        right: 0;
+    }
+
+    .password-field-wrap input {
+        padding-right: 50px;
+    }
+}
+
 /* Buttons */
 button,
 .btn {

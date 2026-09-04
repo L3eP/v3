@@ -43,13 +43,18 @@ const DUMMY_BCRYPT_HASH = '$2a$10$CwTycUXWue0Thq9StjUM0uJ8i8fSGZAXG5eGZ3aWvxE1Y5
 // Login
 router.post('/login', loginLimiter, [
     body('username').trim().escape(),
-    // Password TIDAK di-trim/escape: nilai ini hanya dibandingkan via bcrypt,
-    // tidak pernah dirender ke HTML. .escape() mengubah karakter < > & " ' pada
-    // password sebelum bcrypt.compare, sehingga password yang mengandung
-    // karakter itu tidak akan pernah cocok — akun terkunci permanen padahal
-    // password yang diketik benar. register/update-profile/admin-update tidak
-    // melakukan ini, jadi login harus konsisten dengan cara password disimpan.
-    body('password').notEmpty()
+    // Password TIDAK di-escape (beda dari .trim()): nilai ini hanya
+    // dibandingkan via bcrypt, tidak pernah dirender ke HTML. .escape()
+    // mengubah karakter < > & " ' pada password sebelum bcrypt.compare,
+    // sehingga password yang mengandung karakter itu tidak akan pernah
+    // cocok — akun terkunci permanen padahal password yang diketik benar.
+    // .trim() AMAN dan justru wajib disamakan di sini — spasi tak sengaja
+    // di awal/akhir (autofill, copy-paste, kepencet spasi) harus diabaikan
+    // konsisten di kedua sisi: saat password di-hash (register/
+    // update-profile/admin-update, semuanya sudah .trim()) dan saat
+    // dibandingkan di sini. Kalau cuma salah satu sisi yang trim, itu
+    // menciptakan bug yang sama dari arah sebaliknya.
+    body('password').trim().notEmpty()
 ], asyncHandler(async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -139,7 +144,10 @@ router.post('/logout', (req, res) => {
 router.post('/register', isAuthenticated, isAdmin, registerLimiter, upload.single('photo'), [
     body('username').trim().isLength({ min: 3 }).escape(),
     // Sprint 4 — policy password: minimal 8 karakter + wajib huruf dan angka
+    // .trim() dulu sebelum validasi panjang/isi — spasi tak sengaja di awal/
+    // akhir diabaikan konsisten dengan login (lihat komentar di /login).
     body('password')
+        .trim()
         .isLength({ min: 8 }).withMessage('Password minimal 8 karakter')
         .matches(/(?=.*[A-Za-z])(?=.*\d)/).withMessage('Password harus mengandung huruf dan angka'),
     body('fullName').trim().escape(),

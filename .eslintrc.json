@@ -22,6 +22,7 @@
     "ROLES": "readonly",
     "getTheme": "readonly",
     "toggleTheme": "readonly",
+    "initPasswordToggle": "readonly",
     "formatId": "readonly",
     "isPrivileged": "readonly",
     "phoneOnly": "readonly",
