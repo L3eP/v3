@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mayung-app-v53'; // Increment — trim spasi tak sengaja di username/password (login, register, update-profile, admin/users/update) + tombol intip password di semua field password
+const CACHE_NAME = 'mayung-app-v54'; // Increment — sembunyikan tombol Tambah FTTH untuk Teknisi (read-only, backend sudah 403) + fitur export topologi FTTH (CSV/PDF) di halaman Home FTTH
 const ASSETS = [
     '/',
     '/index.html',

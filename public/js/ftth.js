@@ -383,8 +383,8 @@ document.addEventListener('DOMContentLoaded', async () => {
           brand: i.brand || '',
           totalPorts: i.totalPorts || '',
           serialNumber: i.serialNumber || '',
-          lat: i.lat != null ? i.lat : '',
-          lng: i.lng != null ? i.lng : '',
+          lat: (i.lat !== null && i.lat !== undefined) ? i.lat : '',
+          lng: (i.lng !== null && i.lng !== undefined) ? i.lng : '',
           status: i.isDraft ? 'Draft' : 'Terkonfirmasi'
         });
       });
