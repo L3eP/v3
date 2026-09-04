@@ -418,6 +418,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         const byWilayah = countBy(t => t.subNode);
         const topAktifitas = byAktifitas.slice(0, 3).map(a => a.label);
 
+        // Rentang tanggal data yang benar-benar terekspor (bukan sekadar filter
+        // yang dipilih user) — supaya pembaca laporan tahu tiket dari kapan s/d
+        // kapan yang direkap, tanpa perlu buka aplikasi lagi.
+        const fmtDate = d => d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+        let dateRangeLabel = '—';
+        const validDates = tickets.map(t => new Date(t.createdAt)).filter(d => !isNaN(d));
+        if (validDates.length) {
+            const min = new Date(Math.min(...validDates));
+            const max = new Date(Math.max(...validDates));
+            dateRangeLabel = fmtDate(min) === fmtDate(max) ? fmtDate(min) : `${fmtDate(min)} – ${fmtDate(max)}`;
+        }
+
         const monthMap = {}; // 'YYYY-MM' -> { total, [aktifitas]: count }
         tickets.forEach(t => {
             const d = new Date(t.createdAt);
@@ -440,7 +452,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             return { label, total: cur.total, delta, byAktifitas: topAktifitas.map(a => cur[a] || 0) };
         });
 
-        return { total, byAktifitas, byWilayah, topAktifitas, trend };
+        return { total, byAktifitas, byWilayah, topAktifitas, trend, dateRangeLabel };
     }
     // Label perubahan bulan-ke-bulan dalam kata (bukan simbol ▲▼ — font standar
     // jsPDF/Helvetica tidak punya glyph itu dan akan tampil kosong di PDF).
@@ -792,6 +804,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const summaryLines = [
                     'RINGKASAN EKSPOR',
                     `Total Tiket,${summary.total}`,
+                    `Rentang Data,${csvCell(summary.dateRangeLabel)}`,
                     '',
                     'Aktifitas Terbanyak',
                     'Aktifitas,Jumlah,Persentase',
@@ -889,20 +902,23 @@ document.addEventListener('DOMContentLoaded', async () => {
                 );
                 const summary = computeExportSummary(tickets);
 
-                // Header
+                // Header — baris kedua menyebut rentang tanggal DATA yang benar-benar
+                // terekspor (min–max created_at aktual), bukan cuma kapan file dibuat,
+                // supaya pembaca laporan tahu ini rekap periode kapan tanpa buka app.
                 doc.setFontSize(16);
                 doc.text('Export Tiket', 14, 15);
                 doc.setFontSize(10);
-                doc.text(`Total: ${total} tiket${exportRes.truncated ? ' (dibatasi cap)' : ''} — ${new Date().toLocaleDateString()}`, 14, 23);
+                doc.text(`Total: ${total} tiket${exportRes.truncated ? ' (dibatasi cap)' : ''} — dibuat ${new Date().toLocaleDateString()}`, 14, 22);
+                doc.text(`Rentang data: ${summary.dateRangeLabel}`, 14, 28);
 
                 // Empat ringkasan berdampingan: Status, Priority, Aktifitas
                 // Terbanyak, Wilayah Terbanyak — masing-masing top 6 (sisanya
                 // dirangkum sebagai "+N lainnya" supaya tidak meluber ke kolom lain).
                 const drawList = (x, title, items) => {
                     doc.setFontSize(11);
-                    doc.text(title, x, 32);
+                    doc.text(title, x, 36);
                     doc.setFontSize(9);
-                    let y = 38;
+                    let y = 42;
                     items.slice(0, 6).forEach(({ label, count, pct }) => {
                         const shown = label.length > 20 ? label.slice(0, 19) + '…' : label;
                         doc.text(`${shown}: ${count} (${pct}%)`, x, y);
