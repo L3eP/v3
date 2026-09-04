@@ -24,7 +24,13 @@
 
     <div id="main" class="login-container">
         <div class="login-card max-w-600">
-            <h1>User Settings</h1>
+            <div class="ref-page-header" style="margin-bottom:8px;">
+                <h1 style="margin-bottom:0;">User Settings</h1>
+                <button type="button" id="themeToggleBtn" class="theme-toggle-btn" aria-pressed="false">
+                    <i class="fas fa-moon" aria-hidden="true"></i>
+                    <span id="themeToggleLabel">Mode Gelap</span>
+                </button>
+            </div>
 
             <form id="settingsForm" enctype="multipart/form-data" class="text-left">
                 <div class="form-group">
@@ -81,7 +87,7 @@
     <script src="js/csrf.js?v=1"></script>
     <script src="js/toast.js?v=5"></script>
     <script src="js/navbar.js?v=4"></script>
-    <script src="js/settings.js?v=1"></script>
+    <script src="js/settings.js?v=2"></script>
 </body>
 
 </html>

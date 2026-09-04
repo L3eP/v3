@@ -90,6 +90,7 @@ docs/ERD*
 # no. HP) dan hash password akun sungguhan. JANGAN pernah masuk repo.
 Fri4Sep2026.sql
 migration_to_current_schema.sql
+/migration_staged/
 *.sql.gz
 /dumps/
 

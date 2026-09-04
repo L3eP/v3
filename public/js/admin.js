@@ -2,21 +2,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const user = JSON.parse(localStorage.getItem('user'));
   if (!user || user.role !== ROLES.OWNER) { window.location.href = 'dashboard.html'; return; }
 
-  // ==================== DARK MODE TOGGLE ====================
-  const themeToggleBtn = document.getElementById('themeToggleBtn');
-  const themeToggleLabel = document.getElementById('themeToggleLabel');
-  function syncThemeToggleUI() {
-    const isDark = getTheme() === 'dark';
-    themeToggleBtn.setAttribute('aria-pressed', String(isDark));
-    themeToggleBtn.querySelector('i').className = isDark ? 'fas fa-sun' : 'fas fa-moon';
-    themeToggleLabel.textContent = isDark ? 'Mode Terang' : 'Mode Gelap';
-  }
-  syncThemeToggleUI();
-  themeToggleBtn.addEventListener('click', () => {
-    toggleTheme();
-    syncThemeToggleUI();
-  });
-
   const homeEl = document.getElementById('adminHome');
   const detailEl = document.getElementById('adminDetail');
   let allData = {};

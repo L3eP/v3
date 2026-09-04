@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mayung-app-v51'; // Increment — activity.js & dashboard.js: log aktivitas ke tiket Terlapor/Pending oleh Teknisi otomatis memajukan status ke Dikerjakan (routes/activities.js), toast/modal sukses menampilkan info auto-transition
+const CACHE_NAME = 'mayung-app-v52'; // Increment — toggle dark mode dipindah dari Referensi (Owner-only) ke Settings (satu-satunya halaman yang bisa diakses semua role, lewat dropdown profil sidebar)
 const ASSETS = [
     '/',
     '/index.html',

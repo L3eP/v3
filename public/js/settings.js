@@ -1,6 +1,25 @@
 document.addEventListener('DOMContentLoaded', async () => {
     const settingsForm = document.getElementById('settingsForm');
 
+    // ==================== DARK MODE TOGGLE ====================
+    // Settings adalah satu-satunya halaman yang bisa diakses SEMUA role
+    // (link-nya di dropdown profil sidebar, tidak dibatasi navbar.js `roles:`
+    // seperti menu lain) — makanya toggle tema global ditaruh di sini, bukan
+    // di Referensi (admin.js) yang Owner-only.
+    const themeToggleBtn = document.getElementById('themeToggleBtn');
+    const themeToggleLabel = document.getElementById('themeToggleLabel');
+    function syncThemeToggleUI() {
+        const isDark = getTheme() === 'dark';
+        themeToggleBtn.setAttribute('aria-pressed', String(isDark));
+        themeToggleBtn.querySelector('i').className = isDark ? 'fas fa-sun' : 'fas fa-moon';
+        themeToggleLabel.textContent = isDark ? 'Mode Terang' : 'Mode Gelap';
+    }
+    syncThemeToggleUI();
+    themeToggleBtn.addEventListener('click', () => {
+        toggleTheme();
+        syncThemeToggleUI();
+    });
+
     // Populate form with current user data
     const user = JSON.parse(localStorage.getItem('user'));
     if (user) {
