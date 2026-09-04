@@ -192,6 +192,10 @@ router.put('/api/psb/:id', isAuthenticated, isOwnerOrOperator, upload.single('ph
         [draftLabel, odpLabelFinal, onuPortFinal, inventoryItem.device_name, onuSnFinal, latFinal, lngFinal]
       );
       draftFtthId = ftthResult.insertId;
+
+      // Tautan permanen PSB <-> ONU (psb.ftth_device_id) — bukan cuma teks
+      // di label seperti sebelumnya. Lihat komentar kolomnya di schema.sql.
+      await connection.query('UPDATE psb SET ftth_device_id = ? WHERE id = ?', [draftFtthId, id]);
     }
 
     const [updatedRows] = await connection.query('SELECT * FROM psb WHERE id = ?', [id]);
