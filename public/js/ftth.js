@@ -2,9 +2,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   const user = JSON.parse(localStorage.getItem('user'));
   if (!user) { window.location.href = 'index.html'; return; }
   const isOwner = user.role === ROLES.OWNER;
-  // Tambah/Edit perangkat FTTH: POST/PUT /api/ftth mensyaratkan isOwnerOrOperator
-  // di backend (routes/ftth.js) — Teknisi cuma bisa baca. Tombol Tambah
-  // disembunyikan di sini juga supaya Teknisi tidak mengklik lalu kena 403.
+  // Tambah/Edit/Konfirmasi-draft perangkat FTTH: POST/PUT /api/ftth mensyaratkan
+  // isOwnerOrOperator di backend (routes/ftth.js) — Teknisi cuma bisa baca.
+  // Ketiga tombol itu disembunyikan di sini juga supaya Teknisi tidak mengklik
+  // lalu kena 403 setelah isi form (editItem/confirmDraft juga dijaga langsung,
+  // bukan cuma disembunyikan, kalau dipanggil manual lewat console).
   const canWrite = isPrivileged(user.role);
 
   const homeEl = document.getElementById('ftthHome');
@@ -149,8 +151,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
                 <div class="ftth-item-actions">
                   ${i.lat&&i.lng?`<a href="map.html?lat=${i.lat}&lng=${i.lng}&name=${encodeURIComponent(i.label)}" class="ftth-map-link" title="Lihat di peta">🗺</a>`:''}
-                  ${i.isDraft ? `<button class="ftth-edit" onclick="confirmDraft(${i.id})" title="Konfirmasi entri ini" aria-label="Konfirmasi ${esc(i.label)}" style="color:var(--sem-success-strong);"><i class="fas fa-check"></i></button>` : ''}
-                  <button class="ftth-edit" onclick="editItem('${type}',${i.id})" title="Edit" aria-label="Edit ${esc(i.label)}"><i class="fas fa-edit"></i></button>
+                  ${canWrite && i.isDraft ? `<button class="ftth-edit" onclick="confirmDraft(${i.id})" title="Konfirmasi entri ini" aria-label="Konfirmasi ${esc(i.label)}" style="color:var(--sem-success-strong);"><i class="fas fa-check"></i></button>` : ''}
+                  ${canWrite ? `<button class="ftth-edit" onclick="editItem('${type}',${i.id})" title="Edit" aria-label="Edit ${esc(i.label)}"><i class="fas fa-edit"></i></button>` : ''}
                   ${isOwner ? `<button class="ftth-del" onclick="confirmDel(${i.id},'${esc(i.label)}')" title="Hapus" aria-label="Hapus ${esc(i.label)}"><i class="fas fa-trash"></i></button>` : ''}
                 </div>
               </div>
@@ -274,6 +276,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   let editData = null;
 
   window.editItem = async function(type, id) {
+    if (!canWrite) return; // tombolnya sudah disembunyikan; ini jaga-jaga kalau dipanggil manual
     try {
       const r = await fetch(`${API_BASE}/${id}`);
       if (!r.ok) { toast('Gagal load data', 'error'); return; }
@@ -329,6 +332,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Konfirmasi cuma menghapus tanda draft — kalau field-nya (port/label/dst)
   // perlu diperbaiki dulu, staf pakai tombol Edit biasa sebelum konfirmasi.
   window.confirmDraft = async function(id) {
+    if (!canWrite) return; // tombolnya sudah disembunyikan; ini jaga-jaga kalau dipanggil manual
     try {
       const r = await csrfFetch(`${API_BASE}/${id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ is_draft: false }) });
       if (r.ok) { toast('Entri dikonfirmasi'); await loadData(); renderDetail(activeType); }
