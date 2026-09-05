@@ -172,10 +172,14 @@ const detailLog = require('./middleware/detailLog');
 app.use(detailLog);
 
 // Global Rate Limiting
+// message objek, bukan string — express-rate-limit mengirimnya lewat
+// res.send(message) apa adanya, jadi string -> Content-Type text/html dan
+// setiap fetch() frontend yang expect JSON (await response.json()) lempar
+// SyntaxError alih-alih menampilkan pesan rate-limit yang sebenarnya.
 const globalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 1000, // Limit each IP to 1000 requests per 15 minutes
-    message: 'Too many requests from this IP, please try again later.'
+    message: { message: 'Too many requests from this IP, please try again later.' }
 });
 app.use(globalLimiter);
 

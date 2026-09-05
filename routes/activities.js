@@ -20,12 +20,18 @@ const AUTO_START_FROM = ["Terlapor", "Pending"];
 const escapeLike = (str) => str.replace(/[\\%_]/g, (ch) => '\\' + ch);
 
 // 3.2 — Rate limiter mutasi per endpoint group
-router.use(mutationLimiter("activities"));
+//
+// SENGAJA dipasang per-route (bukan router.use(...) blanket) — lihat catatan
+// yang sama di routes/users.js soal kenapa router.use(fn) tanpa path bocor
+// menghitung request yang ditangani router lain (semua router di-mount di
+// path yang sama, '/', lihat server.js).
+const activitiesMutationLimiter = mutationLimiter("activities");
 
 // Create Activity
 router.post(
   "/activities",
   isAuthenticated,
+  activitiesMutationLimiter,
   [
     body("description").trim().notEmpty().escape(),
     body("username").trim().escape(),
@@ -273,7 +279,7 @@ router.get("/activities", isAuthenticated, asyncHandler(async (req, res) => {
 }));
 
 // Delete Activity
-router.delete("/activities/:id", isAuthenticated, asyncHandler(async (req, res) => {
+router.delete("/activities/:id", isAuthenticated, activitiesMutationLimiter, asyncHandler(async (req, res) => {
   const activityId = parseInt(req.params.id);
   const user = req.session.user;
 

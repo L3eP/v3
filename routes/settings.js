@@ -12,7 +12,12 @@ const { cleanupUploadOnError } = require('../utils/uploads');
 
 // 3.2 — Rate limiter mutasi (sebelumnya endpoint ini hanya dilindungi limiter
 // global 1000/15min — upload logo 5MB bisa diulang ratusan kali per window)
-router.use(mutationLimiter('settings'));
+//
+// SENGAJA dipasang per-route (bukan router.use(...) blanket) — lihat catatan
+// yang sama di routes/users.js soal kenapa router.use(fn) tanpa path bocor
+// menghitung request yang ditangani router lain (semua router di-mount di
+// path yang sama, '/', lihat server.js).
+const settingsMutationLimiter = mutationLimiter('settings');
 
 // Get Company Name (Public or Authenticated)
 router.get('/settings/company-name', asyncHandler(async (req, res) => {
@@ -25,7 +30,7 @@ router.get('/settings/company-name', asyncHandler(async (req, res) => {
 }));
 
 // Update Company Name (Owner only)
-router.post('/settings/company-name', isAuthenticated, isAdmin, asyncHandler(async (req, res) => {
+router.post('/settings/company-name', isAuthenticated, settingsMutationLimiter, isAdmin, asyncHandler(async (req, res) => {
     const { companyName } = req.body;
 
     if (!companyName || companyName.trim() === '') {
@@ -47,7 +52,7 @@ router.get('/settings/company-logo', asyncHandler(async (req, res) => {
 }));
 
 // Update Company Logo (Owner only)
-router.post('/settings/company-logo', isAuthenticated, isAdmin, upload.single('logo'), asyncHandler(async (req, res) => {
+router.post('/settings/company-logo', isAuthenticated, settingsMutationLimiter, isAdmin, upload.single('logo'), asyncHandler(async (req, res) => {
     if (!req.file) {
         return res.status(400).json({ message: 'No file uploaded' });
     }

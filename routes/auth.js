@@ -9,16 +9,23 @@ const asyncHandler = require('../middleware/asyncHandler');
 const { sanitizePhone } = require('../utils/phone');
 const logger = require('../utils/logger');
 
+// message HARUS objek, bukan string — express-rate-limit mengirimnya lewat
+// res.send(message) apa adanya. String -> Content-Type text/html, dan
+// public/js/script.js (await response.json()) lempar SyntaxError begitu
+// limiter ini kena; error itu jatuh ke catch generik "An error occurred,
+// please try again" yang tidak menyebut rate limit sama sekali — pengguna
+// yang credential-nya benar tapi kena limit terlihat seperti "gagal login"
+// tanpa alasan jelas.
 const loginLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 5,
-    message: 'Too many login attempts, please try again later.'
+    message: { message: 'Too many login attempts, please try again later.' }
 });
 
 const registerLimiter = rateLimit({
     windowMs: 60 * 60 * 1000, // 1 jam
     max: 5, // Maks 5 registrasi per jam per IP
-    message: 'Too many registration attempts, please try again later.'
+    message: { message: 'Too many registration attempts, please try again later.' }
 });
 
 // Helper to map DB user to Frontend user

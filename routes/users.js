@@ -17,13 +17,24 @@ const { cleanupUploadOnError } = require('../utils/uploads');
 
 // 3.2 — Rate limiter mutasi (update-role, admin/users/update, delete sebelumnya
 // hanya dilindungi limiter global 1000/15min)
-router.use(mutationLimiter('users'));
+//
+// SENGAJA dipasang per-route (bukan router.use(...) blanket di sini) — semua
+// router di app ini di-mount di path yang SAMA ('/', lihat server.js), jadi
+// router.use(fn) tanpa path akan tetap jalan untuk request yang TIDAK cocok
+// rute manapun di file ini juga (mis. POST /tickets numpang lewat sebelum
+// akhirnya ditangani routes/tickets.js yang dimount setelah file ini) —
+// bocor menghitung kuota 'users' padahal bukan endpoint /users. Ditemukan
+// saat kuota 'users' habis oleh trafik /tickets/psb/ftth/activities gabungan.
+const usersMutationLimiter = mutationLimiter('users');
 
-// Rate limit untuk update-profile — cegah brute force password change
+// Rate limit untuk update-profile — cegah brute force password change.
+// message objek, bukan string — lihat catatan yang sama di auth.js
+// (loginLimiter) soal res.json() frontend yang lempar SyntaxError kalau ini
+// bocor sebagai text/html.
 const profileUpdateLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 menit
     max: 5,
-    message: 'Too many profile update attempts, please try again later.'
+    message: { message: 'Too many profile update attempts, please try again later.' }
 });
 
 // Sesi disimpan sebagai JSON di kolom `sessions.data` (express-mysql-session).
@@ -147,7 +158,7 @@ router.get('/users', isAuthenticated, isOwnerOrOperator, asyncHandler(async (req
 }));
 
 // Update User Role (Owner only)
-router.post('/update-role', isAuthenticated, isAdmin, [
+router.post('/update-role', isAuthenticated, usersMutationLimiter, isAdmin, [
     body('newRole').isIn(['Owner', 'Operator', 'Teknisi']).withMessage('Invalid role'),
     body('username').trim().escape()
 ], asyncHandler(async (req, res) => {
@@ -194,7 +205,7 @@ router.get('/users/:username', isAuthenticated, asyncHandler(async (req, res) =>
 }));
 
 // Delete User (Owner only)
-router.delete('/users/:username', isAuthenticated, isAdmin, asyncHandler(async (req, res) => {
+router.delete('/users/:username', isAuthenticated, usersMutationLimiter, isAdmin, asyncHandler(async (req, res) => {
     const { username } = req.params;
 
     // Prevent self-deletion — Owner tidak bisa menghapus akun sendiri
@@ -222,7 +233,7 @@ router.delete('/users/:username', isAuthenticated, isAdmin, asyncHandler(async (
 // sama sekali: is_active hanya ditulis SEKALI ke FALSE (di DELETE di atas),
 // jadi user yang salah hapus tidak bisa dipulihkan dan usernamenya "terbakar"
 // (register menolak "sudah ada" untuk baris yang justru tak terlihat di UI).
-router.post('/users/:username/restore', isAuthenticated, isAdmin, asyncHandler(async (req, res) => {
+router.post('/users/:username/restore', isAuthenticated, usersMutationLimiter, isAdmin, asyncHandler(async (req, res) => {
     const { username } = req.params;
 
     const [result] = await db.query(
@@ -240,7 +251,7 @@ router.post('/users/:username/restore', isAuthenticated, isAdmin, asyncHandler(a
 }));
 
 // Admin/Owner Update User
-router.post('/admin/users/update', isAuthenticated, isOwnerOrOperator, [
+router.post('/admin/users/update', isAuthenticated, usersMutationLimiter, isOwnerOrOperator, [
     body('originalUsername').trim().escape(),
     body('fullName').optional().trim().escape(),
     body('role').optional().isIn(['Owner', 'Operator', 'Teknisi']).withMessage('Invalid role'),

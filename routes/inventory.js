@@ -8,7 +8,12 @@ const { audit } = require('../middleware/audit');
 const { mutationLimiter } = require('../middleware/rateLimits');
 
 // 3.2 — Rate limiter mutasi per endpoint group
-router.use(mutationLimiter('inventory'));
+//
+// SENGAJA dipasang per-route (bukan router.use(...) blanket) — lihat catatan
+// yang sama di routes/users.js soal kenapa router.use(fn) tanpa path bocor
+// menghitung request yang ditangani router lain (semua router di-mount di
+// path yang sama, '/', lihat server.js).
+const inventoryMutationLimiter = mutationLimiter('inventory');
 
 // GET /api/inventory — List semua inventory
 router.get('/api/inventory', isAuthenticated, asyncHandler(async (req, res) => {
@@ -29,7 +34,7 @@ router.get('/api/inventory/log', isAuthenticated, isOwnerOrOperator, asyncHandle
 }));
 
 // POST /api/inventory — Tambah item (Owner/Operator)
-router.post('/api/inventory', isAuthenticated, isOwnerOrOperator, asyncHandler(async (req, res) => {
+router.post('/api/inventory', isAuthenticated, inventoryMutationLimiter, isOwnerOrOperator, asyncHandler(async (req, res) => {
   const { deviceType, deviceName, totalStock, location, notes, attributes } = req.body;
   if (!deviceType || !deviceName) {
     return res.status(400).json({ message: 'Device type dan name wajib diisi' });
@@ -46,7 +51,7 @@ router.post('/api/inventory', isAuthenticated, isOwnerOrOperator, asyncHandler(a
 }));
 
 // PUT /api/inventory/:id — Update stock (Owner/Operator)
-router.put('/api/inventory/:id', isAuthenticated, isOwnerOrOperator, asyncHandler(async (req, res) => {
+router.put('/api/inventory/:id', isAuthenticated, inventoryMutationLimiter, isOwnerOrOperator, asyncHandler(async (req, res) => {
   const id = parseInt(req.params.id);
   const { totalStock, usedStock, deviceType, deviceName, location, notes } = req.body;
 
@@ -141,7 +146,7 @@ router.put('/api/inventory/:id', isAuthenticated, isOwnerOrOperator, asyncHandle
 }));
 
 // DELETE /api/inventory/:id — Hapus item (Owner only)
-router.delete('/api/inventory/:id', isAuthenticated, isAdmin, asyncHandler(async (req, res) => {
+router.delete('/api/inventory/:id', isAuthenticated, inventoryMutationLimiter, isAdmin, asyncHandler(async (req, res) => {
   const id = parseInt(req.params.id);
   const [result] = await db.query('DELETE FROM inventory WHERE id = ?', [id]);
   if (!result.affectedRows) return res.status(404).json({ message: 'Item not found' });

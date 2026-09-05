@@ -8,7 +8,12 @@ const { audit } = require('../middleware/audit');
 const { mutationLimiter } = require('../middleware/rateLimits');
 
 // 3.2 — Rate limiter mutasi per endpoint group
-router.use(mutationLimiter('ftth'));
+//
+// SENGAJA dipasang per-route (bukan router.use(...) blanket) — lihat catatan
+// yang sama di routes/users.js soal kenapa router.use(fn) tanpa path bocor
+// menghitung request yang ditangani router lain (semua router di-mount di
+// path yang sama, '/', lihat server.js).
+const ftthMutationLimiter = mutationLimiter('ftth');
 
 // Valid types untuk FTTH devices
 const VALID_TYPES = ['olt', 'odc', 'odp', 'onu'];
@@ -127,7 +132,7 @@ router.get('/api/ftth/:id', isAuthenticated, asyncHandler(async (req, res) => {
 }));
 
 // POST /api/ftth — Tambah perangkat baru (Owner only)
-router.post('/api/ftth', isAuthenticated, isOwnerOrOperator, asyncHandler(async (req, res) => {
+router.post('/api/ftth', isAuthenticated, ftthMutationLimiter, isOwnerOrOperator, asyncHandler(async (req, res) => {
   const { type, label, group_name, parent_port, brand, total_ports, serial_number, latitude, longitude, sort_order } = req.body;
 
   if (!type || !VALID_TYPES.includes(type)) {
@@ -206,7 +211,7 @@ router.post('/api/ftth', isAuthenticated, isOwnerOrOperator, asyncHandler(async 
 }));
 
 // PUT /api/ftth/:id — Update perangkat (Owner only)
-router.put('/api/ftth/:id', isAuthenticated, isOwnerOrOperator, asyncHandler(async (req, res) => {
+router.put('/api/ftth/:id', isAuthenticated, ftthMutationLimiter, isOwnerOrOperator, asyncHandler(async (req, res) => {
   const id = parseInt(req.params.id);
   if (isNaN(id)) return res.status(400).json({ message: 'ID tidak valid' });
 
@@ -325,7 +330,7 @@ router.put('/api/ftth/:id', isAuthenticated, isOwnerOrOperator, asyncHandler(asy
 }));
 
 // DELETE /api/ftth/:id — Hapus perangkat (Owner only), dengan cascade check
-router.delete('/api/ftth/:id', isAuthenticated, isAdmin, asyncHandler(async (req, res) => {
+router.delete('/api/ftth/:id', isAuthenticated, ftthMutationLimiter, isAdmin, asyncHandler(async (req, res) => {
   const id = parseInt(req.params.id);
   if (isNaN(id)) return res.status(400).json({ message: 'ID tidak valid' });
 
