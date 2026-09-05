@@ -23,6 +23,7 @@
     "getTheme": "readonly",
     "toggleTheme": "readonly",
     "initPasswordToggle": "readonly",
+    "compressImageFile": "readonly",
     "formatId": "readonly",
     "isPrivileged": "readonly",
     "phoneOnly": "readonly",

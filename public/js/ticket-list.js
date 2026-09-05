@@ -671,11 +671,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         const preview = document.getElementById('ctEvidencePreview');
         const submitBtn = modal.querySelector('button[type="submit"]');
         if (!id) return;
-        setLoading(submitBtn, true);
+        const hasEvidence = !!(evidence.files && evidence.files[0]);
+        // setLoading(true) cuma dipanggil SEKALI — simpan HTML asli tombol.
+        // Fase berikutnya ganti innerHTML langsung (bukan panggil setLoading
+        // lagi), supaya HTML "asli" yang tersimpan tidak ketiban teks loading.
+        setLoading(submitBtn, true, hasEvidence ? 'Mengompres foto...' : undefined);
         try {
             const form = new FormData();
             form.append('status', 'Selesai');
-            if (evidence.files && evidence.files[0]) form.append('evidence', evidence.files[0]);
+            if (hasEvidence) {
+                // Kompres dulu di sisi klien — foto kamera HP sering >5MB (batas
+                // server, middleware/upload.js), bikin upload gagal tanpa alasan
+                // jelas terutama di sinyal seluler lambat saat teknisi di lapangan.
+                const compressed = await compressImageFile(evidence.files[0]);
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
+                form.append('evidence', compressed, compressed.name);
+            }
             const res = await csrfFetch(`/tickets/${id}/update`, { method: 'POST', body: form });
             const data = await res.json().catch(() => ({}));
             if (!res.ok) throw new Error(data.message || 'Gagal simpan');
@@ -1245,12 +1256,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Distill: satu sentuhan buat tiket — form `required` sudah menjaga
             // kelengkapan; gerbang showConfirm kedua hanya menambah friksi.
             const submitBtn = ntForm.querySelector('.login-btn');
-            setLoading(submitBtn, true, 'Creating...');
+            const ntEvidenceInput = document.getElementById('ntEvidence');
+            const hasNtEvidence = !!(ntEvidenceInput && ntEvidenceInput.files && ntEvidenceInput.files[0]);
+            setLoading(submitBtn, true, hasNtEvidence ? 'Mengompres foto...' : 'Creating...');
 
             const formData = new FormData(ntForm);
             formData.append('createdBy', user.username);
 
             try {
+                if (hasNtEvidence) {
+                    // Kompres dulu di sisi klien — foto kamera HP sering >5MB (batas
+                    // server, middleware/upload.js), bikin upload gagal tanpa alasan
+                    // jelas terutama di sinyal seluler lambat saat teknisi di lapangan.
+                    const compressed = await compressImageFile(ntEvidenceInput.files[0]);
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
+                    formData.set('evidence', compressed, compressed.name);
+                }
                 const r = await csrfFetch('/tickets', { method: 'POST', body: formData });
                 if (r.ok) {
                     ntModal.classList.remove('show');

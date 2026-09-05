@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mayung-app-v54'; // Increment — sembunyikan tombol Tambah FTTH untuk Teknisi (read-only, backend sudah 403) + fitur export topologi FTTH (CSV/PDF) di halaman Home FTTH
+const CACHE_NAME = 'mayung-app-v55'; // Increment — kompresi foto bukti tiket (kamera HP sering >5MB, batas server) sebelum upload, cegah "gagal upload foto" saat teknisi buat/selesaikan tiket
 const ASSETS = [
     '/',
     '/index.html',
