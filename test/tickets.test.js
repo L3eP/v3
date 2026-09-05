@@ -7,9 +7,25 @@
  *
  * Cara jalan: npm test
  */
+// PENTING: testApp harus di-require DULUAN — dia yang men-load dotenv
+// (lihat komentar di dalamnya). db.js membuat connection pool langsung saat
+// pertama kali di-require pakai process.env saat itu juga; kalau db di-require
+// duluan, dotenv belum jalan, dan pool KEBURU dibuat pakai kredensial kosong
+// (root@localhost tanpa password) — nyangkut permanen di module cache Node
+// untuk sisa proses (baru ketahuan waktu file ini dijalankan SENDIRIAN, bukan
+// lewat `npm test` yang men-load file lain duluan sehingga dotenv kebetulan
+// sudah jalan sebelum baris ini dieksekusi).
 const { buildTestApp, getAgentFor, TEST_TAG } = require('./helpers/testApp');
+const db = require('../db');
 
 const app = buildTestApp();
+
+// Buffer JPEG minimal — cukup untuk lolos cek magic bytes di middleware/upload.js
+// (butuh >= 12 byte DAN 3 byte pertama FF D8 FF), tidak perlu gambar asli yang
+// bisa didekode karena app ini tidak pernah men-decode isi filenya.
+const MIN_JPEG_BUFFER = Buffer.from([
+  0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01, 0xff, 0xd9
+]);
 
 describe('Ticket Status State Machine', function () {
   this.timeout(15000);
@@ -88,8 +104,11 @@ describe('Ticket Status State Machine', function () {
     const toDikerjakan = await ownerAgent.post(`/tickets/${ticketId}/update`).send({ status: 'Dikerjakan' });
     if (toDikerjakan.status !== 200) throw new Error('Gagal set Dikerjakan sebagai prasyarat test');
 
-    const toSelesai = await ownerAgent.post(`/tickets/${ticketId}/update`).send({ status: 'Selesai' });
-    if (toSelesai.status !== 200) throw new Error(`Expected 200 (Dikerjakan->Selesai valid), got ${toSelesai.status}`);
+    // Sejak foto bukti diwajibkan saat masuk Selesai, transisi ini butuh evidence.
+    const toSelesai = await ownerAgent.post(`/tickets/${ticketId}/update`)
+      .field('status', 'Selesai')
+      .attach('evidence', MIN_JPEG_BUFFER, 'bukti.jpg');
+    if (toSelesai.status !== 200) throw new Error(`Expected 200 (Dikerjakan->Selesai valid), got ${toSelesai.status}: ${JSON.stringify(toSelesai.body)}`);
 
     const toTerlapor = await ownerAgent.post(`/tickets/${ticketId}/update`).send({ status: 'Terlapor' });
     if (toTerlapor.status !== 400) throw new Error(`Expected 400 (Selesai->Terlapor tidak valid, cuma boleh ke Dikerjakan), got ${toTerlapor.status}`);
@@ -98,9 +117,30 @@ describe('Ticket Status State Machine', function () {
   it('Selesai -> Dikerjakan (satu-satunya jalan keluar dari Selesai) HARUS diterima', async () => {
     ticketId = await createTestTicket();
     await ownerAgent.post(`/tickets/${ticketId}/update`).send({ status: 'Dikerjakan' });
-    await ownerAgent.post(`/tickets/${ticketId}/update`).send({ status: 'Selesai' });
+    await ownerAgent.post(`/tickets/${ticketId}/update`)
+      .field('status', 'Selesai')
+      .attach('evidence', MIN_JPEG_BUFFER, 'bukti.jpg');
     const res = await ownerAgent.post(`/tickets/${ticketId}/update`).send({ status: 'Dikerjakan' });
     if (res.status !== 200) throw new Error(`Expected 200, got ${res.status}`);
+  });
+
+  it('transisi ke Selesai TANPA foto bukti ditolak (400); DITERIMA begitu evidence tersedia (dari DB, bukan upload baru)', async () => {
+    // Satu fixture dipakai utk kedua skenario — tekan jumlah request supaya
+    // tidak numpuk di mutationLimiter('tickets') yang dibagi seluruh proses
+    // mocha (lihat test/helpers/testApp.js).
+    ticketId = await createTestTicket();
+    await ownerAgent.post(`/tickets/${ticketId}/update`).send({ status: 'Dikerjakan' });
+
+    const rejected = await ownerAgent.post(`/tickets/${ticketId}/update`).send({ status: 'Selesai' });
+    if (rejected.status !== 400) throw new Error(`Expected 400 (tanpa foto bukti), got ${rejected.status}: ${JSON.stringify(rejected.body)}`);
+    const check = await ownerAgent.get(`/tickets/${ticketId}`);
+    if (check.body.status === 'Selesai') throw new Error('Status berubah ke Selesai padahal request ditolak');
+
+    // Foto sudah dilampirkan sebelumnya (mis. saat masih Dikerjakan) — tidak
+    // wajib upload ulang foto yang sama persis saat menyelesaikan.
+    await db.query("UPDATE tickets SET evidence = '/uploads/existing-test.jpg' WHERE id = ?", [ticketId]);
+    const accepted = await ownerAgent.post(`/tickets/${ticketId}/update`).send({ status: 'Selesai' });
+    if (accepted.status !== 200) throw new Error(`Expected 200 (evidence sudah ada dari sebelumnya), got ${accepted.status}: ${JSON.stringify(accepted.body)}`);
   });
 });
 

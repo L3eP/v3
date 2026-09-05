@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mayung-app-v55'; // Increment — kompresi foto bukti tiket (kamera HP sering >5MB, batas server) sebelum upload, cegah "gagal upload foto" saat teknisi buat/selesaikan tiket
+const CACHE_NAME = 'mayung-app-v56'; // Increment — foto bukti WAJIB saat status tiket diubah ke Selesai (server + kedua UI: sheet Tandai Selesai & modal edit umum), tutup celah yang bisa dilewati lewat ticket-details.html
 const ASSETS = [
     '/',
     '/index.html',

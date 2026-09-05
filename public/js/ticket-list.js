@@ -629,16 +629,30 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // Sheet "Tandai Selesai": foto bukti opsional + Simpan
+    // Sheet "Tandai Selesai": foto bukti WAJIB, kecuali tiket sudah punya
+    // evidence dari sebelumnya (mis. dilampirkan saat masih Dikerjakan) —
+    // lihat pengecekan yang sama di server (routes/tickets.js).
     function openCompleteSheet(ticketId, ticket) {
         const modal = document.getElementById('completeTicketModal');
         const ref = document.getElementById('ctTicketRef');
         ref.textContent = `#${ticket.id} — ${ticket.aktifitas || '-'}`;
         ref.dataset.id = String(ticketId);
+        ref.dataset.hasEvidence = ticket.evidence ? '1' : '';
         const evidence = document.getElementById('ctEvidence');
         evidence.value = '';
         const preview = document.getElementById('ctEvidencePreview');
         preview.classList.add('hidden');
+
+        const reqTag = document.getElementById('ctEvidenceReqTag');
+        const hint = document.getElementById('ctHint');
+        if (ticket.evidence) {
+            reqTag.textContent = '(opsional — sudah ada foto sebelumnya)';
+            hint.innerHTML = '<i class="fas fa-camera"></i> Tiket ini sudah punya foto bukti. Pilih foto baru untuk menggantinya, atau langsung Simpan.';
+        } else {
+            reqTag.textContent = '(wajib)';
+            hint.innerHTML = '<i class="fas fa-camera"></i> Lampirkan foto bukti pekerjaan sebelum menyimpan.';
+        }
+
         modal.classList.add('show');
         setTimeout(() => evidence.focus(), 60);
     }
@@ -671,15 +685,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         const preview = document.getElementById('ctEvidencePreview');
         const submitBtn = modal.querySelector('button[type="submit"]');
         if (!id) return;
-        const hasEvidence = !!(evidence.files && evidence.files[0]);
+        const hasNewFile = !!(evidence.files && evidence.files[0]);
+        const hadExistingEvidence = document.getElementById('ctTicketRef').dataset.hasEvidence === '1';
+        if (!hasNewFile && !hadExistingEvidence) {
+            showToast('Foto bukti wajib dilampirkan untuk menyelesaikan tiket', 'error');
+            evidence.focus();
+            return;
+        }
         // setLoading(true) cuma dipanggil SEKALI — simpan HTML asli tombol.
         // Fase berikutnya ganti innerHTML langsung (bukan panggil setLoading
         // lagi), supaya HTML "asli" yang tersimpan tidak ketiban teks loading.
-        setLoading(submitBtn, true, hasEvidence ? 'Mengompres foto...' : undefined);
+        setLoading(submitBtn, true, hasNewFile ? 'Mengompres foto...' : undefined);
         try {
             const form = new FormData();
             form.append('status', 'Selesai');
-            if (hasEvidence) {
+            if (hasNewFile) {
                 // Kompres dulu di sisi klien — foto kamera HP sering >5MB (batas
                 // server, middleware/upload.js), bikin upload gagal tanpa alasan
                 // jelas terutama di sinyal seluler lambat saat teknisi di lapangan.

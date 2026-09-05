@@ -136,7 +136,7 @@
                         </div>
                         <div>
                             <label for="editStatus">Status</label>
-                            <select id="editStatus" name="status" class="field">
+                            <select id="editStatus" name="status" class="field" onchange="onEditStatusChange()">
                                 <option value="Terlapor">Terlapor</option>
                                 <option value="Dikerjakan">Dikerjakan</option>
                                 <option value="Selesai">Selesai</option>
@@ -149,8 +149,9 @@
                         <textarea id="editInfo" name="info" rows="3" required placeholder="Detailed description..." class="field resize-v"></textarea>
                     </div>
                     <div>
-                        <label for="editEvidence">Evidence (opsional)</label>
+                        <label for="editEvidence">Evidence <span id="editEvidenceReqTag" class="text-muted-sm">(opsional)</span></label>
                         <input type="file" id="editEvidence" name="evidence" accept="image/*" class="field" style="padding:6px;" onchange="onEditEvidenceChange()">
+                        <p id="editEvidenceHint" class="text-muted-sm mt-1 hidden"><i class="fas fa-camera"></i> Foto bukti wajib dilampirkan untuk menyelesaikan tiket.</p>
                         <img id="editEvidencePreview" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="Pratinjau bukti" loading="lazy" style="display:none;max-width:180px;max-height:120px;margin-top:6px;border-radius:6px;border:1px solid var(--border-color);">
                     </div>
                 </div>
@@ -175,7 +176,7 @@
     <script src="js/csrf.js?v=1"></script>
     <script src="js/toast.js?v=5"></script>
     <script src="js/navbar.js?v=4"></script>
-    <script src="js/ticket-details.js?v=3"></script>
+    <script src="js/ticket-details.js?v=4"></script>
 </body>
 
 </html>
