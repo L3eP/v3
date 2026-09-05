@@ -15,6 +15,30 @@ const { sanitizePhone } = require('../utils/phone');
 const FONNTE_TOKEN = process.env.FONNTE_TOKEN;
 const FONNTE_API = 'https://api.fonnte.com/send';
 
+// Base URL publik dipakai untuk menyusun link tiket di badan pesan WA — lihat
+// APP_URL di .env.example. Fallback ke localhost supaya dev tanpa .env tetap
+// jalan (tidak melempar), tapi itu berarti link di WA tidak bisa dibuka orang
+// lain — beri warning sekali di production kalau operator lupa isi APP_URL.
+let warnedMissingAppUrl = false;
+function getAppUrl() {
+  const configured = (process.env.APP_URL || '').trim().replace(/\/+$/, '');
+  if (configured) return configured;
+  if (process.env.NODE_ENV === 'production' && !warnedMissingAppUrl) {
+    warnedMissingAppUrl = true;
+    logger.warn('APP_URL belum di-set di .env — link tiket di notifikasi WA memakai localhost dan tidak akan bisa dibuka penerima');
+  }
+  return `http://localhost:${process.env.PORT || 3000}`;
+}
+
+/**
+ * URL langsung ke halaman detail tiket. Halaman ini tetap butuh login (semua
+ * halaman app redirect ke index.html tanpa sesi) — link ini cuma jalan pintas
+ * navigasi, bukan bypass otentikasi.
+ */
+function ticketUrl(ticketId) {
+  return `${getAppUrl()}/ticket-details.html?id=${ticketId}`;
+}
+
 /**
  * Kirim pesan WhatsApp ke satu nomor
  * @param {string} phone - Nomor telepon (contoh: 87751098112, tanpa 0/+62)
@@ -116,7 +140,7 @@ function formatNewTicketMessage(ticket) {
     `Prioritas: ${ticket.priority}\n` +
     `Status: ${ticket.status}\n` +
     `PIC: ${ticket.pic}\n\n` +
-    `Silakan cek aplikasi untuk detail lebih lanjut.`;
+    `Detail: ${ticketUrl(ticket.id)}`;
 }
 
 /**
@@ -129,7 +153,7 @@ function formatUpdateMessage(ticketId, oldStatus, newStatus, changedBy, ticketDa
     `Lokasi: ${ticketData?.lokasi || '-'}\n` +
     `Status: ${oldStatus} → *${newStatus}*\n` +
     `Oleh: ${changedBy}\n\n` +
-    `Cek aplikasi untuk detail lebih lanjut.`;
+    `Detail: ${ticketUrl(ticketId)}`;
 }
 
 /**
