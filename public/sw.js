@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mayung-app-v56'; // Increment — foto bukti WAJIB saat status tiket diubah ke Selesai (server + kedua UI: sheet Tandai Selesai & modal edit umum), tutup celah yang bisa dilewati lewat ticket-details.html
+const CACHE_NAME = 'mayung-app-v57'; // Increment — navigasi .html & script /js/*.js pindah dari stale-while-revalidate ke network-first (lihat komentar isAppShellRequest di bawah): sebelumnya, pengguna yang tab-nya sudah pernah dibuka bisa tetap menjalankan HTML+JS versi lama sampai reload 2x setelah tiap deploy — kombinasi lama/baru yang tidak sinkron inilah kemungkinan penyebab "tombol Choose File tidak bisa diklik" yang dilaporkan setelah update fitur evidence wajib (v55/v56)
 const ASSETS = [
     '/',
     '/index.html',
@@ -95,6 +95,42 @@ self.addEventListener('fetch', (event) => {
                 .catch(() => {
                     return caches.match(event.request, { ignoreSearch: true });
                 })
+        );
+        return;
+    }
+
+    // App shell (halaman .html/navigasi + script /js/*.js) = Network First juga,
+    // BUKAN cuma endpoint data. Stale-while-revalidate (di bawah) menampilkan
+    // cache DULU lalu memperbarui cache di background — artinya begitu ada
+    // deploy, tab yang sudah pernah dibuka tetap menjalankan HTML+JS versi LAMA
+    // sampai reload dua kali (sekali mengisi cache baru, sekali lagi menampilkannya).
+    // Di antara dua reload itu, HTML baru bisa ke-load bareng JS lama (atau
+    // sebaliknya) — kombinasi tak sinkron yang jadi kandidat kuat penyebab bug
+    // "tombol Choose File tidak bisa diklik" setelah update fitur evidence wajib.
+    // Gambar/CSS/font/manifest tetap stale-while-revalidate — jarang berubah,
+    // dan telat satu load tidak menyebabkan bug fungsional seperti JS/HTML.
+    const isAppShellRequest =
+        event.request.mode === 'navigate' ||
+        path.endsWith('.html') ||
+        path === '/' ||
+        (path.startsWith('/js/') && path.endsWith('.js'));
+
+    if (isAppShellRequest) {
+        event.respondWith(
+            fetch(event.request).then((networkResponse) => {
+                if (networkResponse && networkResponse.ok) {
+                    const cacheCopy = networkResponse.clone();
+                    caches.open(CACHE_NAME).then((cache) => cache.put(event.request, cacheCopy));
+                }
+                return networkResponse;
+            }).catch(() => {
+                return caches.match(event.request, { ignoreSearch: true }).then((cached) => {
+                    if (cached) return cached;
+                    // Navigasi tanpa cache sama sekali (mis. pertama kali offline) — tampilkan offline page.
+                    if (event.request.mode === 'navigate') return caches.match('/offline.html');
+                    return undefined;
+                });
+            })
         );
         return;
     }
