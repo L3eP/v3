@@ -36,8 +36,6 @@ cookie_*.txt
 # Backups — only ignore backup dumps, not schema/migration files
 *_backup.sql
 *_db_*.sql
-latest.sql
-mayungapp.sql
 *.bak
 /backup
 
@@ -49,8 +47,14 @@ migrasi.sql
 !/public/uploads/.gitkeep
 !/public/uploads/default.png
 
-# Production database dump
-prod_db.sql
+# SQL dump di root repo — mysqldump manual (apayalupa.sql, ftth_devices_Fri4Sep2026.sql,
+# prod_db.sql, dst) selalu muncul dengan nama ad-hoc yang tak mungkin dikejar
+# satu per satu, dan isinya PII pelanggan asli + hash password akun sungguhan.
+# Blokir SEMUA *.sql di root (pola root-only, tanpa **), lalu izinkan eksplisit
+# yang memang bagian dari source. Migrasi/seed asli tetap di scripts/ — tidak
+# kena aturan ini karena scripts/ bukan root.
+/*.sql
+!/schema.sql
 
 # AI / Claude
 CLAUDE.md
@@ -88,10 +92,15 @@ docs/ERD*
 
 # Database production & hasil migrasinya — PII pelanggan (nama, alamat,
 # no. HP) dan hash password akun sungguhan. JANGAN pernah masuk repo.
-Fri4Sep2026.sql
-migration_to_current_schema.sql
+# (nama file .sql spesifik sudah tercakup oleh aturan /*.sql di atas)
+/migration_staged/
 *.sql.gz
 /dumps/
+
+# Halaman dokumentasi offline "Jejak Eksekusi MAYUNG" — dibuat ad-hoc untuk
+# dibagikan di luar repo, bukan bagian aplikasi (lihat juga /_arsip/ di atas).
+/mayung-doc/
+/mayung-doc-*.zip
 
 # Runbook operasional — menyebut path/nama service server production,
 # disimpan lokal saja, bukan di repo kode.

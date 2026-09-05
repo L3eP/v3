@@ -9,16 +9,23 @@ const asyncHandler = require('../middleware/asyncHandler');
 const { sanitizePhone } = require('../utils/phone');
 const logger = require('../utils/logger');
 
+// message HARUS objek, bukan string — express-rate-limit mengirimnya lewat
+// res.send(message) apa adanya. String -> Content-Type text/html, dan
+// public/js/script.js (await response.json()) lempar SyntaxError begitu
+// limiter ini kena; error itu jatuh ke catch generik "An error occurred,
+// please try again" yang tidak menyebut rate limit sama sekali — pengguna
+// yang credential-nya benar tapi kena limit terlihat seperti "gagal login"
+// tanpa alasan jelas.
 const loginLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 5,
-    message: 'Too many login attempts, please try again later.'
+    message: { message: 'Too many login attempts, please try again later.' }
 });
 
 const registerLimiter = rateLimit({
     windowMs: 60 * 60 * 1000, // 1 jam
     max: 5, // Maks 5 registrasi per jam per IP
-    message: 'Too many registration attempts, please try again later.'
+    message: { message: 'Too many registration attempts, please try again later.' }
 });
 
 // Helper to map DB user to Frontend user
@@ -43,13 +50,18 @@ const DUMMY_BCRYPT_HASH = '$2a$10$CwTycUXWue0Thq9StjUM0uJ8i8fSGZAXG5eGZ3aWvxE1Y5
 // Login
 router.post('/login', loginLimiter, [
     body('username').trim().escape(),
-    // Password TIDAK di-trim/escape: nilai ini hanya dibandingkan via bcrypt,
-    // tidak pernah dirender ke HTML. .escape() mengubah karakter < > & " ' pada
-    // password sebelum bcrypt.compare, sehingga password yang mengandung
-    // karakter itu tidak akan pernah cocok — akun terkunci permanen padahal
-    // password yang diketik benar. register/update-profile/admin-update tidak
-    // melakukan ini, jadi login harus konsisten dengan cara password disimpan.
-    body('password').notEmpty()
+    // Password TIDAK di-escape (beda dari .trim()): nilai ini hanya
+    // dibandingkan via bcrypt, tidak pernah dirender ke HTML. .escape()
+    // mengubah karakter < > & " ' pada password sebelum bcrypt.compare,
+    // sehingga password yang mengandung karakter itu tidak akan pernah
+    // cocok — akun terkunci permanen padahal password yang diketik benar.
+    // .trim() AMAN dan justru wajib disamakan di sini — spasi tak sengaja
+    // di awal/akhir (autofill, copy-paste, kepencet spasi) harus diabaikan
+    // konsisten di kedua sisi: saat password di-hash (register/
+    // update-profile/admin-update, semuanya sudah .trim()) dan saat
+    // dibandingkan di sini. Kalau cuma salah satu sisi yang trim, itu
+    // menciptakan bug yang sama dari arah sebaliknya.
+    body('password').trim().notEmpty()
 ], asyncHandler(async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -139,7 +151,10 @@ router.post('/logout', (req, res) => {
 router.post('/register', isAuthenticated, isAdmin, registerLimiter, upload.single('photo'), [
     body('username').trim().isLength({ min: 3 }).escape(),
     // Sprint 4 — policy password: minimal 8 karakter + wajib huruf dan angka
+    // .trim() dulu sebelum validasi panjang/isi — spasi tak sengaja di awal/
+    // akhir diabaikan konsisten dengan login (lihat komentar di /login).
     body('password')
+        .trim()
         .isLength({ min: 8 }).withMessage('Password minimal 8 karakter')
         .matches(/(?=.*[A-Za-z])(?=.*\d)/).withMessage('Password harus mengandung huruf dan angka'),
     body('fullName').trim().escape(),

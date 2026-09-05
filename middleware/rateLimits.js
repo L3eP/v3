@@ -18,7 +18,12 @@ function mutationLimiter(label, max = 60) {
         max, // per-IP per 15 menit, per endpoint group
         standardHeaders: true,
         legacyHeaders: false,
-        message: `Terlalu banyak permintaan ke ${label}, coba lagi nanti.`,
+        // Objek, bukan string — express-rate-limit memanggil res.send(message)
+        // apa adanya. String jadi res.send('teks') -> Content-Type text/html,
+        // dan setiap pemanggil frontend yang expect JSON (await response.json())
+        // lempar SyntaxError, jatuh ke catch generik "An error occurred" yang
+        // menyembunyikan pesan asli (termasuk untuk /login — lihat auth.js).
+        message: { message: `Terlalu banyak permintaan ke ${label}, coba lagi nanti.` },
         skip: (req) => SAFE_METHODS.has(req.method.toUpperCase())
     });
 }

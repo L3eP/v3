@@ -397,6 +397,72 @@ document.addEventListener('DOMContentLoaded', async () => {
         return out;
     }
 
+    // Ringkasan ekspor: aktifitas terbanyak, wilayah (sub_node) terbanyak, dan
+    // kecenderungan kendala per bulan — dipakai CSV & PDF supaya isinya konsisten.
+    // "Kecenderungan" dihitung dari 3 aktifitas paling sering muncul di seluruh
+    // data yang diekspor, dilacak per bulan (12 bulan terakhir) supaya kenaikan/
+    // penurunan tiap kategori terlihat, bukan cuma total tiket per bulan.
+    function computeExportSummary(tickets) {
+        const total = tickets.length;
+        const countBy = (getKey) => {
+            const map = {};
+            tickets.forEach(t => {
+                const key = getKey(t) || 'Tidak diketahui';
+                map[key] = (map[key] || 0) + 1;
+            });
+            return Object.entries(map)
+                .sort((a, b) => b[1] - a[1])
+                .map(([label, count]) => ({ label, count, pct: total ? Math.round(count / total * 100) : 0 }));
+        };
+        const byAktifitas = countBy(t => t.aktifitas);
+        const byWilayah = countBy(t => t.subNode);
+        const topAktifitas = byAktifitas.slice(0, 3).map(a => a.label);
+
+        // Rentang tanggal data yang benar-benar terekspor (bukan sekadar filter
+        // yang dipilih user) — supaya pembaca laporan tahu tiket dari kapan s/d
+        // kapan yang direkap, tanpa perlu buka aplikasi lagi.
+        const fmtDate = d => d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+        let dateRangeLabel = '—';
+        const validDates = tickets.map(t => new Date(t.createdAt)).filter(d => !isNaN(d));
+        if (validDates.length) {
+            const min = new Date(Math.min(...validDates));
+            const max = new Date(Math.max(...validDates));
+            dateRangeLabel = fmtDate(min) === fmtDate(max) ? fmtDate(min) : `${fmtDate(min)} – ${fmtDate(max)}`;
+        }
+
+        const monthMap = {}; // 'YYYY-MM' -> { total, [aktifitas]: count }
+        tickets.forEach(t => {
+            const d = new Date(t.createdAt);
+            if (isNaN(d)) return;
+            const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            if (!monthMap[key]) monthMap[key] = { total: 0 };
+            monthMap[key].total++;
+            const akt = t.aktifitas || 'Tidak diketahui';
+            if (topAktifitas.includes(akt)) monthMap[key][akt] = (monthMap[key][akt] || 0) + 1;
+        });
+        const months = Object.keys(monthMap).sort().slice(-12); // 12 bulan terakhir saja — cukup untuk melihat tren
+        const trend = months.map((key, i) => {
+            const cur = monthMap[key];
+            const prevKey = months[i - 1];
+            const prevTotal = prevKey ? monthMap[prevKey].total : null;
+            let delta = null;
+            if (prevTotal !== null && prevTotal > 0) delta = Math.round((cur.total - prevTotal) / prevTotal * 100);
+            const [y, m] = key.split('-');
+            const label = new Date(Number(y), Number(m) - 1, 1).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+            return { label, total: cur.total, delta, byAktifitas: topAktifitas.map(a => cur[a] || 0) };
+        });
+
+        return { total, byAktifitas, byWilayah, topAktifitas, trend, dateRangeLabel };
+    }
+    // Label perubahan bulan-ke-bulan dalam kata (bukan simbol ▲▼ — font standar
+    // jsPDF/Helvetica tidak punya glyph itu dan akan tampil kosong di PDF).
+    function trendDeltaLabel(delta) {
+        if (delta === null) return '—';
+        if (delta > 0) return `naik ${delta}%`;
+        if (delta < 0) return `turun ${Math.abs(delta)}%`;
+        return 'tetap';
+    }
+
     // ===== Ekspor monitor: umpan balik eksplisit selama loop permintaan =====
     // Tombol CSV/PDF dinonaktifkan (anti dobel-klik), strip progres ditampilkan,
     // lalu toast penyelesaian "N tiket → file terunduh" memberi tanda akhir.
@@ -563,16 +629,30 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // Sheet "Tandai Selesai": foto bukti opsional + Simpan
+    // Sheet "Tandai Selesai": foto bukti WAJIB, kecuali tiket sudah punya
+    // evidence dari sebelumnya (mis. dilampirkan saat masih Dikerjakan) —
+    // lihat pengecekan yang sama di server (routes/tickets.js).
     function openCompleteSheet(ticketId, ticket) {
         const modal = document.getElementById('completeTicketModal');
         const ref = document.getElementById('ctTicketRef');
         ref.textContent = `#${ticket.id} — ${ticket.aktifitas || '-'}`;
         ref.dataset.id = String(ticketId);
+        ref.dataset.hasEvidence = ticket.evidence ? '1' : '';
         const evidence = document.getElementById('ctEvidence');
         evidence.value = '';
         const preview = document.getElementById('ctEvidencePreview');
         preview.classList.add('hidden');
+
+        const reqTag = document.getElementById('ctEvidenceReqTag');
+        const hint = document.getElementById('ctHint');
+        if (ticket.evidence) {
+            reqTag.textContent = '(opsional — sudah ada foto sebelumnya)';
+            hint.innerHTML = '<i class="fas fa-camera"></i> Tiket ini sudah punya foto bukti. Pilih foto baru untuk menggantinya, atau langsung Simpan.';
+        } else {
+            reqTag.textContent = '(wajib)';
+            hint.innerHTML = '<i class="fas fa-camera"></i> Lampirkan foto bukti pekerjaan sebelum menyimpan.';
+        }
+
         modal.classList.add('show');
         setTimeout(() => evidence.focus(), 60);
     }
@@ -605,11 +685,28 @@ document.addEventListener('DOMContentLoaded', async () => {
         const preview = document.getElementById('ctEvidencePreview');
         const submitBtn = modal.querySelector('button[type="submit"]');
         if (!id) return;
-        setLoading(submitBtn, true);
+        const hasNewFile = !!(evidence.files && evidence.files[0]);
+        const hadExistingEvidence = document.getElementById('ctTicketRef').dataset.hasEvidence === '1';
+        if (!hasNewFile && !hadExistingEvidence) {
+            showToast('Foto bukti wajib dilampirkan untuk menyelesaikan tiket', 'error');
+            evidence.focus();
+            return;
+        }
+        // setLoading(true) cuma dipanggil SEKALI — simpan HTML asli tombol.
+        // Fase berikutnya ganti innerHTML langsung (bukan panggil setLoading
+        // lagi), supaya HTML "asli" yang tersimpan tidak ketiban teks loading.
+        setLoading(submitBtn, true, hasNewFile ? 'Mengompres foto...' : undefined);
         try {
             const form = new FormData();
             form.append('status', 'Selesai');
-            if (evidence.files && evidence.files[0]) form.append('evidence', evidence.files[0]);
+            if (hasNewFile) {
+                // Kompres dulu di sisi klien — foto kamera HP sering >5MB (batas
+                // server, middleware/upload.js), bikin upload gagal tanpa alasan
+                // jelas terutama di sinyal seluler lambat saat teknisi di lapangan.
+                const compressed = await compressImageFile(evidence.files[0]);
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
+                form.append('evidence', compressed, compressed.name);
+            }
             const res = await csrfFetch(`/tickets/${id}/update`, { method: 'POST', body: form });
             const data = await res.json().catch(() => ({}));
             if (!res.ok) throw new Error(data.message || 'Gagal simpan');
@@ -724,9 +821,40 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (exportRes.error) return; // toast error sudah ditampilkan; jangan unduh file kosong
                 if (exportRes.truncated) showToast('Ekspor dibatasi ke 100.000 tiket terbaru', 'error');
                 const visibleTickets = exportRes.tickets;
+                if (!visibleTickets.length) {
+                    showToast('Tidak ada tiket yang cocok untuk diekspor', 'error');
+                    return;
+                }
                 const headers = ['ID', 'Aktifitas', 'Sub-node', 'ODC', 'Lokasi', 'PIC', 'Priority', 'Status', 'Created By', 'Date', 'Info'];
+                const csvCell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+
+                // Ringkasan: aktifitas terbanyak, wilayah terbanyak, kecenderungan
+                // kendala per bulan \u2014 di atas tabel data mentah, dipisah baris kosong
+                // supaya tetap gampang dibuka di Excel/Sheets.
+                const summary = computeExportSummary(visibleTickets);
+                const summaryLines = [
+                    'RINGKASAN EKSPOR',
+                    `Total Tiket,${summary.total}`,
+                    `Rentang Data,${csvCell(summary.dateRangeLabel)}`,
+                    '',
+                    'Aktifitas Terbanyak',
+                    'Aktifitas,Jumlah,Persentase',
+                    ...summary.byAktifitas.map(a => `${csvCell(a.label)},${a.count},${a.pct}%`),
+                    '',
+                    'Wilayah Terbanyak (Sub-node)',
+                    'Sub-node,Jumlah,Persentase',
+                    ...summary.byWilayah.map(w => `${csvCell(w.label)},${w.count},${w.pct}%`),
+                    '',
+                    `Kecenderungan Kendala per Bulan${summary.topAktifitas.length ? ` (top: ${summary.topAktifitas.join(', ')})` : ''}`,
+                    ['Bulan', 'Total Tiket', 'Perubahan', ...summary.topAktifitas].map(csvCell).join(','),
+                    ...summary.trend.map(row => [row.label, row.total, trendDeltaLabel(row.delta), ...row.byAktifitas].map(csvCell).join(',')),
+                    '',
+                    'DATA TIKET',
+                    ''
+                ];
 
                 const csvContent = [
+                    ...summaryLines,
                     headers.join(','),
                     ...visibleTickets.map(t => [
                         t.id,
@@ -743,10 +871,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     ].join(','))
                 ].join('\n');
 
-                if (!visibleTickets.length) {
-                    showToast('Tidak ada tiket yang cocok untuk diekspor', 'error');
-                    return;
-                }
                 const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
                 const link = document.createElement('a');
                 link.href = URL.createObjectURL(blob);
@@ -795,42 +919,79 @@ document.addEventListener('DOMContentLoaded', async () => {
                     return;
                 }
 
-                // Hitung summary
-                const byStatus = {}; const byPriority = {};
-                tickets.forEach(t => {
-                    byStatus[t.status] = (byStatus[t.status] || 0) + 1;
-                    byPriority[t.priority] = (byPriority[t.priority] || 0) + 1;
-                });
+                // Hitung summary — status/priority (seperti sebelumnya) plus
+                // aktifitas & wilayah terbanyak, dan tren kendala per bulan
+                // (computeExportSummary, dipakai bareng dengan ekspor CSV).
+                const entriesWithPct = obj => Object.entries(obj)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([label, count]) => ({ label, count, pct: Math.round(count / total * 100) }));
+                const byStatusEntries = entriesWithPct(
+                    tickets.reduce((m, t) => ((m[t.status] = (m[t.status] || 0) + 1), m), {})
+                );
+                const byPriorityEntries = entriesWithPct(
+                    tickets.reduce((m, t) => ((m[t.priority] = (m[t.priority] || 0) + 1), m), {})
+                );
+                const summary = computeExportSummary(tickets);
 
-                // Header
+                // Header — baris kedua menyebut rentang tanggal DATA yang benar-benar
+                // terekspor (min–max created_at aktual), bukan cuma kapan file dibuat,
+                // supaya pembaca laporan tahu ini rekap periode kapan tanpa buka app.
                 doc.setFontSize(16);
                 doc.text('Export Tiket', 14, 15);
                 doc.setFontSize(10);
-                doc.text(`Total: ${total} tiket${exportRes.truncated ? ' (dibatasi cap)' : ''} — ${new Date().toLocaleDateString()}`, 14, 23);
+                doc.text(`Total: ${total} tiket${exportRes.truncated ? ' (dibatasi cap)' : ''} — dibuat ${new Date().toLocaleDateString()}`, 14, 22);
+                doc.text(`Rentang data: ${summary.dateRangeLabel}`, 14, 28);
 
-                // Summary by Status
-                doc.setFontSize(11);
-                doc.text('By Status:', 14, 32);
-                doc.setFontSize(9);
-                let sy = 38;
-                Object.entries(byStatus).forEach(([s, c]) => {
-                    doc.text(`  ${s}: ${c} tiket (${Math.round(c / total * 100)}%)`, 14, sy);
-                    sy += 6;
-                });
+                // Empat ringkasan berdampingan: Status, Priority, Aktifitas
+                // Terbanyak, Wilayah Terbanyak — masing-masing top 6 (sisanya
+                // dirangkum sebagai "+N lainnya" supaya tidak meluber ke kolom lain).
+                const drawList = (x, title, items) => {
+                    doc.setFontSize(11);
+                    doc.text(title, x, 36);
+                    doc.setFontSize(9);
+                    let y = 42;
+                    items.slice(0, 6).forEach(({ label, count, pct }) => {
+                        const shown = label.length > 20 ? label.slice(0, 19) + '…' : label;
+                        doc.text(`${shown}: ${count} (${pct}%)`, x, y);
+                        y += 6;
+                    });
+                    if (items.length > 6) {
+                        doc.setFontSize(8);
+                        doc.text(`+${items.length - 6} lainnya`, x, y);
+                        y += 6;
+                    }
+                    return y;
+                };
+                const colBottom = [
+                    drawList(14, 'By Status:', byStatusEntries),
+                    drawList(82, 'By Priority:', byPriorityEntries),
+                    drawList(150, 'Aktifitas Terbanyak:', summary.byAktifitas),
+                    drawList(218, 'Wilayah Terbanyak:', summary.byWilayah)
+                ];
 
-                // Summary by Priority
-                doc.setFontSize(11);
-                doc.text('By Priority:', 110, 32);
-                doc.setFontSize(9);
-                let py = 38;
-                Object.entries(byPriority).forEach(([p, c]) => {
-                    doc.text(`  ${p}: ${c} tiket (${Math.round(c / total * 100)}%)`, 110, py);
-                    py += 6;
-                });
+                // Kecenderungan kendala per bulan (12 bulan terakhir) — tabel
+                // terpisah lewat autoTable supaya ikut berpindah halaman sendiri
+                // kalau rentang tanggalnya panjang.
+                if (summary.trend.length) {
+                    const trendY = Math.max(...colBottom) + 6;
+                    doc.setFontSize(11);
+                    doc.text('Kecenderungan Kendala per Bulan:', 14, trendY);
+                    doc.autoTable({
+                        head: [['Bulan', 'Total Tiket', 'Perubahan', ...summary.topAktifitas]],
+                        body: summary.trend.map(row => [row.label, row.total, trendDeltaLabel(row.delta), ...row.byAktifitas]),
+                        startY: trendY + 4,
+                        theme: 'grid',
+                        styles: { fontSize: 8 },
+                        headStyles: { fillColor: [75, 85, 99] }
+                    });
+                }
 
-                // Ticket table
-                doc.setFontSize(10);
-                const tableStartY = Math.max(sy, py) + 6;
+                // Tabel tiket lengkap mulai dari halaman baru — ringkasan di atas
+                // tidak boleh ikut berdesakan/terpotong oleh data mentah yang bisa
+                // sangat panjang.
+                doc.addPage();
+                doc.setFontSize(12);
+                doc.text('Detail Tiket', 14, 15);
                 const tableData = tickets.map(t => [
                     t.id, t.aktifitas, t.subNode, t.odc, t.lokasi, t.pic, t.priority, t.status,
                     t.createdBy, new Date(t.createdAt).toLocaleDateString()
@@ -839,7 +1000,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 doc.autoTable({
                     head: [['ID', 'Aktifitas', 'Sub-node', 'ODC', 'Lokasi', 'PIC', 'Priority', 'Status', 'Created By', 'Date']],
                     body: tableData,
-                    startY: tableStartY,
+                    startY: 22,
                     theme: 'grid',
                     styles: { fontSize: 7 },
                     headStyles: { fillColor: [75, 85, 99] },
@@ -1115,12 +1276,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Distill: satu sentuhan buat tiket — form `required` sudah menjaga
             // kelengkapan; gerbang showConfirm kedua hanya menambah friksi.
             const submitBtn = ntForm.querySelector('.login-btn');
-            setLoading(submitBtn, true, 'Creating...');
+            const ntEvidenceInput = document.getElementById('ntEvidence');
+            const hasNtEvidence = !!(ntEvidenceInput && ntEvidenceInput.files && ntEvidenceInput.files[0]);
+            setLoading(submitBtn, true, hasNtEvidence ? 'Mengompres foto...' : 'Creating...');
 
             const formData = new FormData(ntForm);
             formData.append('createdBy', user.username);
 
             try {
+                if (hasNtEvidence) {
+                    // Kompres dulu di sisi klien — foto kamera HP sering >5MB (batas
+                    // server, middleware/upload.js), bikin upload gagal tanpa alasan
+                    // jelas terutama di sinyal seluler lambat saat teknisi di lapangan.
+                    const compressed = await compressImageFile(ntEvidenceInput.files[0]);
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
+                    formData.set('evidence', compressed, compressed.name);
+                }
                 const r = await csrfFetch('/tickets', { method: 'POST', body: formData });
                 if (r.ok) {
                     ntModal.classList.remove('show');

@@ -14,7 +14,14 @@ const { cleanupUploadOnError } = require('../utils/uploads');
 const { mutationLimiter } = require('../middleware/rateLimits');
 
 // 3.2 — Rate limiter mutasi (POST/PUT/DELETE; GET dilewati) per endpoint group
-router.use(mutationLimiter('tickets'));
+//
+// SENGAJA dipasang per-route (bukan router.use(...) blanket) — semua router
+// di app ini di-mount di path yang SAMA ('/', lihat server.js), jadi
+// router.use(fn) tanpa path tetap jalan untuk request yang ujungnya ditangani
+// router LAIN yang dimount setelah file ini (activities/settings/references/
+// geo/psb/inventory/ftth/stats) — bocor menghitung kuota 'tickets' padahal
+// bukan endpoint /tickets. Lihat catatan yang sama di routes/users.js.
+const ticketsMutationLimiter = mutationLimiter('tickets');
 
 // Helper to map DB ticket to Frontend ticket
 const mapTicket = (ticket) => {
@@ -74,7 +81,7 @@ async function validatePsbId(psbId) {
   return rows.length > 0;
 }
 
-router.post('/tickets', isAuthenticated, upload.single('evidence'), [
+router.post('/tickets', isAuthenticated, ticketsMutationLimiter, upload.single('evidence'), [
     // aktifitas/subNode/odc/priority TIDAK di-escape(): nilainya divalidasi via
     // validateRef() terhadap label yang tersimpan APA ADANYA di reference_options
     // (aktifitas/sub_node/priority) atau ftth_devices (odc — lihat validateRef()
@@ -344,7 +351,7 @@ const VALID_TRANSITIONS = {
 };
 
 // Update Ticket (IDOR Protected)
-router.post('/tickets/:id/update', isAuthenticated, upload.single('evidence'), [
+router.post('/tickets/:id/update', isAuthenticated, ticketsMutationLimiter, upload.single('evidence'), [
     // Lihat catatan di POST /tickets — field yang divalidasi via validateRef()
     // tidak boleh di-escape().
     body('aktifitas').optional().trim(),
@@ -454,6 +461,22 @@ router.post('/tickets/:id/update', isAuthenticated, upload.single('evidence'), [
                             `Status yang diizinkan: ${(validNext || []).join(', ') || '(tidak ada)'}`
                     });
                 }
+
+                // === Foto bukti wajib saat BENAR-BENAR masuk Selesai ===
+                // Sebelumnya bisa dilewati lewat modal edit umum di ticket-details.html
+                // (evidence di sana cuma "opsional", tanpa cek apa pun) — beda dari
+                // sheet "Tandai Selesai" di ticket-list.html yang setidaknya menampilkan
+                // field foto (walau ada tombol Skip). Dicek terhadap state TERKUNCI
+                // (current), bukan snapshot lama, dan berlaku sama untuk semua role
+                // (Owner/Operator/Teknisi) — tidak ada jalur yang boleh melewatinya.
+                // Foto yang SUDAH ada dari sebelumnya (mis. dilampirkan saat masih
+                // Dikerjakan) ikut dihitung — tidak wajib upload ulang foto yang sama.
+                if (status === 'Selesai' && current.status !== 'Selesai' && !req.file && !current.evidence) {
+                    // req.file selalu falsy di cabang ini (syarat di atas) — tidak ada
+                    // file ke-upload yang perlu dibersihkan.
+                    await connection.rollback();
+                    return res.status(400).json({ message: 'Foto bukti wajib dilampirkan untuk menyelesaikan tiket' });
+                }
             }
 
             let query = 'UPDATE tickets SET ' + updates.join(', ') + ' WHERE id = ?';
@@ -551,7 +574,7 @@ router.get('/tickets/:id/history', isAuthenticated, asyncHandler(async (req, res
 }));
 
 // Delete Ticket (Soft-Delete — Owner only)
-router.delete('/tickets/:id', isAuthenticated, isAdmin, asyncHandler(async (req, res) => {
+router.delete('/tickets/:id', isAuthenticated, ticketsMutationLimiter, isAdmin, asyncHandler(async (req, res) => {
     const ticketId = parseInt(req.params.id);
     // Check existence
     const [rows] = await db.query('SELECT * FROM tickets WHERE id = ?', [ticketId]);

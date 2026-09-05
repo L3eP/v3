@@ -8,7 +8,12 @@ const { audit } = require('../middleware/audit');
 const { mutationLimiter } = require('../middleware/rateLimits');
 
 // 3.2 — Rate limiter mutasi per endpoint group (referensi sering di-bulk via UI)
-router.use(mutationLimiter('references', 100));
+//
+// SENGAJA dipasang per-route (bukan router.use(...) blanket) — lihat catatan
+// yang sama di routes/users.js soal kenapa router.use(fn) tanpa path bocor
+// menghitung request yang ditangani router lain (semua router di-mount di
+// path yang sama, '/', lihat server.js).
+const referencesMutationLimiter = mutationLimiter('references', 100);
 
 // GET /api/references — Ambil semua reference (untuk dropdown)
 router.get('/api/references', isAuthenticated, asyncHandler(async (req, res) => {
@@ -38,7 +43,7 @@ router.get('/api/references', isAuthenticated, asyncHandler(async (req, res) => 
 }));
 
 // POST /api/references — Tambah reference baru (Owner only)
-router.post('/api/references', isAuthenticated, isAdmin, asyncHandler(async (req, res) => {
+router.post('/api/references', isAuthenticated, referencesMutationLimiter, isAdmin, asyncHandler(async (req, res) => {
   const { type, label, group_name, parent_port, sort_order } = req.body;
 
   if (!type || !label) {
@@ -81,7 +86,7 @@ router.post('/api/references', isAuthenticated, isAdmin, asyncHandler(async (req
 }));
 
 // PUT /api/references/:id — Edit reference (Owner only)
-router.put('/api/references/:id', isAuthenticated, isAdmin, asyncHandler(async (req, res) => {
+router.put('/api/references/:id', isAuthenticated, referencesMutationLimiter, isAdmin, asyncHandler(async (req, res) => {
   const id = parseInt(req.params.id);
   const { label, group_name, parent_port, sort_order } = req.body;
 
@@ -130,7 +135,7 @@ router.put('/api/references/:id', isAuthenticated, isAdmin, asyncHandler(async (
 }));
 
 // DELETE /api/references/:id — Hapus reference (Owner only)
-router.delete('/api/references/:id', isAuthenticated, isAdmin, asyncHandler(async (req, res) => {
+router.delete('/api/references/:id', isAuthenticated, referencesMutationLimiter, isAdmin, asyncHandler(async (req, res) => {
   const id = parseInt(req.params.id);
 
   // Audit: ambil label sebelum dihapus

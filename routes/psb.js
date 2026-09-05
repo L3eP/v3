@@ -12,7 +12,12 @@ const { cleanupUploadOnError } = require('../utils/uploads');
 const { mutationLimiter } = require('../middleware/rateLimits');
 
 // 3.2 — Rate limiter mutasi per endpoint group
-router.use(mutationLimiter('psb'));
+//
+// SENGAJA dipasang per-route (bukan router.use(...) blanket) — lihat catatan
+// yang sama di routes/users.js soal kenapa router.use(fn) tanpa path bocor
+// menghitung request yang ditangani router lain (semua router di-mount di
+// path yang sama, '/', lihat server.js).
+const psbMutationLimiter = mutationLimiter('psb');
 
 const VALID_PSB_STATUS = ['Terdaftar', 'Terpasang', 'Aktif', 'Batal'];
 
@@ -32,7 +37,7 @@ router.get('/api/psb/:id', isAuthenticated, asyncHandler(async (req, res) => {
 }));
 
 // POST /api/psb — Buat PSB baru (semua role)
-router.post('/api/psb', isAuthenticated, upload.single('photo'), asyncHandler(async (req, res) => {
+router.post('/api/psb', isAuthenticated, psbMutationLimiter, upload.single('photo'), asyncHandler(async (req, res) => {
   const { customerName, address, phone, onuSn, latitude, longitude, odpLabel, onuPort, notes } = req.body;
 
   if (!customerName || !customerName.trim()) {
@@ -77,7 +82,7 @@ router.post('/api/psb', isAuthenticated, upload.single('photo'), asyncHandler(as
 }));
 
 // PUT /api/psb/:id — Update PSB (Owner/Operator only)
-router.put('/api/psb/:id', isAuthenticated, isOwnerOrOperator, upload.single('photo'), asyncHandler(async (req, res) => {
+router.put('/api/psb/:id', isAuthenticated, psbMutationLimiter, isOwnerOrOperator, upload.single('photo'), asyncHandler(async (req, res) => {
   const id = parseInt(req.params.id);
   const { customerName, address, phone, onuSn, latitude, longitude, odpLabel, onuPort, notes, status, inventoryId } = req.body;
 
@@ -192,6 +197,10 @@ router.put('/api/psb/:id', isAuthenticated, isOwnerOrOperator, upload.single('ph
         [draftLabel, odpLabelFinal, onuPortFinal, inventoryItem.device_name, onuSnFinal, latFinal, lngFinal]
       );
       draftFtthId = ftthResult.insertId;
+
+      // Tautan permanen PSB <-> ONU (psb.ftth_device_id) — bukan cuma teks
+      // di label seperti sebelumnya. Lihat komentar kolomnya di schema.sql.
+      await connection.query('UPDATE psb SET ftth_device_id = ? WHERE id = ?', [draftFtthId, id]);
     }
 
     const [updatedRows] = await connection.query('SELECT * FROM psb WHERE id = ?', [id]);
@@ -212,7 +221,7 @@ router.put('/api/psb/:id', isAuthenticated, isOwnerOrOperator, upload.single('ph
 }));
 
 // DELETE /api/psb/:id — Hapus PSB (Owner/Operator only)
-router.delete('/api/psb/:id', isAuthenticated, isAdmin, asyncHandler(async (req, res) => {
+router.delete('/api/psb/:id', isAuthenticated, psbMutationLimiter, isAdmin, asyncHandler(async (req, res) => {
   const id = parseInt(req.params.id);
 
   // Audit: ambil data sebelum dihapus

@@ -147,6 +147,29 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
+    // Foto bukti wajib saat status di-set ke Selesai (kecuali tiket sudah
+    // punya evidence dari sebelumnya) — cermin dari pengecekan yang sama di
+    // server (routes/tickets.js). Sebelumnya modal edit umum ini menandai
+    // evidence "opsional" tanpa syarat apa pun, jadi status bisa lompat ke
+    // Selesai tanpa foto lewat sini walau sheet "Tandai Selesai" di
+    // ticket-list.html sudah mensyaratkannya.
+    function isEvidenceRequiredNow() {
+        const status = document.getElementById('editStatus').value;
+        const fileInput = document.getElementById('editEvidence');
+        const hasNewFile = !!(fileInput.files && fileInput.files[0]);
+        const alreadyHasEvidence = !!(currentTicket && currentTicket.evidence);
+        const enteringSelesai = status === 'Selesai' && currentTicket && currentTicket.status !== 'Selesai';
+        return enteringSelesai && !hasNewFile && !alreadyHasEvidence;
+    }
+
+    window.onEditStatusChange = function() {
+        const reqTag = document.getElementById('editEvidenceReqTag');
+        const hint = document.getElementById('editEvidenceHint');
+        const required = isEvidenceRequiredNow();
+        reqTag.textContent = required ? '(wajib)' : '(opsional)';
+        hint.classList.toggle('hidden', !required);
+    };
+
     window.onEditEvidenceChange = function() {
         const preview = document.getElementById('editEvidencePreview');
         const fileInput = document.getElementById('editEvidence');
@@ -157,6 +180,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else {
             preview.style.display = 'none';
         }
+        window.onEditStatusChange();
     };
 
     editBtn.addEventListener('click', async () => {
@@ -294,6 +318,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Reset evidence preview
         document.getElementById('editEvidencePreview').style.display = 'none';
         document.getElementById('editEvidence').value = '';
+        window.onEditStatusChange();
 
         // Show/hide PSB section based on current aktifitas
         window.onEditAktifitasChange();
@@ -314,6 +339,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     editForm.addEventListener('submit', async (e) => {
         e.preventDefault();
 
+        if (isEvidenceRequiredNow()) {
+            showModal('Error', 'Foto bukti wajib dilampirkan untuk menyelesaikan tiket', 'error');
+            document.getElementById('editEvidence').focus();
+            return;
+        }
+
         const lokasi = document.getElementById('editLokasi').value.trim();
         // Verifikasi alamat sebelum simpan (ambang panjang > 5 karakter dihapus)
         if (lokasi) {
@@ -324,11 +355,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         const submitBtn = editForm.querySelector('.login-btn');
-        setLoading(submitBtn, true, 'Menyimpan...');
+        const evidenceInput = document.getElementById('editEvidence');
+        const hasNewEvidence = !!(evidenceInput.files && evidenceInput.files[0]);
+        setLoading(submitBtn, true, hasNewEvidence ? 'Mengompres foto...' : 'Menyimpan...');
 
         const formData = new FormData(editForm);
 
         try {
+            if (hasNewEvidence) {
+                // Kompres dulu di sisi klien — foto kamera HP sering >5MB (batas
+                // server, middleware/upload.js), bikin upload gagal tanpa alasan
+                // jelas terutama di sinyal seluler lambat saat teknisi di lapangan.
+                const compressed = await compressImageFile(evidenceInput.files[0]);
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
+                formData.set('evidence', compressed, compressed.name);
+            }
             const response = await csrfFetch(`/tickets/${ticketId}/update`, {
                 method: 'POST',
                 body: formData

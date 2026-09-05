@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mayung-app-v51'; // Increment — activity.js & dashboard.js: log aktivitas ke tiket Terlapor/Pending oleh Teknisi otomatis memajukan status ke Dikerjakan (routes/activities.js), toast/modal sukses menampilkan info auto-transition
+const CACHE_NAME = 'mayung-app-v56'; // Increment — foto bukti WAJIB saat status tiket diubah ke Selesai (server + kedua UI: sheet Tandai Selesai & modal edit umum), tutup celah yang bisa dilewati lewat ticket-details.html
 const ASSETS = [
     '/',
     '/index.html',

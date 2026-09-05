@@ -1,5 +1,7 @@
 document.addEventListener('DOMContentLoaded', async () => {
     const userTableBody = document.getElementById('userTableBody');
+    initPasswordToggle('editPassword');
+    initPasswordToggle('auPassword');
 
     // Avatar fallback lokal (data URI) — jangan placeholder pihak ketiga agar berfungsi offline.
     const DEFAULT_AVATAR = "data:image/svg+xml," + encodeURIComponent(

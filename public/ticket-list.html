@@ -12,7 +12,7 @@
         href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='28' font-size='28'>📡</text></svg>">
     <title>Ticket List - MAYUNG</title>
     <script>(function(){try{var t=localStorage.getItem('theme');if(t==='dark'||(!t&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
-    <link rel="stylesheet" href="css/style.css?v=55">
+    <link rel="stylesheet" href="css/style.css?v=57">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -256,18 +256,17 @@
         </div>
     </div>
 
-    <!-- Modal Tandai Selesai (stepper) — foto bukti opsional -->
+    <!-- Modal Tandai Selesai (stepper) — foto bukti WAJIB kecuali tiket sudah punya evidence sebelumnya -->
     <div id="completeTicketModal" class="modal" role="dialog" aria-modal="true" aria-label="Tandai selesai">
         <div class="modal-content modal-content-sm">
             <h3 class="modal-title"><i class="fas fa-check-circle text-success"></i> Tandai Selesai</h3>
             <p id="ctTicketRef" class="text-muted-sm ticket-ref-line"></p>
             <form id="completeTicketForm">
                 <div class="form-group">
-                    <label for="ctEvidence">Tambahkan foto bukti? <span class="text-muted-sm">(opsional)</span></label>
+                    <label for="ctEvidence">Foto bukti <span id="ctEvidenceReqTag" class="text-muted-sm">(wajib)</span></label>
                     <input type="file" id="ctEvidence" name="evidence" accept="image/*"
                         class="filter-select form-control" aria-describedby="ctHint">
-                    <p id="ctHint" class="text-muted-sm mt-1"><i class="fas fa-camera"></i> Foto bukti opsional — Simpan
-                        tanpa foto jika tidak ada, atau Batal untuk menutup tanpa mengubah status.</p>
+                    <p id="ctHint" class="text-muted-sm mt-1"><i class="fas fa-camera"></i> Lampirkan foto bukti pekerjaan sebelum menyimpan.</p>
                     <img id="ctEvidencePreview" class="evidence-preview-img hidden"
                         src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E" alt="Preview bukti foto">
                 </div>
@@ -279,13 +278,13 @@
         </div>
     </div>
 
-    <script src="js/constants.js?v=2"></script>
+    <script src="js/constants.js?v=4"></script>
     <script src="js/csrf.js?v=1"></script>
     <script src="js/toast.js?v=5"></script>
     <!-- jsPDF + autotable dimuat lazy via pdf-loader.js saat Export PDF diklik -->
     <script src="js/pdf-loader.js?v=1"></script>
     <script src="js/navbar.js?v=4"></script>
-    <script src="js/ticket-list.js?v=12"></script>
+    <script src="js/ticket-list.js?v=13"></script>
 </body>
 
 </html>

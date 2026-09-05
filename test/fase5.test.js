@@ -104,6 +104,13 @@ describe('Fase 5 — PSB Terpasang: auto-decrement inventory + draft ONU', funct
     if (ftthRows.length === 0) throw new Error('Draft ONU tidak ditemukan di ftth_devices');
     if (!ftthRows[0].is_draft) throw new Error('Expected is_draft = 1 pada entri baru');
     if (ftthRows[0].serial_number !== `${TEST_TAG}SN123`) throw new Error('SN pada draft ONU tidak cocok dengan PSB');
+
+    // PSB dan ONU adalah entitas yang sama secara konsep — psb.ftth_device_id
+    // harus tertaut ke draft ONU yang baru dibuat, bukan cuma teks di label.
+    const [psbRows] = await db.query('SELECT ftth_device_id FROM psb WHERE id = ?', [psbId]);
+    if (psbRows[0].ftth_device_id !== res.body.draftFtthId) {
+      throw new Error(`Expected psb.ftth_device_id=${res.body.draftFtthId}, got ${psbRows[0].ftth_device_id}`);
+    }
   });
 
   it('save ulang PSB yang SUDAH Terpasang tanpa ubah status TIDAK BOLEH decrement lagi', async () => {

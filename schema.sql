@@ -151,6 +151,16 @@ CREATE TABLE IF NOT EXISTS `psb` (
   `longitude` decimal(10,7) DEFAULT NULL,
   `odp_label` varchar(255) DEFAULT NULL,
   `onu_port` varchar(50) DEFAULT NULL,
+  -- Tautan permanen ke baris ONU aslinya di ftth_devices, diisi otomatis saat
+  -- transisi ke "Terpasang" (lihat routes/psb.js). PSB dan ONU adalah entitas
+  -- yang sama secara konsep (PSB = "Pemasangan Baru" ONU/pelanggan), tapi
+  -- tetap 2 tabel terpisah (beda concern: status pemasangan vs topologi
+  -- jaringan) — kolom ini yang menautkannya, bukan penggabungan tabel.
+  -- NULL itu wajar & permanen untuk: (a) PSB yang belum Terpasang, (b) ONU
+  -- lama yang dientri manual sebelum alur PSB ini ada — tidak dipaksa
+  -- ditautkan lewat tebakan. Lihat scripts/add_psb_ftth_link.sql untuk
+  -- backfill satu-kali di database yang sudah berjalan.
+  `ftth_device_id` int DEFAULT NULL,
   `photo` varchar(255) DEFAULT NULL,
   `notes` text,
   `status` varchar(50) DEFAULT 'Terdaftar',
@@ -159,7 +169,11 @@ CREATE TABLE IF NOT EXISTS `psb` (
   `updated_at` timestamp NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `idx_psb_status` (`status`),
-  KEY `idx_psb_created_at` (`created_at`)
+  KEY `idx_psb_created_at` (`created_at`),
+  KEY `idx_psb_ftth_device` (`ftth_device_id`),
+  -- ON DELETE SET NULL: hapus perangkat ONU di FTTH tidak boleh ikut
+  -- menghapus riwayat PSB-nya — cukup putus tautannya.
+  CONSTRAINT `fk_psb_ftth_device` FOREIGN KEY (`ftth_device_id`) REFERENCES `ftth_devices` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- FK ditambahkan di sini (bukan di CREATE TABLE tickets di atas) karena psb
