@@ -30,6 +30,14 @@ async function validateOdpLabel(label) {
   return rows.length > 0;
 }
 
+// Tautan tahan-rename (cacat #5) — dipanggil terpisah dari validateOdpLabel()
+// di titik penulisan, cermin lookupFtthDeviceId() di routes/tickets.js.
+async function lookupOdpId(label) {
+  if (!label) return null;
+  const [rows] = await db.query("SELECT id FROM ftth_devices WHERE type = 'odp' AND label = ?", [label]);
+  return rows.length > 0 ? rows[0].id : null;
+}
+
 // GET /api/psb — List semua PSB (terbaru di atas)
 router.get('/api/psb', isAuthenticated, asyncHandler(async (req, res) => {
   const [rows] = await db.query(
@@ -64,12 +72,14 @@ router.post('/api/psb', isAuthenticated, psbMutationLimiter, upload.single('phot
   // Standarisasi nomor telepon ke format 62xx — konsisten dengan users (auth.js/
   // users.js). Sebelumnya nomor disimpan mentah apa adanya dari input pelanggan.
   const standardPhone = phone ? (sanitizePhone(phone) || phone) : null;
+  // Tautan tahan-rename (cacat #5) — lihat komentar lookupOdpId() di atas.
+  const ftthOdpId = await lookupOdpId(odpLabel);
 
   let result;
   try {
     [result] = await db.query(
-      `INSERT INTO psb (customer_name, address, phone, onu_sn, latitude, longitude, odp_label, onu_port, photo, notes, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO psb (customer_name, address, phone, onu_sn, latitude, longitude, odp_label, ftth_odp_id, onu_port, photo, notes, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         customerName.trim(),
         address.trim(),
@@ -78,6 +88,7 @@ router.post('/api/psb', isAuthenticated, psbMutationLimiter, upload.single('phot
         latitude ? parseFloat(latitude) : null,
         longitude ? parseFloat(longitude) : null,
         odpLabel || null,
+        ftthOdpId,
         onuPort || null,
         photo,
         notes || null,
@@ -138,6 +149,9 @@ router.put('/api/psb/:id', isAuthenticated, psbMutationLimiter, isOwnerOrOperato
         return res.status(400).json({ message: 'ODP tidak valid' });
       }
       updates.push('odp_label = ?'); params.push(odpLabel || null);
+      // Tautan tahan-rename (cacat #5) — ikut diperbarui kapan pun teks
+      // odp_label-nya sendiri diperbarui.
+      updates.push('ftth_odp_id = ?'); params.push(await lookupOdpId(odpLabel));
     }
     if (onuPort !== undefined) { updates.push('onu_port = ?'); params.push(onuPort || null); }
     if (notes !== undefined) { updates.push('notes = ?'); params.push(notes || null); }

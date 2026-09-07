@@ -161,6 +161,11 @@ CREATE TABLE IF NOT EXISTS `psb` (
   -- ditautkan lewat tebakan. Lihat scripts/add_psb_ftth_link.sql untuk
   -- backfill satu-kali di database yang sudah berjalan.
   `ftth_device_id` int DEFAULT NULL,
+  -- Tautan tahan-rename utk odp_label (teks di atas) — diisi otomatis di
+  -- titik yang sama teks-nya divalidasi (routes/psb.js). Kalau ODP-nya
+  -- di-rename lewat routes/ftth.js, teks odp_label ikut di-cascade lewat
+  -- FK ini alih-alih diam-diam basi. Lihat cacat #5 & scripts/add_ftth_rename_links.sql.
+  `ftth_odp_id` int DEFAULT NULL,
   `photo` varchar(255) DEFAULT NULL,
   `notes` text,
   `status` varchar(50) DEFAULT 'Terdaftar',
@@ -171,9 +176,11 @@ CREATE TABLE IF NOT EXISTS `psb` (
   KEY `idx_psb_status` (`status`),
   KEY `idx_psb_created_at` (`created_at`),
   KEY `idx_psb_ftth_device` (`ftth_device_id`),
+  KEY `idx_psb_ftth_odp` (`ftth_odp_id`),
   -- ON DELETE SET NULL: hapus perangkat ONU di FTTH tidak boleh ikut
   -- menghapus riwayat PSB-nya — cukup putus tautannya.
-  CONSTRAINT `fk_psb_ftth_device` FOREIGN KEY (`ftth_device_id`) REFERENCES `ftth_devices` (`id`) ON DELETE SET NULL
+  CONSTRAINT `fk_psb_ftth_device` FOREIGN KEY (`ftth_device_id`) REFERENCES `ftth_devices` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_psb_ftth_odp` FOREIGN KEY (`ftth_odp_id`) REFERENCES `ftth_devices` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- FK ditambahkan di sini (bukan di CREATE TABLE tickets di atas) karena psb
@@ -181,6 +188,19 @@ CREATE TABLE IF NOT EXISTS `psb` (
 -- PSB tidak boleh ikut menghapus tiketnya — riwayat tiket harus tetap ada.
 ALTER TABLE tickets
   ADD CONSTRAINT fk_tickets_psb FOREIGN KEY (psb_id) REFERENCES psb (id) ON DELETE SET NULL;
+
+-- Tautan tahan-rename utk tickets.odc/odp (teks) — cermin fk_psb_ftth_odp di
+-- atas. Diisi otomatis di titik yang sama teks-nya divalidasi
+-- (routes/tickets.js validateRef). Kalau ODC/ODP-nya di-rename lewat
+-- routes/ftth.js, teks odc/odp di tiket lama ikut di-cascade lewat FK ini
+-- alih-alih diam-diam menunjuk nama yang sudah tidak ada. Cacat #5.
+ALTER TABLE tickets
+  ADD COLUMN `ftth_odc_id` int DEFAULT NULL AFTER `odc`,
+  ADD COLUMN `ftth_odp_id` int DEFAULT NULL AFTER `odp`,
+  ADD KEY `idx_tickets_ftth_odc` (`ftth_odc_id`),
+  ADD KEY `idx_tickets_ftth_odp` (`ftth_odp_id`),
+  ADD CONSTRAINT `fk_tickets_ftth_odc` FOREIGN KEY (`ftth_odc_id`) REFERENCES `ftth_devices` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `fk_tickets_ftth_odp` FOREIGN KEY (`ftth_odp_id`) REFERENCES `ftth_devices` (`id`) ON DELETE SET NULL;
 
 CREATE TABLE IF NOT EXISTS `inventory` (
   `id` int NOT NULL AUTO_INCREMENT,
