@@ -79,8 +79,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         const aktifTotal = s.totalOpen + s.done.month;
         const rasio = aktifTotal > 0 ? Math.round((s.done.month / aktifTotal) * 100) : 0;
         setText('selesaiRasio', `${rasio}%`);
+        // frontend, Sprint 4 — transform: scaleX() bukan width, supaya
+        // animasi cuma compositing (lihat komentar .progress-bar-fill di
+        // style.css), bukan reflow tiap frame.
         const bar = document.getElementById('selesaiRasioBar');
-        if (bar) bar.style.width = `${Math.min(100, rasio)}%`;
+        if (bar) bar.style.transform = `scaleX(${Math.min(100, rasio) / 100})`;
         setText('selesaiPekanIni', s.done.week);
         setText('selesaiBulanLabel', new Date().toLocaleDateString('id-ID', { month: 'long' }));
 
@@ -133,7 +136,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // ======================================================================
-    // 2) Chart "Tren Bulan Ini" — paket data terbatas (100 tiket terakhir)
+    // 2) Chart "Tren Bulan Ini" — dibatasi tanggal bulan berjalan sungguhan
+    //    (lihat fetchChartTickets), plus batas 100 tiket dari sisi server
+    //    (routes/tickets.js) kalau volumenya sangat tinggi.
     // ======================================================================
     let chartInstance = null;
     let currentChartType = 'bar'; // Default type
@@ -185,7 +190,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     async function fetchChartTickets() {
         if (!isPrivileged) return;
         try {
-            const res = await apiFetch('/tickets?page=1&limit=100&sort=createdAt&order=desc');
+            // Judul kartu ini "Tren Bulan Ini" — sebelumnya query di bawah tidak
+            // membatasi tanggal sama sekali (cuma "100 tiket terakhir" apa pun
+            // waktunya), jadi labelnya tidak jujur: bisa mencakup beberapa bulan
+            // atau kurang dari seminggu tergantung volume tiket. GET /tickets
+            // sudah mendukung startDate/endDate — dipakai di sini supaya grafik
+            // benar-benar bulan berjalan, bukan cuma "terbaru".
+            const now = new Date();
+            const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+            const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
+            const res = await apiFetch(
+                `/tickets?page=1&limit=100&sort=createdAt&order=desc&startDate=${encodeURIComponent(monthStart)}&endDate=${encodeURIComponent(monthEnd)}`
+            );
             if (!res.ok) throw new Error('Chart failed');
             const data = await res.json();
             const tickets = Array.isArray(data) ? data : (data.data || []);

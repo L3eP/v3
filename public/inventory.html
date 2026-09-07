@@ -8,7 +8,7 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='28' font-size='28'>📡</text></svg>">
     <title>Inventory - MAYUNG</title>
   <script>(function(){try{var t=localStorage.getItem('theme');if(t==='dark'||(!t&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
-    <link rel="stylesheet" href="css/style.css?v=57">
+    <link rel="stylesheet" href="css/style.css?v=59">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -42,7 +42,7 @@
   <!-- Add Inventory Modal -->
   <div id="addInvModal" class="modal" role="dialog" aria-modal="true" aria-label="Tambah Item Inventory">
     <div class="modal-content" style="max-width:450px;text-align:left;">
-      <h3 style="margin:0 0 16px 0;color:var(--accent-cyan);"><i class="fas fa-plus-circle"></i> Tambah Item Inventory</h3>
+      <h3 style="margin:0 0 16px 0;"><i class="fas fa-plus-circle" style="color:var(--accent-cyan);"></i> Tambah Item Inventory</h3>
       <div style="display:flex;flex-direction:column;gap:10px;">
         <div class="flex-row">
           <div class="flex-1">
@@ -83,7 +83,7 @@
   <!-- Edit Inventory Modal -->
   <div id="editInvModal" class="modal" role="dialog" aria-modal="true" aria-label="Edit Item Inventory">
     <div class="modal-content" style="max-width:450px;text-align:left;">
-      <h3 style="margin:0 0 16px 0;color:var(--accent-cyan);"><i class="fas fa-edit"></i> Edit Item Inventory</h3>
+      <h3 style="margin:0 0 16px 0;"><i class="fas fa-edit" style="color:var(--accent-cyan);"></i> Edit Item Inventory</h3>
       <form id="editInvForm" style="display:flex;flex-direction:column;gap:10px;">
         <input type="hidden" id="editInvId">
         <div class="flex-row">
@@ -131,7 +131,7 @@
   <script src="js/toast.js?v=5"></script>
   <!-- jsPDF + autotable dimuat lazy via pdf-loader.js saat Export PDF diklik -->
   <script src="js/pdf-loader.js?v=1"></script>
-  <script src="js/navbar.js?v=4"></script>
-  <script src="js/inventory.js?v=3"></script>
+  <script src="js/navbar.js?v=5"></script>
+  <script src="js/inventory.js?v=4"></script>
 </body>
 </html>

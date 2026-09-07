@@ -8,6 +8,7 @@ const { sanitizePhone } = require('../utils/phone');
 const logger = require('../utils/logger');
 const { audit } = require('../middleware/audit');
 const { cleanupUploadOnError } = require('../utils/uploads');
+const { checkOnuConflicts } = require('../utils/ftthConflicts');
 
 const { mutationLimiter } = require('../middleware/rateLimits');
 
@@ -20,6 +21,23 @@ const { mutationLimiter } = require('../middleware/rateLimits');
 const psbMutationLimiter = mutationLimiter('psb');
 
 const VALID_PSB_STATUS = ['Terdaftar', 'Terpasang', 'Aktif', 'Batal'];
+
+// psb.odp_label sebelumnya tidak pernah dicek keberadaannya sama sekali —
+// bisa diisi nama yang tidak pernah ada di ftth_devices. Cermin dari
+// validateRef('odp', ...) di routes/tickets.js, cuma untuk tabel ini.
+async function validateOdpLabel(label) {
+  if (!label) return true; // opsional
+  const [rows] = await db.query("SELECT id FROM ftth_devices WHERE type = 'odp' AND label = ?", [label]);
+  return rows.length > 0;
+}
+
+// Tautan tahan-rename (cacat #5) — dipanggil terpisah dari validateOdpLabel()
+// di titik penulisan, cermin lookupFtthDeviceId() di routes/tickets.js.
+async function lookupOdpId(label) {
+  if (!label) return null;
+  const [rows] = await db.query("SELECT id FROM ftth_devices WHERE type = 'odp' AND label = ?", [label]);
+  return rows.length > 0 ? rows[0].id : null;
+}
 
 // GET /api/psb — List semua PSB (terbaru di atas)
 router.get('/api/psb', isAuthenticated, asyncHandler(async (req, res) => {
@@ -46,17 +64,23 @@ router.post('/api/psb', isAuthenticated, psbMutationLimiter, upload.single('phot
   if (!address || !address.trim()) {
     return res.status(400).json({ message: 'Alamat wajib diisi' });
   }
+  if (odpLabel && !(await validateOdpLabel(odpLabel))) {
+    cleanupUploadOnError(req);
+    return res.status(400).json({ message: 'ODP tidak valid' });
+  }
 
   const photo = req.file ? `/uploads/${req.file.filename}` : null;
   // Standarisasi nomor telepon ke format 62xx — konsisten dengan users (auth.js/
   // users.js). Sebelumnya nomor disimpan mentah apa adanya dari input pelanggan.
   const standardPhone = phone ? (sanitizePhone(phone) || phone) : null;
+  // Tautan tahan-rename (cacat #5) — lihat komentar lookupOdpId() di atas.
+  const ftthOdpId = await lookupOdpId(odpLabel);
 
   let result;
   try {
     [result] = await db.query(
-      `INSERT INTO psb (customer_name, address, phone, onu_sn, latitude, longitude, odp_label, onu_port, photo, notes, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO psb (customer_name, address, phone, onu_sn, latitude, longitude, odp_label, ftth_odp_id, onu_port, photo, notes, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         customerName.trim(),
         address.trim(),
@@ -65,6 +89,7 @@ router.post('/api/psb', isAuthenticated, psbMutationLimiter, upload.single('phot
         latitude ? parseFloat(latitude) : null,
         longitude ? parseFloat(longitude) : null,
         odpLabel || null,
+        ftthOdpId,
         onuPort || null,
         photo,
         notes || null,
@@ -119,7 +144,16 @@ router.put('/api/psb/:id', isAuthenticated, psbMutationLimiter, isOwnerOrOperato
       if (longitude !== '' && isNaN(lng)) { await connection.rollback(); return res.status(400).json({ message: 'Longitude tidak valid' }); }
       updates.push('longitude = ?'); params.push(lng);
     }
-    if (odpLabel !== undefined) { updates.push('odp_label = ?'); params.push(odpLabel || null); }
+    if (odpLabel !== undefined) {
+      if (odpLabel && !(await validateOdpLabel(odpLabel))) {
+        await connection.rollback();
+        return res.status(400).json({ message: 'ODP tidak valid' });
+      }
+      updates.push('odp_label = ?'); params.push(odpLabel || null);
+      // Tautan tahan-rename (cacat #5) — ikut diperbarui kapan pun teks
+      // odp_label-nya sendiri diperbarui.
+      updates.push('ftth_odp_id = ?'); params.push(await lookupOdpId(odpLabel));
+    }
     if (onuPort !== undefined) { updates.push('onu_port = ?'); params.push(onuPort || null); }
     if (notes !== undefined) { updates.push('notes = ?'); params.push(notes || null); }
     if (status !== undefined) {
@@ -136,12 +170,29 @@ router.put('/api/psb/:id', isAuthenticated, psbMutationLimiter, isOwnerOrOperato
       return res.status(400).json({ message: 'No fields to update' });
     }
 
-    // Transisi SUNGGUHAN ke Terpasang — bukan cuma "statusnya kebetulan
-    // Terpasang" (yang juga true kalau field lain di-edit tanpa mengubah status).
-    const isNewlyTerpasang = status === 'Terpasang' && existing.status !== 'Terpasang';
+    // Cacat #1, Sprint 3 — sebelumnya HANYA transisi status yang sungguhan
+    // berubah (bukan-Terpasang → Terpasang) yang memicu pemilihan inventory
+    // + draft ONU. PSB yang jadi Terpasang lewat jalan pintas (tiket
+    // instalasinya ditutup, lihat auto-sync di routes/tickets.js) melewati
+    // efek samping ini sama sekali, dan sebelum perbaikan ini TIDAK ADA CARA
+    // untuk melengkapinya belakangan — status sudah Terpasang jadi syarat
+    // lama ("status berubah DARI selain Terpasang") tidak akan pernah
+    // terpenuhi lagi. Sekarang dipicu oleh status TARGET-nya Terpasang DAN
+    // belum tertaut ke perangkat FTTH (ftth_device_id IS NULL) — mencakup
+    // baik transisi asli maupun PSB yang belakangan "dilengkapi" Owner/
+    // Operator lewat psb.html. ftth_device_id yang sudah terisi jadi
+    // penanda alami sudah pernah diproses, mencegah dobel-kurangi stok
+    // persis seperti guard lama.
+    const needsInventoryLink = status === 'Terpasang' && !existing.ftth_device_id;
     let inventoryItem = null;
+    // Dihitung sekali di sini — dipakai untuk cek bentrok SN/port (cacat #2)
+    // SEBELUM stok dikurangi, dan dipakai lagi untuk draft ONU di bawah,
+    // supaya keduanya tidak bisa didesinkron.
+    const onuSnFinal = (onuSn !== undefined ? onuSn : existing.onu_sn) || null;
+    const odpLabelFinal = (odpLabel !== undefined ? odpLabel : existing.odp_label) || null;
+    const onuPortFinal = (onuPort !== undefined ? onuPort : existing.onu_port) || null;
 
-    if (isNewlyTerpasang) {
+    if (needsInventoryLink) {
       if (!inventoryId) {
         await connection.rollback();
         return res.status(400).json({ message: 'Pilih item ONU dari inventory untuk menandai instalasi selesai' });
@@ -157,6 +208,24 @@ router.put('/api/psb/:id', isAuthenticated, psbMutationLimiter, isOwnerOrOperato
         await connection.rollback();
         return res.status(400).json({ message: `Stok ${inventoryItem.device_name} habis` });
       }
+
+      // Cacat #2, Sprint 3 — draft ONU ini sebelumnya dibuat tanpa cek SN
+      // unik atau port bentrok sama sekali (beda dengan jalur langsung di
+      // routes/ftth.js). Dicek di sini, SEBELUM stok dikurangi/draft
+      // dibuat, pakai fungsi yang sama — kalau bentrok, TOLAK seluruh
+      // transisi (bukan cuma draft-nya) supaya stok tidak ikut terlanjur
+      // berkurang untuk instalasi yang gagal tercatat dengan benar.
+      const conflictMsg = await checkOnuConflicts(connection, {
+        serialNumber: onuSnFinal,
+        groupName: odpLabelFinal,
+        parentPort: onuPortFinal,
+        excludeId: 0
+      });
+      if (conflictMsg) {
+        await connection.rollback();
+        cleanupUploadOnError(req);
+        return res.status(400).json({ message: conflictMsg });
+      }
     }
 
     params.push(id);
@@ -169,7 +238,7 @@ router.put('/api/psb/:id', isAuthenticated, psbMutationLimiter, isOwnerOrOperato
       throw err;
     }
 
-    if (isNewlyTerpasang) {
+    if (needsInventoryLink) {
       await connection.query('UPDATE inventory SET used_stock = used_stock + 1 WHERE id = ?', [inventoryItem.id]);
       await connection.query(
         `INSERT INTO inventory_log (inventory_id, change_type, quantity, reference_type, reference_id, notes, created_by)
@@ -179,11 +248,6 @@ router.put('/api/psb/:id', isAuthenticated, psbMutationLimiter, isOwnerOrOperato
 
       // Draft entri ONU di ftth_devices — perlu dikonfirmasi staf di halaman
       // FTTH (lihat routes/ftth.js is_draft) sebelum dianggap data resmi.
-      // Field diambil dari nilai EFEKTIF (request baru kalau dikirim, kalau
-      // tidak dari data PSB yang sudah ada).
-      const onuSnFinal = (onuSn !== undefined ? onuSn : existing.onu_sn) || null;
-      const odpLabelFinal = (odpLabel !== undefined ? odpLabel : existing.odp_label) || null;
-      const onuPortFinal = (onuPort !== undefined ? onuPort : existing.onu_port) || null;
       const latFinal = latitude !== undefined ? (latitude !== '' ? parseFloat(latitude) : null) : existing.latitude;
       const lngFinal = longitude !== undefined ? (longitude !== '' ? parseFloat(longitude) : null) : existing.longitude;
       const customerNameFinal = (customerName !== undefined ? customerName : existing.customer_name);

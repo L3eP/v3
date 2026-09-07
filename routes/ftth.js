@@ -6,6 +6,7 @@ const asyncHandler = require('../middleware/asyncHandler');
 const logger = require('../utils/logger');
 const { audit } = require('../middleware/audit');
 const { mutationLimiter } = require('../middleware/rateLimits');
+const { checkOnuConflicts } = require('../utils/ftthConflicts');
 
 // 3.2 — Rate limiter mutasi per endpoint group
 //
@@ -149,16 +150,22 @@ router.post('/api/ftth', isAuthenticated, ftthMutationLimiter, isOwnerOrOperator
   }
 
   if (type === 'onu') {
-    // Cek unique SN jika diisi
-    if (serial_number) {
-      const [dup] = await db.query('SELECT id FROM ftth_devices WHERE serial_number = ?', [serial_number]);
-      if (dup.length > 0) return res.status(400).json({ message: `SN "${serial_number}" sudah terdaftar` });
-    }
+    // Cek unique SN & port bentrok lewat fungsi bersama (cacat #2, Sprint 3)
+    // — dipakai juga oleh routes/psb.js untuk draft ONU dan oleh PUT di bawah
+    // untuk konfirmasi draft, supaya aturannya persis sama di ketiga jalur.
+    const conflictMsg = await checkOnuConflicts(db, {
+      serialNumber: serial_number || null,
+      groupName: group_name || null,
+      parentPort: parent_port || null,
+      excludeId: 0
+    });
+    if (conflictMsg) return res.status(400).json({ message: conflictMsg });
   }
 
-  // Validasi parent port tidak duplikat (untuk ODC, ODP, ONU)
-  // Filter type child → SAMPAH di grup yang sama di level lain tidak dianggap konflik
-  if (parent_port && group_name && type !== 'olt') {
+  // Validasi parent port tidak duplikat (untuk ODC, ODP — ONU sudah dicek
+  // di atas lewat checkOnuConflicts). Filter type child → SAMPAH di grup
+  // yang sama di level lain tidak dianggap konflik.
+  if (parent_port && group_name && type !== 'olt' && type !== 'onu') {
     const [conflict] = await db.query(
       'SELECT id, label FROM ftth_devices WHERE group_name = ? AND type = ? AND parent_port = ?',
       [group_name, type, parent_port]
@@ -238,36 +245,56 @@ router.put('/api/ftth/:id', isAuthenticated, ftthMutationLimiter, isOwnerOrOpera
   // Konfirmasi draft (dari auto-entry PSB "Terpasang") — cuma bisa maju dari
   // draft ke resmi, staf tidak perlu (dan tidak seharusnya) menandai balik
   // device yang sudah resmi jadi draft lagi lewat field ini.
-  if (is_draft !== undefined && device.is_draft && !is_draft) {
+  const confirmingDraft = is_draft !== undefined && device.is_draft && !is_draft;
+  if (confirmingDraft) {
     updates.push('is_draft = ?'); params.push(false);
   }
 
-  // Serial number hanya untuk ONU
+  // Cacat #2, Sprint 3 — SN unik & port-bentrok untuk ONU. Draft ONU yang
+  // dibuat otomatis dari PSB "Terpasang" (routes/psb.js) sekarang sudah
+  // dicek saat draft itu dibuat, tapi tetap dicek ULANG di sini terhadap
+  // nilai yang benar-benar akan tersimpan — baik saat serial_number/
+  // parent_port dikirim ulang di request ini, MAUPUN (celah sebelumnya)
+  // saat staf mengonfirmasi draft TANPA mengirim ulang field-nya sama
+  // sekali, memakai nilai yang sudah tersimpan di database. Tanpa ini,
+  // konfirmasi draft yang kebetulan bentrok bisa lolos begitu saja jadi
+  // data resmi.
+  if (device.type === 'onu' && (serial_number !== undefined || parent_port !== undefined || confirmingDraft)) {
+    const effectiveGroup = group_name !== undefined ? (group_name || null) : device.group_name;
+    const effectiveSerial = serial_number !== undefined ? (serial_number || null) : device.serial_number;
+    const effectivePort = parent_port !== undefined ? (parent_port || null) : device.parent_port;
+    const conflictMsg = await checkOnuConflicts(db, {
+      serialNumber: effectiveSerial,
+      groupName: effectiveGroup,
+      parentPort: effectivePort,
+      excludeId: id
+    });
+    if (conflictMsg) return res.status(400).json({ message: conflictMsg });
+  }
+
   if (serial_number !== undefined && device.type === 'onu') {
-    if (serial_number) {
-      const [dup] = await db.query('SELECT id FROM ftth_devices WHERE serial_number = ? AND id != ?', [serial_number, id]);
-      if (dup.length > 0) return res.status(400).json({ message: `SN "${serial_number}" sudah terdaftar` });
-    }
     updates.push('serial_number = ?'); params.push(serial_number || null);
   }
 
-  // Validasi parent port tidak duplikat — HARUS pakai group_name efektif (request
-  // baru ATAU group_name device saat ini jika tidak dikirim) dan filter `type`
-  // sama seperti POST, kalau tidak: (a) kirim parent_port tanpa group_name lolos
+  // Validasi parent port tidak duplikat untuk ODC/ODP — HARUS pakai
+  // group_name efektif (request baru ATAU group_name device saat ini jika
+  // tidak dikirim), kalau tidak: kirim parent_port tanpa group_name lolos
   // tanpa dicek sama sekali tapi tetap ditulis → dua device bisa dobel-pakai
-  // port yang sama; (b) tanpa filter type, ODC & ODP yang kebetulan berbagi
-  // group_name saling mengunci port padahal beda level.
+  // port yang sama. ONU sudah dicek di atas lewat checkOnuConflicts
+  // (termasuk kasus konfirmasi draft tanpa resend).
   if (parent_port !== undefined) {
-    const effectiveGroup = group_name !== undefined ? (group_name || null) : device.group_name;
-    if (parent_port && effectiveGroup) {
-      const [conflict] = await db.query(
-        'SELECT id, label FROM ftth_devices WHERE group_name = ? AND type = ? AND parent_port = ? AND id != ?',
-        [effectiveGroup, device.type, parent_port, id]
-      );
-      if (conflict.length > 0) {
-        return res.status(400).json({
-          message: `Port "${parent_port}" sudah dipakai oleh ${conflict[0].label}`
-        });
+    if (device.type !== 'onu') {
+      const effectiveGroup = group_name !== undefined ? (group_name || null) : device.group_name;
+      if (parent_port && effectiveGroup) {
+        const [conflict] = await db.query(
+          'SELECT id, label FROM ftth_devices WHERE group_name = ? AND type = ? AND parent_port = ? AND id != ?',
+          [effectiveGroup, device.type, parent_port, id]
+        );
+        if (conflict.length > 0) {
+          return res.status(400).json({
+            message: `Port "${parent_port}" sudah dipakai oleh ${conflict[0].label}`
+          });
+        }
       }
     }
     updates.push('parent_port = ?');
@@ -314,6 +341,19 @@ router.put('/api/ftth/:id', isAuthenticated, ftthMutationLimiter, isOwnerOrOpera
         'UPDATE ftth_devices SET group_name = ? WHERE group_name = ?',
         [label.trim(), device.label]
       );
+      // Cacat #5 — rename ODC/ODP sebelumnya cuma membetulkan pohon FTTH
+      // sendiri (di atas); tiket/PSB lama yang sudah menyimpan teksnya
+      // sebagai snapshot tetap diam-diam menunjuk nama lama yang sudah
+      // tidak ada. tickets.ftth_odc_id/ftth_odp_id dan psb.ftth_odp_id
+      // (diisi otomatis saat teksnya ditulis, lihat routes/tickets.js &
+      // routes/psb.js) yang dipakai di sini untuk menemukan baris mana
+      // yang perlu ikut dibetulkan — bukan menebak dari teks lama.
+      if (device.type === 'odc') {
+        await connection.query('UPDATE tickets SET odc = ? WHERE ftth_odc_id = ?', [label.trim(), id]);
+      } else if (device.type === 'odp') {
+        await connection.query('UPDATE tickets SET odp = ? WHERE ftth_odp_id = ?', [label.trim(), id]);
+        await connection.query('UPDATE psb SET odp_label = ? WHERE ftth_odp_id = ?', [label.trim(), id]);
+      }
     }
     const [updatedRows] = await connection.query('SELECT * FROM ftth_devices WHERE id = ?', [id]);
     updatedDevice = updatedRows[0];
