@@ -314,6 +314,19 @@ router.put('/api/ftth/:id', isAuthenticated, ftthMutationLimiter, isOwnerOrOpera
         'UPDATE ftth_devices SET group_name = ? WHERE group_name = ?',
         [label.trim(), device.label]
       );
+      // Cacat #5 — rename ODC/ODP sebelumnya cuma membetulkan pohon FTTH
+      // sendiri (di atas); tiket/PSB lama yang sudah menyimpan teksnya
+      // sebagai snapshot tetap diam-diam menunjuk nama lama yang sudah
+      // tidak ada. tickets.ftth_odc_id/ftth_odp_id dan psb.ftth_odp_id
+      // (diisi otomatis saat teksnya ditulis, lihat routes/tickets.js &
+      // routes/psb.js) yang dipakai di sini untuk menemukan baris mana
+      // yang perlu ikut dibetulkan — bukan menebak dari teks lama.
+      if (device.type === 'odc') {
+        await connection.query('UPDATE tickets SET odc = ? WHERE ftth_odc_id = ?', [label.trim(), id]);
+      } else if (device.type === 'odp') {
+        await connection.query('UPDATE tickets SET odp = ? WHERE ftth_odp_id = ?', [label.trim(), id]);
+        await connection.query('UPDATE psb SET odp_label = ? WHERE ftth_odp_id = ?', [label.trim(), id]);
+      }
     }
     const [updatedRows] = await connection.query('SELECT * FROM ftth_devices WHERE id = ?', [id]);
     updatedDevice = updatedRows[0];

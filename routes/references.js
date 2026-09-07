@@ -135,11 +135,53 @@ router.put('/api/references/:id', isAuthenticated, referencesMutationLimiter, is
 }));
 
 // DELETE /api/references/:id — Hapus reference (Owner only)
+// Cek pemakaian sebelum hapus — cermin pola yang sudah benar di
+// routes/ftth.js (DELETE /api/ftth/:id, cek children dulu). Sebelumnya
+// endpoint ini menghapus tanpa cek apa pun, bisa menghilangkan opsi yang
+// masih dipakai ratusan tiket/user/item inventory tanpa peringatan.
+// odc/odp/olt/onu (salinan lama, sudah tidak dipakai validateRef()
+// manapun sejak topologi FTTH pindah ke ftth_devices) dan device_brand
+// (belum ada form yang benar-benar memakainya) sengaja tidak dicek —
+// tidak ada konsumen nyata yang bisa rusak.
+async function countReferenceUsage(type, label) {
+  switch (type) {
+    case 'aktifitas': {
+      const [[row]] = await db.query('SELECT COUNT(*) AS c FROM tickets WHERE aktifitas = ? AND deleted_at IS NULL', [label]);
+      return { count: row.c, where: 'tiket' };
+    }
+    case 'sub_node': {
+      const [[t]] = await db.query('SELECT COUNT(*) AS c FROM tickets WHERE sub_node = ? AND deleted_at IS NULL', [label]);
+      const [[u]] = await db.query('SELECT COUNT(*) AS c FROM users WHERE default_sub_node = ? AND deleted_at IS NULL', [label]);
+      return { count: t.c + u.c, where: 'tiket/user' };
+    }
+    case 'priority': {
+      const [[row]] = await db.query('SELECT COUNT(*) AS c FROM tickets WHERE priority = ? AND deleted_at IS NULL', [label]);
+      return { count: row.c, where: 'tiket' };
+    }
+    case 'inventory_type': {
+      const [[row]] = await db.query('SELECT COUNT(*) AS c FROM inventory WHERE device_type = ?', [label]);
+      return { count: row.c, where: 'item inventory' };
+    }
+    default:
+      return { count: 0, where: '' };
+  }
+}
+
 router.delete('/api/references/:id', isAuthenticated, referencesMutationLimiter, isAdmin, asyncHandler(async (req, res) => {
   const id = parseInt(req.params.id);
 
-  // Audit: ambil label sebelum dihapus
   const [before] = await db.query('SELECT type, label FROM reference_options WHERE id = ?', [id]);
+  if (before.length === 0) {
+    return res.status(404).json({ message: 'Reference not found' });
+  }
+  const { type, label } = before[0];
+
+  const usage = await countReferenceUsage(type, label);
+  if (usage.count > 0) {
+    return res.status(400).json({
+      message: `Tidak bisa menghapus "${label}" — masih dipakai ${usage.count} ${usage.where}`
+    });
+  }
 
   const [result] = await db.query('DELETE FROM reference_options WHERE id = ?', [id]);
 

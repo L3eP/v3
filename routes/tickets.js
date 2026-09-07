@@ -63,6 +63,17 @@ async function validateRef(type, label) {
   return rows.length > 0;
 }
 
+// Tautan tahan-rename (cacat #5) — dipanggil terpisah dari validateRef() di
+// titik penulisan (bukan di dalam validator) supaya tidak mengubah kontrak
+// baliknya (boolean, dipakai express-validator .custom()). Kalau odc/odp
+// di-rename lewat routes/ftth.js, id ini yang dipakai transaksi rename
+// untuk ikut membetulkan teks odc/odp tiket lama.
+async function lookupFtthDeviceId(type, label) {
+  if (!label) return null;
+  const [rows] = await db.query('SELECT id FROM ftth_devices WHERE type = ? AND label = ?', [type, label]);
+  return rows.length > 0 ? rows[0].id : null;
+}
+
 // PIC sebelumnya tidak divalidasi sama sekali (beda dari aktifitas/odc/priority
 // yang selalu dicek via validateRef) — tiket bisa ditugaskan ke username yang
 // tidak ada atau sudah di-soft-delete, dan notifikasi WA-nya gagal diam-diam.
@@ -141,6 +152,12 @@ router.post('/tickets', isAuthenticated, ticketsMutationLimiter, upload.single('
     const evidence = req.file ? `/uploads/${req.file.filename}` : null;
     const createdAt = new Date();
 
+    // Tautan tahan-rename (cacat #5) — diisi di titik yang sama teksnya
+    // sudah divalidasi ADA-nya (validateRef di atas), supaya rename ODC/ODP
+    // belakangan bisa ikut membetulkan teks ini lewat routes/ftth.js.
+    const ftthOdcId = await lookupFtthDeviceId('odc', odc);
+    const ftthOdpId = await lookupFtthDeviceId('odp', odp);
+
     // 2.1 — INSERT tiket + INSERT riwayat status dalam SATU transaksi di koneksi
     // yang sama. Kalau salah satu gagal di tengah, semuanya di-rollback → tidak
     // ada tiket tanpa riwayat (atau riwayat tanpa tiket).
@@ -150,8 +167,8 @@ router.post('/tickets', isAuthenticated, ticketsMutationLimiter, upload.single('
         await connection.beginTransaction();
 
         [result] = await connection.query(
-            'INSERT INTO tickets (aktifitas, sub_node, odc, odp, lokasi, pic, priority, status, info, evidence, created_by, created_at, psb_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [aktifitas, subNode, odc, odp || null, lokasi, pic, priority, newStatus, info, evidence, createdBy, createdAt, psbId || null]
+            'INSERT INTO tickets (aktifitas, sub_node, odc, ftth_odc_id, odp, ftth_odp_id, lokasi, pic, priority, status, info, evidence, created_by, created_at, psb_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [aktifitas, subNode, odc, ftthOdcId, odp || null, ftthOdpId, lokasi, pic, priority, newStatus, info, evidence, createdBy, createdAt, psbId || null]
         );
 
         // Catat event pembuatan tiket ke riwayat status (old=NULL, new=status awal)
@@ -422,6 +439,18 @@ router.post('/tickets/:id/update', isAuthenticated, ticketsMutationLimiter, uplo
         const dbField = field === 'subNode' ? 'sub_node' : field;
         updates.push(`${dbField} = ?`);
         params.push(value);
+    }
+
+    // Tautan tahan-rename (cacat #5) — ikut diperbarui kapan pun teks
+    // odc/odp-nya sendiri diperbarui (di luar loop generik di atas karena
+    // butuh lookup async), supaya tetap konsisten dengan teksnya sendiri.
+    if (odc !== undefined && !(isTeknisi && !allowedTeknisiFields.has('odc'))) {
+        updates.push('ftth_odc_id = ?');
+        params.push(await lookupFtthDeviceId('odc', odc));
+    }
+    if (odp !== undefined && !(isTeknisi && !allowedTeknisiFields.has('odp'))) {
+        updates.push('ftth_odp_id = ?');
+        params.push(await lookupFtthDeviceId('odp', odp));
     }
 
     if (req.file) {
