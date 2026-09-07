@@ -8,6 +8,7 @@ const { sanitizePhone } = require('../utils/phone');
 const logger = require('../utils/logger');
 const { audit } = require('../middleware/audit');
 const { cleanupUploadOnError } = require('../utils/uploads');
+const { checkOnuConflicts } = require('../utils/ftthConflicts');
 
 const { mutationLimiter } = require('../middleware/rateLimits');
 
@@ -169,12 +170,29 @@ router.put('/api/psb/:id', isAuthenticated, psbMutationLimiter, isOwnerOrOperato
       return res.status(400).json({ message: 'No fields to update' });
     }
 
-    // Transisi SUNGGUHAN ke Terpasang — bukan cuma "statusnya kebetulan
-    // Terpasang" (yang juga true kalau field lain di-edit tanpa mengubah status).
-    const isNewlyTerpasang = status === 'Terpasang' && existing.status !== 'Terpasang';
+    // Cacat #1, Sprint 3 — sebelumnya HANYA transisi status yang sungguhan
+    // berubah (bukan-Terpasang → Terpasang) yang memicu pemilihan inventory
+    // + draft ONU. PSB yang jadi Terpasang lewat jalan pintas (tiket
+    // instalasinya ditutup, lihat auto-sync di routes/tickets.js) melewati
+    // efek samping ini sama sekali, dan sebelum perbaikan ini TIDAK ADA CARA
+    // untuk melengkapinya belakangan — status sudah Terpasang jadi syarat
+    // lama ("status berubah DARI selain Terpasang") tidak akan pernah
+    // terpenuhi lagi. Sekarang dipicu oleh status TARGET-nya Terpasang DAN
+    // belum tertaut ke perangkat FTTH (ftth_device_id IS NULL) — mencakup
+    // baik transisi asli maupun PSB yang belakangan "dilengkapi" Owner/
+    // Operator lewat psb.html. ftth_device_id yang sudah terisi jadi
+    // penanda alami sudah pernah diproses, mencegah dobel-kurangi stok
+    // persis seperti guard lama.
+    const needsInventoryLink = status === 'Terpasang' && !existing.ftth_device_id;
     let inventoryItem = null;
+    // Dihitung sekali di sini — dipakai untuk cek bentrok SN/port (cacat #2)
+    // SEBELUM stok dikurangi, dan dipakai lagi untuk draft ONU di bawah,
+    // supaya keduanya tidak bisa didesinkron.
+    const onuSnFinal = (onuSn !== undefined ? onuSn : existing.onu_sn) || null;
+    const odpLabelFinal = (odpLabel !== undefined ? odpLabel : existing.odp_label) || null;
+    const onuPortFinal = (onuPort !== undefined ? onuPort : existing.onu_port) || null;
 
-    if (isNewlyTerpasang) {
+    if (needsInventoryLink) {
       if (!inventoryId) {
         await connection.rollback();
         return res.status(400).json({ message: 'Pilih item ONU dari inventory untuk menandai instalasi selesai' });
@@ -190,6 +208,24 @@ router.put('/api/psb/:id', isAuthenticated, psbMutationLimiter, isOwnerOrOperato
         await connection.rollback();
         return res.status(400).json({ message: `Stok ${inventoryItem.device_name} habis` });
       }
+
+      // Cacat #2, Sprint 3 — draft ONU ini sebelumnya dibuat tanpa cek SN
+      // unik atau port bentrok sama sekali (beda dengan jalur langsung di
+      // routes/ftth.js). Dicek di sini, SEBELUM stok dikurangi/draft
+      // dibuat, pakai fungsi yang sama — kalau bentrok, TOLAK seluruh
+      // transisi (bukan cuma draft-nya) supaya stok tidak ikut terlanjur
+      // berkurang untuk instalasi yang gagal tercatat dengan benar.
+      const conflictMsg = await checkOnuConflicts(connection, {
+        serialNumber: onuSnFinal,
+        groupName: odpLabelFinal,
+        parentPort: onuPortFinal,
+        excludeId: 0
+      });
+      if (conflictMsg) {
+        await connection.rollback();
+        cleanupUploadOnError(req);
+        return res.status(400).json({ message: conflictMsg });
+      }
     }
 
     params.push(id);
@@ -202,7 +238,7 @@ router.put('/api/psb/:id', isAuthenticated, psbMutationLimiter, isOwnerOrOperato
       throw err;
     }
 
-    if (isNewlyTerpasang) {
+    if (needsInventoryLink) {
       await connection.query('UPDATE inventory SET used_stock = used_stock + 1 WHERE id = ?', [inventoryItem.id]);
       await connection.query(
         `INSERT INTO inventory_log (inventory_id, change_type, quantity, reference_type, reference_id, notes, created_by)
@@ -212,11 +248,6 @@ router.put('/api/psb/:id', isAuthenticated, psbMutationLimiter, isOwnerOrOperato
 
       // Draft entri ONU di ftth_devices — perlu dikonfirmasi staf di halaman
       // FTTH (lihat routes/ftth.js is_draft) sebelum dianggap data resmi.
-      // Field diambil dari nilai EFEKTIF (request baru kalau dikirim, kalau
-      // tidak dari data PSB yang sudah ada).
-      const onuSnFinal = (onuSn !== undefined ? onuSn : existing.onu_sn) || null;
-      const odpLabelFinal = (odpLabel !== undefined ? odpLabel : existing.odp_label) || null;
-      const onuPortFinal = (onuPort !== undefined ? onuPort : existing.onu_port) || null;
       const latFinal = latitude !== undefined ? (latitude !== '' ? parseFloat(latitude) : null) : existing.latitude;
       const lngFinal = longitude !== undefined ? (longitude !== '' ? parseFloat(longitude) : null) : existing.longitude;
       const customerNameFinal = (customerName !== undefined ? customerName : existing.customer_name);
