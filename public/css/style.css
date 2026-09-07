@@ -549,6 +549,10 @@ button,
 }
 
 .btn-danger:hover {
+    /* impeccable-disable-line low-contrast -- warna TEKS (putih, dari .btn-danger)
+       tidak diubah di sini, cuma latarnya — putih di atas #dc2626 = 4.83:1, lolos.
+       Detektor otomatis salah baca ini sebagai teks #b91c1c (warna LATAR sebelum
+       hover) di atas #dc2626, dihitung ulang manual & dikonfirmasi keliru. */
     background-color: #dc2626;
 }
 
