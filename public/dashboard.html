@@ -73,14 +73,16 @@
                 <p class="stat-note"><i class="fas fa-arrow-up text-success"></i> <span id="selesaiPekanIni">–</span> baru pekan ini</p>
             </section>
 
-            <!-- Owner/Operator: SLA rata-rata -->
-            <section class="stat-card hero-card privileged-only" aria-label="Estimasi waktu penyelesaian rata-rata">
+            <!-- Owner/Operator: SLA rata-rata + target -->
+            <section class="stat-card hero-card privileged-only" aria-label="Estimasi waktu penyelesaian rata-rata & kepatuhan target">
                 <div class="card-header-icon">
                     <h2>SLA Rata-rata</h2>
                     <i class="fas fa-stopwatch"></i>
                 </div>
                 <p class="hero-metric" id="heroSla">–</p>
                 <p class="hero-subtitle" id="slaSubtext">menunggu data selesai</p>
+                <p class="stat-note" id="slaMetNote"></p>
+                <p class="stat-note" id="slaRiskNote"></p>
             </section>
 
             <!-- Teknisi: Tugas Saya (strip) -->
@@ -142,6 +144,30 @@
                 <canvas id="ticketsChart" role="img" aria-label="Grafik tren tiket bulan ini"></canvas>
             </div>
             <p id="chartSummary" class="chart-summary-text">Loading insights...</p>
+        </section>
+
+        <!-- Owner/Operator: kinerja per Teknisi bulan ini (SLA/KPI, 2026-09-07) -->
+        <section class="stat-card privileged-only" aria-label="Kinerja Teknisi bulan ini">
+            <div class="card-header-icon">
+                <h2>Kinerja Tim Bulan Ini</h2>
+                <i class="fas fa-user-check"></i>
+            </div>
+            <p class="page-sub">Dari tiket Selesai bulan berjalan, per Teknisi (PIC) — target SLA: Urgent 2j, Critical 4j, Moderate 12j, Low 48j.</p>
+            <div class="table-responsive">
+                <table class="user-table" id="teknisiPerfTable">
+                    <thead>
+                        <tr>
+                            <th>Teknisi</th>
+                            <th>Selesai</th>
+                            <th>Rata-rata waktu</th>
+                            <th>Memenuhi SLA</th>
+                        </tr>
+                    </thead>
+                    <tbody id="teknisiPerfBody">
+                        <tr><td colspan="4" class="text-muted-sm">Memuat...</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </section>
 
         <div class="dashboard-bottom-grid">
@@ -216,7 +242,7 @@
     <script src="js/csrf.js?v=1"></script>
     <script src="js/toast.js?v=5"></script>
     <script src="js/navbar.js?v=5"></script>
-    <script src="js/dashboard.js?v=8"></script>
+    <script src="js/dashboard.js?v=9"></script>
 </body>
 
 </html>
