@@ -549,10 +549,13 @@ button,
 }
 
 .btn-danger:hover {
-    /* impeccable-disable-line low-contrast -- warna TEKS (putih, dari .btn-danger)
-       tidak diubah di sini, cuma latarnya — putih di atas #dc2626 = 4.83:1, lolos.
-       Detektor otomatis salah baca ini sebagai teks #b91c1c (warna LATAR sebelum
-       hover) di atas #dc2626, dihitung ulang manual & dikonfirmasi keliru. */
+    /* Warna TEKS (putih, dari .btn-danger) tidak diubah di sini, cuma latarnya
+       — putih di atas #dc2626 = 4.83:1, lolos AA. (Koreksi 2026-09-07: sempat
+       disangka rule INI yang bikin detektor melapor "1.3:1 text #b91c1c on
+       #dc2626" — ternyata BUKAN, sumber sungguhannya adalah .skip-nav yang
+       collision dengan `a:hover` generik, sudah diperbaiki terpisah. Klaim
+       "detektor salah baca rule ini" di komentar lama itu sendiri keliru,
+       cuma perhitungan kontrasnya yang tetap benar.) */
     background-color: #dc2626;
 }
 
@@ -2024,7 +2027,21 @@ button:active,
     transition: top 0.2s;
 }
 
+/* Cacat nyata (dikonfirmasi 2026-09-07 lewat bisection langsung ke detektor,
+   BUKAN false positive seperti dugaan sebelumnya): .skip-nav adalah <a>, dan
+   rule generik `a:hover { color: var(--primary-hover) }` di atas punya
+   spesifisitas LEBIH TINGGI (elemen+pseudo-class) daripada `.skip-nav`'s
+   `color: #fff` (satu class saja) — jadi saat link ini di-hover, warna teks
+   sungguhan berubah jadi --primary-hover (#b91c1c) di atas latar yang masih
+   --primary-color (#dc2626): 1,34:1, gagal AA. Redeclare eksplisit di sini
+   (spesifisitas class+pseudo mengalahkan elemen+pseudo) supaya teks tetap
+   putih baik saat hover maupun fokus. */
+.skip-nav:hover {
+    color: #fff;
+}
+
 .skip-nav:focus {
+    color: #fff;
     top: 0;
     outline: 2px solid #fff;
     outline-offset: 2px;
@@ -2457,7 +2474,12 @@ select.field {
     font-family: monospace;
     font-size: 1rem;
     font-weight: 700;
-    color: var(--primary-color);
+    /* Cacat nyata (dikonfirmasi 2026-09-07 lewat bisection langsung ke
+       detektor): --primary-color (#dc2626) di atas --bg-primary-light
+       (#fee2e2) = 4,0:1, gagal AA (butuh 4,5:1). --sem-danger-text adalah
+       token yang memang dirancang untuk teks-di-atas-latar-pastel seperti
+       ini (lihat komentar definisinya) — 5,3:1 di light mode. */
+    color: var(--sem-danger-text);
     background: var(--bg-primary-light);
     padding: 4px 12px;
     border-radius: 8px;

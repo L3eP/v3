@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mayung-app-v60'; // Increment — Sprint 4: menu profil bisa diakses keyboard, urutan H1->H2 dibetulkan (6 halaman), kontras teks & warna hardcode dark-mode dibetulkan, animasi progress bar pakai transform bukan width
+const CACHE_NAME = 'mayung-app-v61'; // Increment — 2 cacat kontras NYATA (bukan false positive seperti dikira Sprint 4): .skip-nav teks jadi tak terbaca saat hover (collision spesifisitas dengan `a:hover` generik), .td-id (badge ID tiket) gagal AA di light mode
 const ASSETS = [
     '/',
     '/index.html',
