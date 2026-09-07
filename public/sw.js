@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mayung-app-v61'; // Increment — 2 cacat kontras NYATA (bukan false positive seperti dikira Sprint 4): .skip-nav teks jadi tak terbaca saat hover (collision spesifisitas dengan `a:hover` generik), .td-id (badge ID tiket) gagal AA di light mode
+const CACHE_NAME = 'mayung-app-v62'; // Increment — Fitur SLA/KPI sungguhan di dashboard: target jam per prioritas, % memenuhi target, tiket terancam lewat SLA, kinerja per Teknisi bulan ini
 const ASSETS = [
     '/',
     '/index.html',

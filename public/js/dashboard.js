@@ -97,6 +97,50 @@ document.addEventListener('DOMContentLoaded', async () => {
             slaEl.textContent = '—';
             sub.textContent = 'menunggu data selesai';
         }
+
+        // SLA/KPI sungguhan (2026-09-07) — % memenuhi target bulan ini, dan
+        // peringatan dini kalau ada tiket terbuka yang sudah/hampir lewat
+        // target jamnya (lihat SLA_TARGET_HOURS di routes/stats.js).
+        const metNote = document.getElementById('slaMetNote');
+        if (metNote) {
+            metNote.textContent = s.sla.metPercent !== null
+                ? `${s.sla.metPercent}% memenuhi target (${s.sla.metCount}/${s.sla.knownCount})`
+                : 'belum ada tiket selesai bulan ini';
+        }
+        const riskNote = document.getElementById('slaRiskNote');
+        if (riskNote) {
+            if (s.sla.breached > 0) {
+                riskNote.innerHTML = `<i class="fas fa-triangle-exclamation text-danger-strong"></i> <span class="text-danger-strong">${s.sla.breached} tiket sudah lewat target</span>`;
+            } else if (s.sla.atRisk > 0) {
+                riskNote.innerHTML = `<i class="fas fa-clock text-warning"></i> <span class="text-warning">${s.sla.atRisk} tiket mendekati target</span>`;
+            } else {
+                riskNote.textContent = '';
+            }
+        }
+
+        renderTeknisiPerformance(s.teknisiPerformance || []);
+    }
+
+    // Kinerja per Teknisi (SLA/KPI, 2026-09-07) — Owner/Operator only, tabel
+    // sederhana di bawah chart tren. Diurutkan server-side (routes/stats.js)
+    // dari yang paling banyak menyelesaikan tiket bulan ini.
+    function renderTeknisiPerformance(list) {
+        const tbody = document.getElementById('teknisiPerfBody');
+        if (!tbody) return;
+        if (!list.length) {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-muted-sm">Belum ada tiket selesai bulan ini.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = list.map(t => {
+            const slaText = t.slaMetPercent !== null ? `${t.slaMetPercent}%` : '—';
+            const slaClass = t.slaMetPercent === null ? '' : (t.slaMetPercent >= 80 ? 'text-success' : (t.slaMetPercent >= 50 ? 'text-warning' : 'text-danger-strong'));
+            return `<tr>
+                <td>${esc(t.username)}</td>
+                <td>${t.doneCount}</td>
+                <td>${formatHours(t.avgHours)}</td>
+                <td class="${slaClass}">${slaText}</td>
+            </tr>`;
+        }).join('');
     }
 
     // "3 h 12 j" kalau ≥1 hari, "18 jam" kalau di bawah itu — dipakai hero
