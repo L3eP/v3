@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mayung-app-v57'; // Increment — navigasi .html & script /js/*.js pindah dari stale-while-revalidate ke network-first (lihat komentar isAppShellRequest di bawah): sebelumnya, pengguna yang tab-nya sudah pernah dibuka bisa tetap menjalankan HTML+JS versi lama sampai reload 2x setelah tiap deploy — kombinasi lama/baru yang tidak sinkron inilah kemungkinan penyebab "tombol Choose File tidak bisa diklik" yang dilaporkan setelah update fitur evidence wajib (v55/v56)
+const CACHE_NAME = 'mayung-app-v58'; // Increment — Sprint 1: notifikasi salah warna (admin/inventory), 3 tombol dead-end disembunyikan, validasi ODP/wilayah/device-type, syarat password disamakan, grafik dashboard benar-benar bulan berjalan
 const ASSETS = [
     '/',
     '/index.html',

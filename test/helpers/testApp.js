@@ -81,6 +81,7 @@ function buildTestApp() {
   app.use('/', require('../../routes/ftth'));
   app.use('/', require('../../routes/psb'));
   app.use('/', require('../../routes/activities'));
+  app.use('/', require('../../routes/inventory'));
 
   // Error handler minimal — biar error balik sebagai JSON, bukan halaman HTML
   // default Express (memudahkan baca pesan error saat test gagal).

@@ -18,7 +18,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   // esc() — global from toast.js
 
   // Toast — delegasikan ke showToast() dari toast.js
-  function toast(m, type = 'success') {
+  // Default 'info', SAMA dengan showToast() sendiri — sebelumnya default
+  // di sini 'success' (hijau), jadi kegagalan yang tidak eksplisit menyebut
+  // type (banyak jalur error di file ini) tampil sebagai notifikasi
+  // "berhasil" padahal gagal. Lihat CLAUDE.md cacat #9.
+  function toast(m, type = 'info') {
     showToast(m, type);
   }
 
@@ -188,7 +192,7 @@ let _addRefType = '';
     e.preventDefault();
     const type = _addRefType;
     const label = document.getElementById('addRefLabel').value.trim();
-    if (!label) { toast('Label wajib diisi'); return; }
+    if (!label) { toast('Label wajib diisi', 'error'); return; }
     const s = SECTIONS[type];
     const lat = s.coord ? (document.getElementById('addRefLat').value.trim()||'') : '';
     const lng = s.coord ? (document.getElementById('addRefLng').value.trim()||'') : '';
@@ -199,11 +203,11 @@ let _addRefType = '';
       if (lat && lng) { body.latitude = parseFloat(lat); body.longitude = parseFloat(lng); }
       const r = await csrfFetch('/api/references', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
       if (r.ok) {
-        toast('Berhasil ditambahkan');
+        toast('Berhasil ditambahkan', 'success');
         document.getElementById('addRefModal').classList.remove('show');
         goHome(); await loadData(); goSection(type);
-      } else { const d = await r.json(); toast(d.message||'Gagal'); }
-    } catch(e) { toast('Error: '+e.message); }
+      } else { const d = await r.json(); toast(d.message||'Gagal', 'error'); }
+    } catch(e) { toast('Error: '+e.message, 'error'); }
     finally { setLoading(btn, false); }
   });
 
@@ -246,11 +250,11 @@ let _addRefType = '';
       const r = await csrfFetch(`/api/references/${editId}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
       if (r.ok) {
         document.getElementById('editModal').classList.remove('show');
-        toast('Berhasil diupdate');
+        toast('Berhasil diupdate', 'success');
         goHome(); await loadData();
         goSection(editType);
-      } else { const d = await r.json(); toast(d.message||'Gagal'); }
-    } catch(e) { toast('Error: '+e.message); }
+      } else { const d = await r.json(); toast(d.message||'Gagal', 'error'); }
+    } catch(e) { toast('Error: '+e.message, 'error'); }
   };
   document.getElementById('cancelEditBtn').onclick = () => {
     document.getElementById('editModal').classList.remove('show');
@@ -264,10 +268,10 @@ let _addRefType = '';
       try {
         const r = await csrfFetch(`/api/references/${id}`, { method:'DELETE' });
         if (r.ok) {
-          toast(`"${label}" berhasil dihapus`);
+          toast(`"${label}" berhasil dihapus`, 'success');
           goHome(); await loadData();
-        } else { const d = await r.json(); toast(d.message||'Gagal'); }
-      } catch(e) { toast('Error: '+e.message); }
+        } else { const d = await r.json(); toast(d.message||'Gagal', 'error'); }
+      } catch(e) { toast('Error: '+e.message, 'error'); }
     });
   };
 
