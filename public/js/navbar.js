@@ -177,7 +177,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             </nav>
 
             <div class="sidebar-footer">
-                <div class="user-profile" id="userProfile">
+                <div class="user-profile" id="userProfile" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false" aria-controls="dropdownMenu">
                     <img src="${esc(photoUrl)}" alt="Profile" class="profile-pic">
                     <div class="user-info">
                         <span class="username">${esc(user.username)}</span>
@@ -186,11 +186,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <i class="fas fa-chevron-up" style="font-size:0.8rem;color:var(--text-muted);"></i>
                 </div>
 
-                <div class="dropdown-menu" id="dropdownMenu">
-                    <a href="settings.html" class="dropdown-item">
+                <div class="dropdown-menu" id="dropdownMenu" role="menu" aria-label="Menu profil">
+                    <a href="settings.html" class="dropdown-item" role="menuitem">
                         <i class="fas fa-cog icon-cell"></i> Settings
                     </a>
-                    <a href="#" class="dropdown-item" id="logoutBtn">
+                    <a href="#" class="dropdown-item" id="logoutBtn" role="menuitem">
                         <i class="fas fa-sign-out-alt icon-cell"></i> Logout
                     </a>
                 </div>
@@ -257,9 +257,38 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (mobileToggle) mobileToggle.addEventListener('click', toggleMobile);
     if (sidebarOverlay) sidebarOverlay.addEventListener('click', toggleMobile);
 
-    // User dropdown
-    userProfile.addEventListener('click', (e) => { e.stopPropagation(); dropdownMenu.classList.toggle('show'); });
-    window.addEventListener('click', () => dropdownMenu.classList.remove('show'));
+    // User dropdown — frontend #1, Sprint 4: pemicunya sebelumnya <div> biasa
+    // tanpa peran/kemampuan fokus apa pun, jadi tidak bisa dibuka sama sekali
+    // lewat keyboard (WCAG level A). Sekarang punya role="button" + tabindex
+    // (lihat markup di atas), dibuka Enter/Space seperti tombol asli, ditutup
+    // Escape (fokus kembali ke pemicu), dan Tab pertama ke dalam menu
+    // langsung diarahkan ke item pertamanya.
+    const setDropdownOpen = (open) => {
+        dropdownMenu.classList.toggle('show', open);
+        userProfile.setAttribute('aria-expanded', open ? 'true' : 'false');
+    };
+    userProfile.addEventListener('click', (e) => {
+        e.stopPropagation();
+        setDropdownOpen(!dropdownMenu.classList.contains('show'));
+    });
+    userProfile.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            setDropdownOpen(!dropdownMenu.classList.contains('show'));
+            if (dropdownMenu.classList.contains('show')) {
+                dropdownMenu.querySelector('.dropdown-item')?.focus();
+            }
+        } else if (e.key === 'Escape') {
+            setDropdownOpen(false);
+        }
+    });
+    dropdownMenu.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            setDropdownOpen(false);
+            userProfile.focus();
+        }
+    });
+    window.addEventListener('click', () => setDropdownOpen(false));
 
     // Logout
     logoutBtn.addEventListener('click', async (e) => {

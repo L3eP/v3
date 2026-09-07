@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mayung-app-v59'; // Increment — Sprint 3: cek SN/port bentrok ONU disatukan (routes/ftth.js & psb.js), PSB "Terpasang" tanpa inventory/FTTH (jalan pintas tiket) sekarang bisa dilengkapi belakangan + badge "Belum lengkap" di psb.html
+const CACHE_NAME = 'mayung-app-v60'; // Increment — Sprint 4: menu profil bisa diakses keyboard, urutan H1->H2 dibetulkan (6 halaman), kontras teks & warna hardcode dark-mode dibetulkan, animasi progress bar pakai transform bukan width
 const ASSETS = [
     '/',
     '/index.html',

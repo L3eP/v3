@@ -79,8 +79,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         const aktifTotal = s.totalOpen + s.done.month;
         const rasio = aktifTotal > 0 ? Math.round((s.done.month / aktifTotal) * 100) : 0;
         setText('selesaiRasio', `${rasio}%`);
+        // frontend, Sprint 4 — transform: scaleX() bukan width, supaya
+        // animasi cuma compositing (lihat komentar .progress-bar-fill di
+        // style.css), bukan reflow tiap frame.
         const bar = document.getElementById('selesaiRasioBar');
-        if (bar) bar.style.width = `${Math.min(100, rasio)}%`;
+        if (bar) bar.style.transform = `scaleX(${Math.min(100, rasio) / 100})`;
         setText('selesaiPekanIni', s.done.week);
         setText('selesaiBulanLabel', new Date().toLocaleDateString('id-ID', { month: 'long' }));
 

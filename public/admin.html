@@ -8,7 +8,7 @@
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='28' font-size='28'>📡</text></svg>">
     <title>Referensi - MAYUNG</title>
     <script>(function(){try{var t=localStorage.getItem('theme');if(t==='dark'||(!t&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
-    <link rel="stylesheet" href="css/style.css?v=58">
+    <link rel="stylesheet" href="css/style.css?v=59">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -40,7 +40,7 @@
 
     <div id="editModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="editModalTitle">
         <div class="modal-content" style="max-width:450px;">
-            <h3 id="editModalTitle">Edit</h3>
+            <h2 id="editModalTitle">Edit</h2>
             <div id="editModalBody" class="modal-body">
                 <label for="editLabel">Label</label>
                 <input type="text" id="editLabel" aria-label="Label" class="field">
@@ -71,7 +71,7 @@
     <!-- Company Settings Modal -->
     <div id="companyModal" class="modal" role="dialog" aria-modal="true" aria-label="Company Settings">
         <div class="modal-content" style="max-width:450px;text-align:left;">
-            <h3 class="modal-title"><i class="fas fa-building"></i> Company Settings</h3>
+            <h2 class="modal-title"><i class="fas fa-building"></i> Company Settings</h2>
             <form id="companyForm" style="display:flex;flex-direction:column;gap:14px;">
                 <div class="flex-col">
                     <label class="field-label" for="companyName">Nama Perusahaan</label>
@@ -94,7 +94,7 @@
     <!-- Add Reference Modal -->
     <div id="addRefModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="addRefTitle">
         <div class="modal-content" style="max-width:450px;text-align:left;">
-            <h3 id="addRefTitle" class="modal-title"><i class="fas fa-plus-circle"></i> Tambah</h3>
+            <h2 id="addRefTitle" class="modal-title"><i class="fas fa-plus-circle"></i> Tambah</h2>
             <form id="addRefForm" style="display:flex;flex-direction:column;gap:12px;">
                 <div class="flex-col">
                     <label class="field-label" for="addRefLabel">Label</label>
@@ -119,7 +119,7 @@
     <div id="auditModal" class="modal" role="dialog" aria-modal="true" aria-label="Log Audit">
         <div class="modal-content" style="max-width:600px;text-align:left;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-                <h3 style="margin:0;color:var(--primary-color);"><i class="fas fa-history"></i> Log Audit <span id="auditCount" class="text-muted-sm"></span></h3>
+                <h2 style="margin:0;color:var(--primary-color);"><i class="fas fa-history"></i> Log Audit <span id="auditCount" class="text-muted-sm"></span></h2>
                 <button class="btn-secondary" style="padding:6px 12px;" onclick="document.getElementById('auditModal').classList.remove('show')">✕</button>
             </div>
             <div style="border-bottom:1px solid var(--border-color);margin-bottom:12px;"></div>
@@ -132,7 +132,7 @@
     <script src="js/constants.js?v=4"></script>
     <script src="js/csrf.js?v=1"></script>
     <script src="js/toast.js?v=5"></script>
-    <script src="js/navbar.js?v=4"></script>
+    <script src="js/navbar.js?v=5"></script>
     <script src="js/admin.js?v=5"></script>
 </body>
 </html>
