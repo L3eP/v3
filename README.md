@@ -1,336 +1,321 @@
 # MAYUNG — Sistem Ticketing & Manajemen Jaringan FTTH
 
-Aplikasi web untuk ISP di Lombok, NTB yang menangani pelaporan gangguan jaringan (ticketing), pencatatan aktivitas teknisi, manajemen infrastruktur FTTH (OLT → ODC → ODP → ONU) dengan port tracking, PSB (Pemasangan Baru), inventory stok perangkat, dan visualisasi peta geografis interaktif.
+Aplikasi web internal untuk sebuah ISP di Lombok, NTB. Menangani pelaporan gangguan & pekerjaan lapangan (ticketing), pencatatan aktivitas teknisi, topologi jaringan FTTH (OLT → ODC → ODP → ONU) beserta pelacakan port, PSB (Pemasangan Baru pelanggan), inventaris perangkat, dan peta interaktif.
 
-**Stack:** Node.js / Express 5 + MySQL 8 — Vanilla JS frontend, PWA-enabled.
+**Stack:** Node.js / **Express 5** + **MySQL 8** · frontend **JavaScript vanilla** (tanpa framework, tanpa bundler) · **PWA** · notifikasi WhatsApp via Fonnte.
+
+Semua teks campur Indonesia/Inggris. Skema database memakai nama kolom Indonesia (`aktifitas`, `lokasi`, `sub_node`, `date_selesai`). Status tiket: `Terlapor → Dikerjakan → Selesai`, plus `Pending`. Status PSB: `Terdaftar → Terpasang → Aktif`, atau `Batal`.
+
+---
+
+## Daftar isi
+
+- [Fitur](#fitur)
+- [Struktur proyek](#struktur-proyek)
+- [Quick start](#quick-start)
+- [RBAC — tiga peran](#rbac--tiga-peran)
+- [Halaman frontend](#halaman-frontend)
+- [API endpoints](#api-endpoints)
+- [Database](#database)
+- [Environment variables](#environment-variables)
+- [Perintah](#perintah)
+- [Keamanan](#keamanan)
+- [Catatan pengembangan](#catatan-pengembangan)
+- [Dokumen terkait](#dokumen-terkait)
 
 ---
 
 ## Fitur
 
-| Modul | Deskripsi |
+| Modul | Ringkasan |
 |---|---|
-| **Ticketing** | CRUD tiket, status workflow (Terlapor→Dikerjakan→Selesai), soft-delete, riwayat perubahan status, upload evidence, role-based field restriction, auto-assign PIC (beban paling ringan, diprioritaskan berdasar wilayah/`sub_node` Teknisi) |
-| **Activity Logging** | Catatan aktivitas teknisi per tiket, export CSV/PDF, delete (Owner/Operator) |
-| **Jaringan FTTH** | Hierarki OLT→ODC→ODP→ONU, port tracking (`Port 3/8`), dua interface: tab CRUD (`/ftth.html`) + tree admin. Entri ONU juga bisa dibuat otomatis (draft, perlu konfirmasi staf) dari PSB yang baru "Terpasang" |
-| **Peta Interaktif** | Leaflet.js, batas NTB, circle markers, chain koneksi (klik parent → flyTo), Google Maps link |
-| **PSB (Pemasangan Baru)** | Form registrasi pelanggan + ONU, upload foto modem, status workflow (Terdaftar→Terpasang→Aktif→Batal). Transisi ke Terpasang mengurangi stok inventory ONU terpilih & membuat draft entri FTTH otomatis |
-| **Inventory** | Manajemen stok perangkat (ODP, ONU, kabel, dll), tracking sisa stok, histori pemakaian (dengan referensi balik ke PSB yang memicunya) |
-| **SLA Dashboard** | Rata-rata waktu penyelesaian tiket, statistik bulanan, Chart.js bar/pie |
-| **RBAC** | 3 role: **Owner** (full), **Operator** (kelola), **Teknisi** (self-only) |
-| **Notifikasi WhatsApp** | Otomatis via Fonnte API — tiket baru & status berubah → pembuat + PIC |
-| **Export** | CSV (BOM Excel) & PDF dengan summary rekap (by status, by priority, aktifitas & wilayah terbanyak, tren kendala per bulan, rentang tanggal data), filter bulan ini / semua |
-| **PWA** | Service worker + manifest — installable di HP |
-| **Kesiapan operasional** | `GET /health` (cek koneksi DB), graceful shutdown (`SIGTERM`/`SIGINT`), test suite otomatis + CI (GitHub Actions) |
+| **Ticketing** | CRUD tiket, state machine status (`VALID_TRANSITIONS` — tidak boleh lompat), soft-delete, riwayat perubahan status, upload foto bukti (wajib saat masuk `Selesai`), pembatasan field per-role, auto-assign PIC (beban paling ringan, prioritaskan yang wilayahnya cocok) |
+| **Activity log** | Catatan kerja teknisi, opsional ditautkan ke satu tiket. Teknisi yang mencatat aktivitas ke tiket `Terlapor`/`Pending` miliknya otomatis memajukan status ke `Dikerjakan` |
+| **FTTH** | Hierarki OLT→ODC→ODP→ONU (berbasis label, tanpa FK), pelacakan port (`Port 3` dst; Port 1 di-reserve sebagai uplink), CRUD di `ftth.html`. Entri ONU juga dibuat otomatis sebagai *draft* dari transisi PSB → `Terpasang`, menunggu konfirmasi staf |
+| **PSB** | Form registrasi pelanggan + ONU, upload foto, alur `Terdaftar → Terpasang → Aktif` / `Batal`. Transisi ke `Terpasang` mengurangi stok ONU terpilih di inventory dan membuat draft entri FTTH — dalam satu transaksi |
+| **Inventory** | Stok perangkat + histori pemakaian; log yang dipicu PSB menyimpan `reference_type='psb'` + `reference_id` untuk telusur balik |
+| **Peta** | Leaflet, dibatasi bounds NTB, marker per tipe perangkat, terbang ke titik dari link `ftth.html` |
+| **Dashboard & SLA** | Statistik agregat bulanan, aging tiket terbuka, target SLA per prioritas + kepatuhan, tiket `breached`/`atRisk`, kinerja per Teknisi (khusus Owner/Operator), Chart.js |
+| **Export** | CSV (dengan BOM Excel) & PDF dari daftar tiket — blok ringkasan (by status, by priority, aktifitas & wilayah terbanyak, tren kendala per bulan, rentang tanggal data) mendahului baris data mentah |
+| **Notifikasi WhatsApp** | Otomatis (fire-and-forget) saat tiket dibuat & saat status berubah → pembuat tiket + PIC (Operator sengaja tidak diikutkan). Pesan menyertakan link `<APP_URL>/ticket-details.html?id=` |
+| **RBAC** | 3 role: **Owner** (penuh, satu-satunya yang bisa hapus), **Operator** (kelola, tak bisa hapus), **Teknisi** (hanya milik sendiri) |
+| **PWA** | Service worker (network-first untuk halaman & JS, stale-while-revalidate untuk aset) + manifest — installable di HP, jalan offline terbatas |
+| **Kesiapan operasional** | `GET /health` (cek koneksi DB sungguhan), graceful shutdown, audit trail `audit_logs`, detail request log ke file, test suite + CI (GitHub Actions) |
 
 ---
 
-## Struktur Proyek
+## Struktur proyek
 
 ```
 .
-├── server.js                 # Entry point Express 5 — juga GET /health + graceful shutdown
-├── db.js                     # MySQL2 connection pool (queueLimit dibatasi, DB_PORT opsional)
-├── schema.sql                # Database schema — source of truth utk instalasi baru
-├── .env.example               # Template environment
-├── .eslintrc.json            # ESLint config
-├── .prettierrc                # Prettier config
-├── .github/workflows/ci.yml   # CI: lint + test tiap push/PR (provisioning DB dari nol)
-├── middleware/
-│   ├── auth.js                # isAuthenticated, isAdmin, isOwnerOrOperator
-│   ├── upload.js               # Multer — image only, 5MB, magic-byte check
-│   ├── asyncHandler.js         # Async error wrapper
-│   ├── csrf.js                 # Double-submit cookie CSRF
-│   ├── audit.js                 # audit_logs writer (dipakai tickets/users/inventory/ftth/psb)
-│   ├── detailLog.js             # Request/response detail logger (terpisah dari audit trail)
-│   └── rateLimits.js            # mutationLimiter per route file
-├── routes/                    # 11 route file, semua di-mount di `/` tanpa prefix
-│   ├── auth.js                # POST /login, /logout, /register
-│   ├── users.js                # GET /users, POST /update-profile, /admin/users/update
-│   ├── tickets.js               # CRUD /tickets + status history + workflow validation + GET /api/auto-pic
-│   ├── activities.js            # CRUD /activities
-│   ├── settings.js               # Company name/logo
-│   ├── references.js             # CRUD /api/references (dropdown non-FTTH + legacy FTTH tree)
-│   ├── geo.js                    # GET /api/geo (data peta)
-│   ├── psb.js                     # CRUD /api/psb — Terpasang memicu decrement inventory + draft ONU
-│   ├── inventory.js                # CRUD /api/inventory + GET /api/inventory/log
-│   ├── ftth.js                      # CRUD /api/ftth (sumber kebenaran topologi FTTH) + konfirmasi draft
-│   └── stats.js                      # GET /api/stats/month (dashboard)
-├── services/
-│   └── notification.js        # WhatsApp via Fonnte API
-├── utils/
-│   ├── logger.js               # Winston daily rotate
-│   ├── phone.js                 # Phone sanitizer (62xx format)
-│   ├── detailLog.js              # Helper untuk middleware/detailLog.js
-│   └── uploads.js                 # cleanupUploadOnError() — hapus file upload kalau DB write gagal
-├── scripts/                    # Migrasi upgrade-only (schema.sql sudah mencakup semuanya utk instalasi baru)
-│   ├── add_reference_table.sql     # reference_options + seed data (WAJIB dijalankan bahkan di instalasi baru)
-│   ├── seed_ci_users.sql            # Seed akun test untuk CI (bukan data asli)
-│   ├── backup-db.sh                  # Backup script
-│   └── migrate_history.js             # ticket_status_history table (database lama)
+├── server.js                 Entry point Express 5 — rantai middleware, GET /health, graceful shutdown
+├── db.js                     Pool mysql2/promise (connectionLimit 10, queueLimit 30)
+├── schema.sql                Source of truth database untuk instalasi baru (sudah mencakup semua migrasi)
+├── .env.example              Template environment
+├── .eslintrc.json / .prettierrc
+├── .github/workflows/ci.yml  CI: eslint + mocha di MySQL 8 container yang di-provision dari nol
+│
+├── middleware/               (7 file)
+│   ├── auth.js               isAuthenticated · isAdmin (Owner) · isOwnerOrOperator
+│   ├── asyncHandler.js       Bungkus handler async → auto-catch, log, 500
+│   ├── csrf.js               Double-submit cookie CSRF (timing-safe, rotasi token)
+│   ├── rateLimits.js         mutationLimiter(label, max) — dipasang per-route
+│   ├── upload.js             Multer: gambar saja, 5 MB, verifikasi magic bytes
+│   ├── detailLog.js          Log tiap request ke logs/detail-*.log (field sensitif di-redact)
+│   └── audit.js              audit(...) → tabel audit_logs
+│
+├── routes/                   (11 file, semua di-mount di '/' tanpa prefix)
+│   ├── auth.js               POST /login · /logout · /register (Owner-only)
+│   ├── users.js              /users · /update-profile · /update-role · /admin/users/update · DELETE + restore
+│   ├── tickets.js            /tickets CRUD + /tickets/:id/update + /tickets/:id/history + GET /api/auto-pic
+│   ├── activities.js         /activities CRUD (auto-start tiket dari log aktivitas)
+│   ├── psb.js                /api/psb CRUD (transisi Terpasang → decrement inventory + draft ONU)
+│   ├── ftth.js               /api/ftth CRUD + /api/ftth/available-ports (sumber kebenaran topologi)
+│   ├── geo.js                GET /api/geo (data peta)
+│   ├── inventory.js          /api/inventory CRUD + /api/inventory/log
+│   ├── references.js         /api/references CRUD (dropdown non-FTTH + salinan legacy FTTH)
+│   ├── settings.js           /settings/company-name · /company-logo
+│   └── stats.js              GET /api/stats/month (agregat dashboard + SLA/KPI)
+│
+├── services/notification.js  WhatsApp via Fonnte API
+├── utils/                    logger.js · detailLog.js · phone.js · uploads.js · ftthConflicts.js
+│
+├── scripts/                  Migrasi upgrade-only + seed + backup (lihat catatan di Database)
 ├── public/
-│   ├── *.html                  # 13 halaman (lihat tabel di bawah)
-│   ├── js/                      # 17 file JS
-│   ├── css/style.css             # ~4765 baris, single file
-│   ├── sw.js                      # PWA service worker
-│   ├── manifest.json               # PWA manifest
-│   └── vendor/fontawesome/          # Font Awesome 6 local
-├── docs/
-│   ├── api-reference.md
-│   ├── developer-guide.md
-│   ├── code_documentation_en.md
-│   ├── code_documentation_id.md
-│   └── ...beberapa laporan/analisis bertanggal (arsip, bukan dokumentasi hidup)
-└── test/
-    ├── api.test.js              # Settings + Auth API
-    ├── tickets.test.js           # State machine status tiket + IDOR
-    ├── ftth.test.js                # Port FTTH tidak boleh dobel-pakai
-    ├── fase5.test.js                # Auto-PIC sub_node, auto-decrement inventory, draft ONU
-    └── helpers/testApp.js            # App + agent singleton dipakai bersama semua file test
+│   ├── *.html                13 halaman
+│   ├── js/*.js               17 skrip (5 bersama + 12 per halaman)
+│   ├── css/style.css         Satu file, CSS custom properties, ~5070 baris
+│   ├── sw.js                 Service worker (CACHE_NAME versioned)
+│   ├── manifest.json
+│   └── vendor/fontawesome/   Font Awesome 6, self-hosted
+│
+├── test/                     9 file *.test.js + helpers/testApp.js (mocha + supertest)
+└── docs/                     code_documentation_{en,id}.md (dilacak); sisanya catatan lokal/arsip
 ```
+
+---
+
+## Quick start
+
+```bash
+# 1. Install
+git clone <repo-url> && cd <repo> && npm install
+
+# 2. Environment
+cp .env.example .env
+# Isi minimal: DB_*, SESSION_SECRET, PORT. Untuk notifikasi WA: FONNTE_TOKEN.
+# Untuk link tiket di notifikasi WA berfungsi di production: APP_URL.
+
+# 3. Database — instalasi BARU: dua baris ini SUDAH CUKUP.
+#    schema.sql sudah mencakup soft-delete, ftth_devices, audit_logs, semua FK & kolom.
+#    JANGAN jalankan scripts/*.sql yang lain — itu migrasi upgrade untuk database LAMA
+#    dan akan gagal (duplicate column/FK) di schema baru.
+mysql -u root -p login_app_db < schema.sql
+mysql -u root -p login_app_db < scripts/add_reference_table.sql   # reference_options + seed dropdown
+
+# 4. Jalankan
+npm run dev      # hot reload (node --watch) → http://localhost:3000
+# atau: npm run prod
+```
+
+**Upgrade database lama** (dibuat sebelum konsolidasi `schema.sql` 2026-08-26): jalankan `scripts/*.sql` yang relevan secara berurutan, lalu backfill Node-nya. Yang terbaru: `scripts/add_ftth_rename_links.sql` + `node scripts/backfill_ftth_rename_links.js` (untuk DB sebelum 2026-09-07), dan `scripts/add_psb_ftth_link.sql` + `node scripts/backfill_psb_ftth_link.js` (sebelum 2026-09-04). Semua backfill punya flag `--dry-run`.
+
+---
+
+## RBAC — tiga peran
+
+Dipaksakan di server oleh `middleware/auth.js`; sidebar (`navbar.js`) juga menyembunyikan menu per role, tapi itu hanya pagar tampilan — **guard server yang menentukan**.
+
+| Role | Guard | Bisa |
+|---|---|---|
+| **Owner** | `isAdmin` | Semua. Satu-satunya yang bisa **hapus** (tiket, PSB, FTTH, inventory, user, referensi), kelola role, kelola referensi & company settings. |
+| **Operator** | `isOwnerOrOperator` | Kelola tiket / PSB / FTTH (write) / inventory. Lihat daftar user & edit sebagian. Tidak bisa hapus apa pun, tidak bisa kelola role. |
+| **Teknisi** | `isAuthenticated` + cek per-record | Hanya tiket di mana ia `created_by` atau `pic`. Hanya aktivitasnya sendiri. Boleh buat PSB. FTTH & Map read-only. Di update tiket, hanya boleh mengubah `status` / `info` / `evidence`. |
+
+---
+
+## Halaman frontend
+
+Aplikasi multi-halaman (bukan SPA) — tiap navigasi = full reload; tiap `*.html` memuat file JS senama plus beberapa file bersama. Semua halaman (kecuali `index.html` / `offline.html`) redirect ke login jika `localStorage.user` kosong.
+
+| Halaman | JS | Akses | Isi |
+|---|---|---|---|
+| `index.html` | `script.js` | Publik | Login. Menyimpan `{id, username, fullName, role, phone, photo}` ke `localStorage.user`. |
+| `dashboard.html` | `dashboard.js` | Semua | KPI, aging tiket, SLA (target per prioritas + kepatuhan + breached/atRisk + kinerja per Teknisi khusus Owner/Operator), Chart.js, Recent Tickets, feed aktivitas. Auto-refresh 60 dtk. |
+| `ticket-list.html` | `ticket-list.js` | Semua | Tabel terpaginasi + sort + filter (server-side), modal buat tiket (`#newTicketModal`), export CSV/PDF dengan ringkasan. |
+| `ticket-details.html` | `ticket-details.js` | Per-tiket | Detail + timeline status + modal edit. Tombol Hapus hanya untuk Owner. Kompres foto di klien sebelum upload. |
+| `activity.html` | `activity.js` | Semua | Form + riwayat + export. |
+| `ftth.html` | `ftth.js` | Semua (write: Owner/Operator) | Tab CRUD OLT/ODC/ODP/ONU + chip port tersedia + konfirmasi draft ONU. Tombol Tambah/Edit/Konfirmasi disembunyikan dari Teknisi. Auto-refresh 30 dtk. |
+| `map.html` | `map.js` | Semua | Peta Leaflet, marker per tipe, terima `?lat=&lng=&name=`. |
+| `psb.html` | `psb.js` | Semua (write/edit: Owner/Operator) | Form + daftar terpaginasi, upload foto. Saat menandai `Terpasang` (atau melengkapi PSB yang belum tertaut ONU), muncul pemilih ONU dari inventory. |
+| `inventory.html` | `inventory.js` | Semua (write: Owner/Operator) | CRUD stok + log pemakaian, field dinamis per tipe. Teknisi bisa lihat (tombol Tambah/Edit/Hapus disembunyikan). |
+| `admin.html` | `admin.js` | Owner | Panel referensi (aktifitas, sub_node, priority, tree FTTH legacy) + modal tambah user. Redirect non-Owner. |
+| `user-list.html` | `user-list.js` | Owner/Operator | Tabel user + modal edit/tambah + hapus/restore (hapus: Owner). Termasuk `default_sub_node` untuk auto-PIC. |
+| `settings.html` | `settings.js` | Semua | Profil & password diri sendiri, toggle tema global, nama/logo perusahaan (Owner). |
+| `offline.html` | — | Publik | Fallback PWA — disajikan `sw.js` saat navigasi gagal & tidak ada cache. |
+
+**Halaman yang sudah dihapus** (fungsinya digabung): `new-ticket.html` → modal di `ticket-list.html`; `register.html` → registrasi mandiri dihapus, Owner buat user via modal `user-list.html`; `edit-user.html` → `#editUserModal`; `user-dashboard.html` → digabung ke `dashboard.html`.
+
+**Sidebar** (`navbar.js`): Dashboard, Aktivitas, grup **Tiket** (Ticket List, PSB), grup **Jaringan** (FTTH, Inventory, Peta). Grup **Panel** (Owner/Operator: Users; Owner-only: Referensi → `admin.html`). Badge tiket "Terlapor" polling tiap 30 dtk. Logout di satu tab me-redirect tab lain (event `storage`).
+
+---
+
+## API endpoints
+
+Semua di-mount di `/` (tanpa prefix). Auth di kolom "Guard": `auth` = login saja, `per-tiket` = creator/PIC/Owner/Operator, `O/O` = Owner atau Operator, `Owner` = Owner saja.
+
+### Auth
+| Endpoint | Guard | Catatan |
+|---|---|---|
+| `POST /login` | publik | Rate limit 5/15 mnt. Tolak user soft-deleted/nonaktif. Trim username & password. Regenerasi session id. |
+| `POST /logout` | auth | Hancurkan session. |
+| `POST /register` | **Owner** | Rate limit 5/jam. Tidak ada registrasi mandiri. Password min 8 + huruf & angka. |
+
+### Tickets
+| Endpoint | Guard | Catatan |
+|---|---|---|
+| `GET /tickets` | auth | Terpaginasi (`?page=&limit=`, maks 100) + filter (`search`, `status`, `priority`, `startDate`, `endDate`) + sort (`?sort=&order=` via whitelist `SORT_MAP`). Teknisi: `WHERE created_by=? OR pic=?`. Tanpa `?page` → semua baris (dipakai dashboard & export loop). |
+| `POST /tickets` | auth | `multipart/form-data`, `evidence` opsional. Status awal hanya `Terlapor`/`Pending`. Validasi referensi (aktifitas/sub_node/priority ke `reference_options`; odc/odp ke `ftth_devices`) + PIC ada. Transaksi: insert tiket + riwayat. Notifikasi WA. |
+| `GET /tickets/:id` | per-tiket | IDOR: creator / PIC / Owner / Operator. |
+| `POST /tickets/:id/update` | per-tiket | `multipart/form-data`. Teknisi hanya boleh `status`/`info`/`evidence` (field lain di-drop diam-diam). `SELECT … FOR UPDATE` → validasi `VALID_TRANSITIONS` terhadap baris terkunci → riwayat + `date_selesai`. Masuk `Selesai` **wajib** ada foto bukti (baru atau yang sudah ada). Jika `psb_id` terisi & status jadi `Selesai`: `psb.status` maju `Terdaftar → Terpasang` di transaksi yang sama. |
+| `GET /tickets/:id/history` | per-tiket | Riwayat status LEFT JOIN users. |
+| `DELETE /tickets/:id` | **Owner** | Soft-delete (`deleted_at = NOW()`). |
+| `GET /api/auto-pic?subNode=` | auth | Sarankan PIC: Teknisi dengan `default_sub_node` yang cocok diprioritaskan (`ORDER BY is_local DESC, active_tickets ASC`), lalu fallback beban paling ringan. |
+
+### Activities
+| Endpoint | Guard | Catatan |
+|---|---|---|
+| `GET /activities` | auth | Terpaginasi. Owner/Operator lihat semua; Teknisi lihat miliknya. |
+| `POST /activities` | auth (self) | IDOR guard: Teknisi hanya boleh menautkan ke tiket miliknya. Auto-start: log ke tiket `Terlapor`/`Pending` milik Teknisi memajukan status ke `Dikerjakan` (transaksi + `FOR UPDATE` + notifikasi WA). |
+| `DELETE /activities/:id` | **O/O** | (Frontend hanya menampilkan tombol ini untuk Owner — Operator dapat via API.) |
+
+### Users
+| Endpoint | Guard | Catatan |
+|---|---|---|
+| `GET /users` · `GET /users/:username` | **O/O** / self | SELECT kolom eksplisit (tanpa password). |
+| `POST /update-profile` | auth (self) | Butuh password lama. Rate limit 5/15 mnt. Hapus foto lama dari disk. |
+| `POST /update-role` | **Owner** | Whitelist role, blokir menurunkan diri sendiri, cabut session user yang diubah. |
+| `POST /admin/users/update` | **O/O** | Operator tidak bisa menyentuh akun Owner / promote ke Owner. |
+| `DELETE /users/:username` · `POST /users/:username/restore` | **Owner** | Soft-delete + cabut session. Blokir hapus diri sendiri. |
+
+### FTTH · Geo · References · PSB · Inventory · Settings · Stats
+| Endpoint | Guard | Catatan |
+|---|---|---|
+| `GET /api/ftth` · `/api/ftth/:id` · `/api/ftth/available-ports` | auth | List dikelompokkan per tipe + `stats` (termasuk `draftCount`). `available-ports` reserve Port 1 sebagai uplink untuk ODC/ODP. |
+| `POST /api/ftth` · `PUT /api/ftth/:id` | **O/O** | `PUT` juga menerima `is_draft:false` (konfirmasi draft, hanya maju). Cek konflik SN/port ONU via `checkOnuConflicts()`. Rename label meng-cascade `group_name` anak + teks `odc`/`odp` di tiket & `odp_label` di PSB (lewat `ftth_*_id`) dalam satu transaksi. |
+| `DELETE /api/ftth/:id` | **Owner** | Ditolak jika masih punya anak. |
+| `GET /api/geo` | auth | OLT/ODC/ODP/ONU yang punya koordinat, dari `ftth_devices`. |
+| `GET /api/references` | auth | Dikelompokkan per `type`. |
+| `POST /api/references` · `PUT` · `DELETE /api/references/:id` | **Owner** | `DELETE` ditolak jika label masih dipakai (`countReferenceUsage()`: aktifitas/sub_node/priority di `tickets`, sub_node di `users.default_sub_node`, inventory_type di `inventory`). |
+| `GET /api/psb` · `/api/psb/:id` | auth | |
+| `POST /api/psb` | auth | `multipart/form-data`, semua role. Validasi `odpLabel` ke `ftth_devices`. |
+| `PUT /api/psb/:id` | **O/O** | Saat target status `Terpasang` **dan** `ftth_device_id IS NULL` (`needsInventoryLink`): wajib `inventoryId`, cek stok & konflik SN/port, kurangi `used_stock`, tulis `inventory_log`, buat draft ONU di `ftth_devices`, tulis balik `psb.ftth_device_id` — semua dalam satu transaksi ber-`FOR UPDATE`. |
+| `DELETE /api/psb/:id` | **Owner** | Hard-delete. |
+| `GET /api/inventory` · `PUT` · `POST` | auth / **O/O** | `PUT` transaksi + `FOR UPDATE`, tulis delta ke `inventory_log`. |
+| `GET /api/inventory/log` | **O/O** | LEFT JOIN — histori item yang dihapus tetap muncul. |
+| `DELETE /api/inventory/:id` | **Owner** | |
+| `GET /settings/company-name` · `/company-logo` | **publik** | Tampil di halaman login. |
+| `POST /settings/company-name` · `/company-logo` | **Owner** | Logo lama dihapus dari disk. |
+| `GET /api/stats/month` | auth | Agregat dashboard + SLA target/kepatuhan/breached/atRisk; blok `teknisi` jika role Teknisi; array `teknisiPerformance` hanya untuk Owner/Operator. |
+| `GET /api/audit` | **Owner** | Terpaginasi, di `server.js` (inline). |
+| `GET /health` | **publik** | `SELECT 1` ke DB → `{status, db, uptime}`, 200/503. Tanpa auth, tanpa rate-limit. |
+
+Untuk contoh request/response, lihat `docs/code_documentation_en.md` (§4).
 
 ---
 
 ## Database
 
-11 tabel aplikasi + `sessions` (auto oleh express-mysql-session):
+MySQL `login_app_db`. **`schema.sql` adalah source of truth tunggal untuk instalasi baru** — sudah mencakup setiap kolom & tabel dari `scripts/*.sql`. 11 tabel aplikasi + `sessions` (dibuat otomatis oleh `express-mysql-session`).
 
-| Tabel | Fungsi |
+| Tabel | Menyimpan |
 |---|---|
-| `users` | Akun user (bcrypt, default role: Teknisi), `default_sub_node` (wilayah utk auto-PIC), soft-delete |
-| `tickets` | Tiket pekerjaan + soft-delete (`deleted_at`), `psb_id` (FK opsional ke `psb`) |
-| `activities` | Log aktivitas, FK nullable ke tickets |
-| `ticket_status_history` | Riwayat perubahan status tiket |
-| `settings` | Key-value (company_name, company_logo) |
-| `reference_options` | Dropdown non-FTTH (aktifitas, sub_node, priority, dll) + salinan lama topologi FTTH (legacy, lihat catatan di bawah) |
-| `ftth_devices` | **Sumber kebenaran** topologi FTTH (OLT/ODC/ODP/ONU) + port tracking. `is_draft` menandai entri ONU otomatis dari PSB yang belum dikonfirmasi staf |
-| `psb` | Pemasangan Baru / registrasi ONU pelanggan, status Terdaftar→Terpasang→Aktif/Batal |
-| `inventory` / `inventory_log` | Stok perangkat + histori pemakaian (`reference_type`/`reference_id` melacak balik ke PSB yang memicu) |
-| `audit_logs` | Jejak audit level-bisnis (siapa mengubah apa), dibaca via `GET /api/audit` (Owner only) |
-| `public_reports` | Belum dipakai route manapun |
+| `users` | Akun (bcrypt), `role`, `phone`, `photo`, `deleted_at` + `is_active` (soft-delete), `default_sub_node` (wilayah teknisi — teks bebas, dipakai auto-PIC). |
+| `tickets` | Tiket + `deleted_at`, `psb_id` (FK→psb, SET NULL), `ftth_odc_id`/`ftth_odp_id` (FK→ftth_devices, SET NULL — tautan id yang menemani teks `odc`/`odp` untuk cascade rename). |
+| `ticket_status_history` | `old_status`/`new_status`/`changed_by`/`changed_at`. `changed_by` FK→users.username **SET NULL** (riwayat bertahan walau user dihapus). |
+| `activities` | `description`/`username`/`date`/`ticket_id` (FK→tickets **CASCADE**). |
+| `reference_options` | Dropdown non-FTTH (`aktifitas`, `sub_node`, `priority`, `device_brand`, `inventory_type`) + salinan **legacy** `olt/odc/odp/onu` yang dibaca tree di `admin.html`. Dibuat oleh `scripts/add_reference_table.sql`. |
+| `ftth_devices` | **Sumber kebenaran** topologi FTTH + port. Hierarki tanpa FK: anak menyimpan `group_name = label` induk. `is_draft=1` untuk ONU auto dari PSB. UNIQUE `(type, label, group_name)`. |
+| `psb` | Instalasi pelanggan. `ftth_device_id` (FK→ftth_devices, SET NULL — tautan permanen ke ONU-nya, sekaligus penanda "sudah diproses"), `ftth_odp_id` (tautan rename untuk `odp_label`). |
+| `inventory` / `inventory_log` | Stok (`total_stock`, `used_stock`) + histori. `inventory_log.inventory_id` FK **SET NULL**. |
+| `audit_logs` | Jejak bisnis: action / target_type / target_id / details(JSON) / username / ip. Dibaca Owner via `GET /api/audit`. |
+| `settings` | Key/value — hanya `company_name`, `company_logo`. |
+| `sessions` | Store session (`data` = JSON `req.session`). Dibuat & dibersihkan otomatis. |
 
-> **Catatan penting:** `ftth.html` (tab CRUD) membaca/menulis `ftth_devices` via `/api/ftth`, sedangkan `admin.html` (tree view lama) masih membaca `/api/references` — salinan lama yang tidak ikut ter-update. Data yang dibuat/diubah lewat satu UI tidak otomatis benar di UI lain.
+> **Quirk arsitektur — FTTH di dua tempat.** `ftth.html` membaca/menulis `ftth_devices` via `/api/ftth`; tree di `admin.html` masih membaca salinan legacy di `reference_options` via `/api/references`. Data yang dibuat/diubah lewat satu UI tidak otomatis benar di UI lain. Selalu cek endpoint/tabel yang dipakai surface yang sedang kamu ubah.
 
-**Lihat:** `schema.sql` (source of truth untuk instalasi baru) + `scripts/` untuk migrasi upgrade database lama.
-
----
-
-## Instalasi
-
-```bash
-# 1. Clone & install
-git clone <repo-url>
-cd mayung-app
-npm install
-
-# 2. Copy environment
-cp .env.example .env
-# Isi: DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, SESSION_SECRET, PORT, FONNTE_TOKEN
-
-# 3. Setup database — schema.sql sudah mencakup semua tabel & kolom
-#    (soft-delete, odp, ftth_devices, audit_logs, dst). Untuk instalasi BARU,
-#    dua baris ini SUDAH CUKUP — jangan jalankan scripts/*.sql migration lain,
-#    itu untuk upgrade database LAMA yang sudah berjalan sebelum konsolidasi
-#    2026-08-26 dan akan gagal (duplicate column/FK) jika dipakai di sini.
-mysql -u root -p < schema.sql
-mysql -u root -p < scripts/add_reference_table.sql
-
-# 4. (Hanya untuk database LAMA yang mau di-upgrade, lihat komentar di atas)
-# node scripts/migrate_history.js
-# mysql -u root -p login_app_db < scripts/add_deleted_at_tickets.sql
-# mysql -u root -p login_app_db < scripts/add_parent_port.sql
-# mysql -u root -p login_app_db < scripts/fix_fk_history.sql
-
-# 5. Jalankan (development — hot reload)
-npm run dev
-# → http://localhost:3000
-
-# Atau production
-npm run prod
-```
+> **`public_reports`** hanya dibuat oleh `scripts/add_reports_table.sql`, belum disentuh route mana pun.
 
 ---
 
-## RBAC
-
-| Role | Akses |
-|---|---|
-| **Owner** | Full — referensi, user, role, settings, admin panel, inventory |
-| **Operator** | Lihat user, kelola tiket, hapus aktivitas, PSB, inventory, edit FTTH |
-| **Teknisi** | Tiket sendiri, aktivitas sendiri, FTTH view, map, daftarkan PSB |
-
-**Middleware:** `middleware/auth.js` — `isAuthenticated`, `isAdmin` (Owner), `isOwnerOrOperator`
-
----
-
-## Halaman Frontend
-
-| Halaman | JS | Auth | Fitur |
-|---|---|---|---|
-| `index.html` | `script.js` | Public | Login |
-| `dashboard.html` | `dashboard.js` | All roles | Statistik, Chart.js, SLA, recent tickets, activity log — dipakai semua role (blok khusus Teknisi ditambahkan lewat `GET /api/stats/month`) |
-| `ticket-list.html` | `ticket-list.js` | All roles | Tabel + pagination + filter + export CSV/PDF rekap. Pembuatan tiket adalah modal (`#newTicketModal`) di halaman ini — bukan halaman terpisah |
-| `ticket-details.html` | `ticket-details.js` | All roles | Detail + edit + delete + status timeline |
-| `activity.html` | `activity.js` | All roles | Log + history + export |
-| `ftth.html` | `ftth.js` | All roles (write: Owner/Operator) | Tab CRUD (OLT/ODC/ODP/ONU) + port tracking + konfirmasi entri draft dari PSB |
-| `map.html` | `map.js` | All roles | Peta Leaflet + chain koneksi interaktif |
-| `psb.html` | `psb.js` | All roles (write: Owner/Operator) | Form PSB + upload foto + list. Transisi ke Terpasang minta pilih item ONU inventory |
-| `inventory.html` | `inventory.js` | Owner/Operator | Stok perangkat |
-| `admin.html` | `admin.js` | Owner | Panel referensi + add user |
-| `user-list.html` | `user-list.js` | Owner/Operator | Manajemen user, termasuk wilayah (`default_sub_node`) utk auto-PIC |
-| `settings.html` | `settings.js` | All roles | Profil + company settings (Owner) |
-| `offline.html` | — | Public | Fallback PWA offline (disajikan `sw.js` saat navigasi gagal & tidak ada cache) |
-
-**Halaman yang sudah dihapus** (fungsinya digabung ke tempat lain): `new-ticket.html` → modal di `ticket-list.html`; `register.html` → self-registration dihapus, Owner buat user lewat modal di `user-list.html`; `edit-user.html` → modal `#editUserModal` di `user-list.html`; `user-dashboard.html` → digabung ke `dashboard.html` tunggal.
-
----
-
-## API Endpoints
-
-Semua route di-mount di `/`. Lihat `docs/api-reference.md` untuk dokumentasi lengkap dengan contoh request/response.
-
-### Auth
-- `POST /login` — Login (rate limit: 5/15min)
-- `POST /logout` — Logout
-- `POST /register` — Register (Owner only, rate limit: 5/jam)
-
-### Tickets
-- `GET /tickets` — List (pagination + filter: search, status, priority, tanggal)
-- `POST /tickets` — Create (multipart, evidence opsional)
-- `GET /tickets/:id` — Detail (IDOR protected)
-- `POST /tickets/:id/update` — Update (role-based field restriction + workflow validation)
-- `DELETE /tickets/:id` — Soft-delete (creator/Owner/Operator)
-- `GET /tickets/:id/history` — Status timeline
-
-### Activities
-- `GET /activities` — List (pagination, RBAC)
-- `POST /activities` — Log activity
-- `DELETE /activities/:id` — Owner/Operator only
-
-### Users
-- `GET /users` — List all (Owner/Operator)
-- `GET /users/:username` — Detail
-- `POST /update-profile` — Self
-- `POST /update-role` — Owner only (validated whitelist)
-- `POST /admin/users/update` — Owner (validated)
-- `DELETE /users/:username` — Owner (self-delete protected)
-
-### Settings
-- `GET /settings/company-name` — Public
-- `POST /settings/company-name` — Owner only
-- `GET /settings/company-logo` — Public
-- `POST /settings/company-logo` — Owner only (multipart)
-
-### References (dropdown non-FTTH + tree FTTH lama)
-- `GET /api/references` — All references grouped by type
-- `POST /api/references` — Create (all roles)
-- `PUT /api/references/:id` — Update (all roles)
-- `DELETE /api/references/:id` — Delete (all roles)
-
-### Geo (Map)
-- `GET /api/geo` — OLT, ODC, ODP, ONU with coordinates + parentPort (dari `ftth_devices`)
-
-### FTTH (sumber kebenaran topologi)
-- `GET /api/ftth` — Semua device grouped by type + stats (termasuk `draftCount`)
-- `GET /api/ftth/available-ports` — Port tersedia dari parent (query: `type`, `parent`)
-- `POST /api/ftth` — Create (Owner/Operator)
-- `PUT /api/ftth/:id` — Update (Owner/Operator) — juga dipakai untuk konfirmasi draft (`is_draft: false`)
-- `DELETE /api/ftth/:id` — Delete (Owner only, ditolak kalau masih punya child)
-
-### PSB
-- `GET /api/psb` — List (all roles)
-- `POST /api/psb` — Create (all roles, multipart)
-- `PUT /api/psb/:id` — Update (Owner/Operator). Transisi sungguhan ke `Terpasang` WAJIB sertakan `inventoryId` — mengurangi stok ONU terpilih & membuat draft entri di `ftth_devices` dalam transaksi yang sama
-- `DELETE /api/psb/:id` — Delete (Owner/Operator)
-
-### Inventory
-- `GET /api/inventory` — List (all roles)
-- `GET /api/inventory/log` — Histori pemakaian (Owner/Operator)
-- `POST /api/inventory` — Create (Owner/Operator)
-- `PUT /api/inventory/:id` — Update (Owner/Operator)
-- `DELETE /api/inventory/:id` — Delete (Owner only)
-
-### Stats & Operasional
-- `GET /api/stats/month` — Statistik dashboard agregat (semua role); blok tambahan khusus Teknisi kalau `role === 'Teknisi'`
-- `GET /api/auto-pic?subNode=` — Sarankan PIC: Teknisi dengan wilayah (`default_sub_node`) yang cocok diprioritaskan, baru fallback ke beban paling ringan
-- `GET /health` — Cek koneksi DB (`{status, db, uptime}`), 200/503, tanpa auth — untuk load balancer/uptime monitor
-
----
-
-## Notifikasi WhatsApp
-
-```env
-FONNTE_TOKEN=token_dari_fonnte
-```
-- Tiket baru → pembuat tiket + PIC
-- Status berubah → pembuat tiket + PIC
-- Nomor otomatis distandarisasi ke format `62xx`
-
----
-
-## Commands
-
-```bash
-npm start         # node server.js
-npm run dev       # node --watch server.js (hot reload — juga memicu graceful shutdown tiap restart)
-npm run prod      # NODE_ENV=production node server.js
-npm test          # mocha test/*.test.js --exit — 26 test di 4 file, jalan ke login_app_db asli (fixture bertanda, dibersihkan otomatis)
-npx eslint .      # Linting (eslint di-pin sbg devDependency — jangan biarkan npx pakai versi lain yang mengabaikan .eslintrc.json)
-npx prettier --check .   # Format check
-```
-
-CI (`.github/workflows/ci.yml`) menjalankan urutan yang sama (`npm ci` → lint → provisioning MySQL dari nol via `schema.sql` + `scripts/add_reference_table.sql` + `scripts/seed_ci_users.sql` → test) di setiap push/PR.
-
----
-
-## Environment Variables
+## Environment variables
 
 ```
-DB_HOST=localhost
-DB_PORT=3306
+DB_HOST=localhost          # DB_PORT opsional, fallback 3306
 DB_USER=login_app_user
-DB_PASSWORD=strongpassword
+DB_PASSWORD=...
 DB_NAME=login_app_db
-PORT=3000
-SESSION_SECRET=supersecretkey123
-FONNTE_TOKEN=token_dari_fonnte
-NODE_ENV=development
-TRUST_PROXY=
+PORT=3000                  # server.js fallback ke 3000 kalau kosong
+SESSION_SECRET=...
+FONNTE_TOKEN=...           # kosong = notifikasi WA di-skip diam-diam
+APP_URL=https://mayung.example.com   # base URL publik untuk link tiket di notifikasi WA (tanpa trailing slash)
+NODE_ENV=development       # 'production' → cookie session Secure
+TRUST_PROXY=               # kosong/apa pun = percaya 1 hop X-Forwarded-* (default, untuk di belakang nginx). 'false' = Node langsung menghadap internet
 ```
 
-> `server.js` fallback ke port **3000** jika PORT tidak diset (disamakan dengan `.env`). `DB_PORT` opsional, fallback ke **3306**. `TRUST_PROXY` — kosongkan/biarkan default kalau ada reverse proxy (nginx dll) di depan Node; set `false` hanya kalau Node benar-benar langsung menghadap internet tanpa proxy.
+`APP_URL` wajib diisi ke domain publik yang sesungguhnya di production — kalau kosong, `notification.js` menulis warning sekali dan link jatuh ke `http://localhost:<PORT>` yang tidak bisa dibuka penerima.
 
 ---
 
-## Fitur Keamanan
+## Perintah
+
+```bash
+npm run dev              # node --watch server.js — hot reload (memicu graceful shutdown tiap restart)
+npm start               # node server.js
+npm run prod            # NODE_ENV=production node server.js
+npm test                # mocha test/*.test.js --timeout 10000 --exit — ~55 test di 9 file
+npx eslint .            # eslint di-pin sebagai devDependency — jangan biarkan npx ambil v9+ (mengabaikan .eslintrc.json)
+npx prettier --check .  # cek format (tidak dijalankan di CI)
+```
+
+**CI** (`.github/workflows/ci.yml`): tiap push/PR → `npm ci` → `npx eslint .` → MySQL 8 container di-provision dari `schema.sql` + `scripts/add_reference_table.sql` + `scripts/seed_ci_users.sql` (seed `pfizer`/`ijang1` password `test123`) → `npm test`.
+
+---
+
+## Keamanan
 
 | Aspek | Implementasi |
 |---|---|
-| **Password** | bcrypt 10 rounds |
-| **Session** | MySQL store, httpOnly, sameSite: strict, 24 jam |
-| **Rate limiting** | Global 1000/15min, Login 5/15min, Register 5/jam |
-| **SQL injection** | Parameterized queries (mysql2) |
-| **IDOR** | Ownership check di setiap endpoint tiket |
-| **CSRF** | Double-submit cookie pattern |
-| **Input validation** | express-validator + whitelist role |
-| **Helmet** | Security headers dengan CSP |
-| **File upload** | Image only, 5MB, filename sanitasi, isi file diverifikasi via magic bytes (bukan cuma ekstensi/MIME) |
-| **Error handling** | asyncHandler, stack trace aman dari client |
-| **Audit trail** | `audit_logs` (level bisnis, dibaca Owner via `GET /api/audit`) — terpisah dari `logs/*.log` (Winston, level teknis, tidak tampil di app) |
-| **Koneksi DB** | Pool dibatasi (`queueLimit: 30`) — kelebihan beban gagal cepat, bukan menumpuk tanpa batas di memori |
-| **Kesiapan restart** | `GET /health` cek DB sungguhan; graceful shutdown menutup server/session-store/pool DB dengan rapi saat `SIGTERM`/`SIGINT` |
+| Password | bcryptjs 10 rounds. Min 8 + huruf & angka. Input di-trim konsisten di semua jalur set-password & login. |
+| Session | Store MySQL, `httpOnly`, `sameSite: strict`, umur 24 jam, `Secure` saat `NODE_ENV=production`. Session id di-regenerate saat login. Dicabut saat user dihapus / diturunkan role. |
+| Timing | Login yang gagal karena user tidak ada tetap menjalankan `bcrypt.compare` dummy (samakan waktu respons). |
+| Rate limiting | Global 1000/15 mnt per IP; login 5/15 mnt; register 5/jam; `mutationLimiter` per grup endpoint. `message` selalu objek (bukan string) supaya balasan 429 berupa JSON, bukan `text/html` yang bikin `response.json()` frontend error. |
+| SQL injection | Query berparameter (mysql2). Wildcard `%`/`_` di input search di-escape (`LIKE … ESCAPE`). Kolom sort dari whitelist. |
+| IDOR | Cek kepemilikan per-request di setiap endpoint tiket & di `POST /activities`. |
+| CSRF | Double-submit cookie, `timingSafeEqual`, token dirotasi setelah setiap mutasi. |
+| Upload | Gambar saja, 5 MB, nama file disanitasi, **isi file diverifikasi via magic bytes** (bukan cuma ekstensi/MIME) — file `x.png` berisi HTML ditolak. |
+| Aset privat | `public/uploads/` (foto bukti, foto profil, foto PSB pelanggan) di-gate auth di `server.js` — kecuali `settings.company_logo` yang aktif (tampil pra-login). |
+| Helmet + CSP | CSP di-set manual per dokumen HTML (CSP global dengan `'unsafe-inline'` akan menolak registrasi service worker). |
+| Audit trail | `audit_logs` (level bisnis, dibaca Owner) — terpisah dari `logs/*.log` (Winston, level teknis, tidak tampil di app). |
+| DB pool | `queueLimit: 30` — kelebihan beban gagal cepat (`ER_CON_COUNT_ERROR`), bukan menumpuk di memori. |
+| Restart | `GET /health` cek DB sungguhan; graceful shutdown menutup server → session store → pool DB dengan rapi. |
+| Dependency | `package.json` `overrides` men-dedupe `mysql2` bersarang milik `express-mysql-session` ke `mysql2` top-level yang sudah dipatch (CVE). Verifikasi: `npm ls mysql2` → yang bersarang harus `deduped`. |
 
 ---
 
-## Pengembangan
+## Catatan pengembangan
 
-- **Tidak ada bundler** — edit langsung file di `public/js/*.js`
-- **Hot reload** — `npm run dev` = `node --watch` (server.js merestart bersih lewat graceful shutdown tiap kali ada file berubah)
-- **Service worker** — nama cache versioned di `public/sw.js` (`CACHE_NAME`) — **naikkan angkanya tiap kali mengubah file frontend** (js/css/html), atau perubahan tidak akan sampai ke browser klien lewat cache lama. Hard refresh (Cmd+Shift+R) untuk verifikasi lokal
-- **Logging** — `logs/` daily rotate (app-YYYY-WW.log / error-YYYY-WW.log / detail-*.log), terpisah dari `audit_logs` di database (lihat Fitur Keamanan)
-- **CSS** — single file `style.css` (~4765 baris), custom properties
-- **Font Awesome 6** — lokal di `vendor/fontawesome/`
-- **Test** — mocha + supertest, 4 file (`test/*.test.js`) jalan langsung ke `login_app_db` lewat fixture bertanda & dibersihkan sendiri — bukan database test terpisah (lihat `docs/developer-guide.md` untuk detail kenapa)
-- **CI** — GitHub Actions (`.github/workflows/ci.yml`), lint + test tiap push/PR
-- **API Reference** — `docs/api-reference.md`
-- **Developer Guide** — `docs/developer-guide.md` (setup, ERD, debugging, deployment)
+- **Tanpa bundler / build step** — edit langsung `public/js/*.js`; `<script src>` biasa. Library besar (Chart.js, jsPDF, Leaflet) dari CDN, di-lazy-load saat dipakai (`pdf-loader.js`).
+- **Service worker** — naikkan `CACHE_NAME` di `public/sw.js` tiap perubahan frontend. Strategi network-first membuat perubahan sampai ke klien pada load berikutnya tanpa reload dua kali; hard refresh (`Cmd+Shift+R`) untuk verifikasi lokal.
+- **Logging** — `logs/` daily rotate, retensi 7 hari: `app-*.log`, `error-*.log`, `detail-*.log`. Berbeda dari tabel `audit_logs`.
+- **Pola route** — hampir semua handler mengikuti bentuk yang sama: `asyncHandler` → `express-validator` / validasi manual → (kalau ada efek samping) transaksi `db.getConnection()` + `SELECT … FOR UPDATE` + validasi terhadap baris terkunci + write + tabel turunan → `commit` → efek fire-and-forget (notifikasi WA) + `audit()`. Kenali sekali, sisa `routes/` jadi mudah dibaca.
+- **`.escape()` sengaja TIDAK dipakai** pada field yang divalidasi via `validateRef()` (aktifitas/odc/priority/…): nilainya dicek terhadap label yang tersimpan apa adanya; kalau di-escape, label ber-karakter `& < > " '` tidak akan pernah cocok. Rendering aman tetap dilakukan di frontend (`esc()`).
+- **Test** — menembak `login_app_db` yang sama dengan app (tidak ada DB test terpisah — `login_app_user` tak punya `CREATE DATABASE`). Isolasi lewat fixture bertanda `AUTOTEST_` yang dibersihkan di `afterEach`/`after`. `test/helpers/testApp.js` memoize satu app + satu session login per akun karena `loginLimiter` in-memory dibagi seluruh proses mocha; juga `delete process.env.FONNTE_TOKEN` supaya tak ada WA asli terkirim.
+
+---
+
+## Dokumen terkait
+
+- **`docs/code_documentation_en.md`** / **`docs/code_documentation_id.md`** — referensi kode lengkap: request lifecycle, tiap endpoint dengan auth, skema DB per kolom + alasan tiap FK, pola transaksi, tiga loop bisnis, known issues.
+- **`CLAUDE.md`** — panduan untuk asisten AI; ringkasan arsitektur paling padat + catatan per-cacat (lokal, git-ignored).
+- **`schema.sql`** + **`scripts/`** — struktur DB & riwayat migrasi.
