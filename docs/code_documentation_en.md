@@ -210,7 +210,7 @@ Expand/collapse state saved in localStorage. Role-based visibility. Collapsible 
 |---|---|---|
 | **index.html** | `script.js` | Login form → csrfFetch POST /login → save user to localStorage |
 | **dashboard.html** | `dashboard.js` | All roles (a Teknisi-specific block is layered on via `GET /api/stats/month`). Stats, Chart.js (bar/pie), SLA (avg hours), recent tickets with search, activity log, apiFetch instead of global fetch override |
-| **ticket-list.html** | `ticket-list.js` | Server-side pagination, client-side sorting, search + filter, CSV/PDF export with summary (by status + priority), scope filter (all/month). Ticket creation is a modal (`#newTicketModal`) on this page, not a separate page — the sub-node select re-queries `GET /api/auto-pic?subNode=` on change |
+| **ticket-list.html** | `ticket-list.js` | Server-side pagination **and sorting** (`?sort=&order=` against a `SORT_MAP` whitelist), search + filter, CSV/PDF export with a summary block (by status, by priority, top `aktifitas`, top wilayah/`sub_node`, per-month trend, actual date range), scope filter (all/month). Ticket creation is a modal (`#newTicketModal`) on this page, not a separate page — the sub-node select re-queries `GET /api/auto-pic?subNode=` on change |
 | **ticket-details.html** | `ticket-details.js` | Detail view, edit modal, status history timeline, soft-delete with showConfirm modal, status workflow error display |
 | **activity.html** | `activity.js` | Log activity form, history list, CSV/PDF export, delete with confirm modal |
 | **ftth.html** | `ftth.js` | Tab CRUD (OLT→ODC→ODP→ONU), inline add with port field, edit modal with parentPort, delete with confirmation. Draft ONU entries (auto-created from a PSB install) show an amber "needs confirmation" badge and a one-click confirm button |
@@ -237,7 +237,7 @@ Expand/collapse state saved in localStorage. Role-based visibility. Collapsible 
 ### PWA (`sw.js`)
 - Cache name is versioned (`CACHE_NAME` in `sw.js`) — **must be bumped on every frontend change** or clients keep serving stale cached JS/CSS/HTML
 - Pre-cache: all HTML pages, JS files, CSS, manifest, FontAwesome CSS, `offline.html`, `pdf-loader.js`
-- Strategy: stale-while-revalidate for static assets; a failed navigation request with no cache hit serves `offline.html`
+- Strategy: **network-first** for navigations (`.html`), same-origin `/js/*.js`, and data endpoints (fall back to cache when offline, then `offline.html` for a failed navigation); **stale-while-revalidate** only for images/CSS/fonts/manifest. OSM map tiles bypass the SW entirely. Network-first for the app shell was chosen so a deploy reaches clients on the next load without a double reload, and so fresh HTML is never paired with a stale cached JS bundle. `skipWaiting()` + `clients.claim()`; `activate` purges old-version caches
 - Chart.js and jsPDF/jspdf-autotable are lazy-loaded on demand (via `pdf-loader.js` for the latter), not eagerly bundled into the precache
 
 ---
@@ -367,7 +367,7 @@ A ticket created from a PSB carries `psb_id`. When that ticket reaches "Selesai"
 - **FTTH data split** — see §7. `ftth_devices` vs. the legacy `reference_options` copy can drift; check which table/endpoint the surface you're editing actually uses.
 - **`psb.status` has no enforced state machine** — unlike `tickets`' `VALID_TRANSITIONS`, `routes/psb.js` only checks list membership, not a valid-transition graph, and the edit dropdown always shows all 4 statuses. A record can jump `Terdaftar → Aktif` directly, silently skipping the inventory-decrement + draft-ONU automation that only fires on an explicit `→ Terpasang` transition. Fixing this would need a `VALID_PSB_TRANSITIONS` map mirroring `tickets.js`'s pattern — a product decision (is skipping ever legitimate?) as much as a technical one.
 - **`public_reports` table is unused** — created by a migration script but no route references it.
-- **Ticket export** fetches ALL tickets (unpaginated) then filters client-side.
-- **Ticket list sorting** is applied client-side to the current page only, not server-side.
+- **Ticket export** loops `GET /tickets?page=N&limit=100` with server-side filters (up to `MAX_PAGES=1000`), then builds a summary ahead of the raw rows. The page loop has no throttle — a large export can burn ~1000 requests fast and, since `globalLimiter` is 1000/15min per IP, exhaust the quota for everyone behind that IP.
+- **Ticket list sorting** is server-side, via a `SORT_MAP` column whitelist in `GET /tickets` (`?sort=&order=`); an unknown `?sort` is silently ignored.
 - **`POST /tickets/:id/update`** uses POST (not PUT/PATCH) with `multipart/form-data`.
 - **No separate test database** — see §1 and the Testing section; tests run against the real dev database via tagged, self-cleaning fixtures because the DB user has no `CREATE DATABASE` grant.
