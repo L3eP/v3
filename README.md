@@ -19,7 +19,7 @@ Aplikasi web untuk ISP di Lombok, NTB yang menangani pelaporan gangguan jaringan
 | **SLA Dashboard** | Rata-rata waktu penyelesaian tiket, statistik bulanan, Chart.js bar/pie |
 | **RBAC** | 3 role: **Owner** (full), **Operator** (kelola), **Teknisi** (self-only) |
 | **Notifikasi WhatsApp** | Otomatis via Fonnte API — tiket baru & status berubah → pembuat + PIC |
-| **Export** | CSV (BOM Excel) & PDF dengan summary rekap (by status + priority), filter bulan ini / semua |
+| **Export** | CSV (BOM Excel) & PDF dengan summary rekap (by status, by priority, aktifitas & wilayah terbanyak, tren kendala per bulan, rentang tanggal data), filter bulan ini / semua |
 | **PWA** | Service worker + manifest — installable di HP |
 | **Kesiapan operasional** | `GET /health` (cek koneksi DB), graceful shutdown (`SIGTERM`/`SIGINT`), test suite otomatis + CI (GitHub Actions) |
 

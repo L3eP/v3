@@ -63,17 +63,21 @@ document.addEventListener("DOMContentLoaded", async () => {
                 `;
       }
 
+      // Deskripsi = judul tebal (APA yang dikerjakan), username pindah ke
+      // baris meta bersama tanggal (SIAPA) — sebelumnya "username: deskripsi"
+      // digabung satu baris tebal yang sama, jadi siapa & apa tidak jelas
+      // mana yang mana sekilas pandang. Menyamakan pola yang sudah benar di
+      // widget aktivitas dashboard (js/dashboard.js renderActivityLog).
       li.innerHTML = `
                 <div class="dash-item-row-start spread">
-                    <div class="dash-item-row">
+                    <div class="dash-item-row-start">
                         <div class="dash-item-icon">
                             <i class="fas fa-history"></i>
                         </div>
                         <div>
-                            <strong class="dash-item-title">
-                                ${activity.username ? `<span class="text-primary">${esc(activity.username)}</span>: ` : ""}${esc(activity.description)}
-                            </strong>
+                            <strong class="dash-item-title">${esc(activity.description)}</strong>
                             <small class="dash-item-meta">
+                                ${activity.username ? `<i class="fas fa-user-circle"></i> <span class="text-primary">${esc(activity.username)}</span><span class="dash-item-sep">•</span>` : ""}
                                 <i class="far fa-calendar-alt"></i> ${new Date(activity.date).toLocaleString()}
                             </small>
                         </div>

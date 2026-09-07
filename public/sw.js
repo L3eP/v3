@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mayung-app-v62'; // Increment — Fitur SLA/KPI sungguhan di dashboard: target jam per prioritas, % memenuhi target, tiket terancam lewat SLA, kinerja per Teknisi bulan ini
+const CACHE_NAME = 'mayung-app-v63'; // Increment — Halaman Aktivitas: deskripsi & username tidak lagi digabung satu baris tebal, username pindah ke baris meta (siapa vs apa jadi jelas)
 const ASSETS = [
     '/',
     '/index.html',

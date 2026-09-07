@@ -318,8 +318,8 @@ Tiket dari PSB membawa `psb_id`; saat "Selesai", PSB terkait otomatis maju ke Te
 - **FTTH data split** — lihat §7. `ftth_devices` vs salinan lama `reference_options` bisa drift; cek tabel/endpoint mana yang benar-benar dipakai permukaan yang Anda edit.
 - **`psb.status` tidak punya state-machine** — beda dari `tickets` yang punya `VALID_TRANSITIONS`, `routes/psb.js` cuma cek keanggotaan list, bukan graf transisi valid, dan dropdown edit selalu menampilkan semua 4 status. Record bisa lompat `Terdaftar → Aktif` langsung, melewati otomasi decrement-inventory + draft-ONU yang cuma terpicu di transisi eksplisit `→ Terpasang`. Perbaikannya butuh `VALID_PSB_TRANSITIONS` mirip pola `tickets.js` — keputusan produk (apakah lompat status pernah sah?) sekaligus teknis.
 - **Tabel `public_reports` belum dipakai** — dibuat migration script tapi belum ada route yang mereferensikannya.
-- **Export tiket** mengambil SEMUA tiket (tanpa pagination) baru difilter di client.
-- **Sorting daftar tiket** diterapkan client-side ke halaman yang sedang tampil saja, bukan server-side.
+- **Export tiket** melakukan loop `GET /tickets?page=N&limit=100` dengan filter di server (batas `MAX_PAGES=1000`), lalu menyusun blok ringkasan (aktifitas & wilayah terbanyak, tren kendala per bulan, rentang tanggal) di atas baris data mentah — di CSV maupun PDF. Loop-nya tanpa jeda: satu export besar bisa menembak ~1000 request cepat, dan karena `globalLimiter` 1000/15menit **per IP**, bisa menghabiskan kuota semua orang di belakang IP itu.
+- **Sorting daftar tiket** kini server-side, lewat whitelist kolom `SORT_MAP` di `GET /tickets` (`?sort=&order=`); `?sort` tak dikenal diabaikan diam-diam.
 - **`POST /tickets/:id/update`** memakai POST (bukan PUT/PATCH) dengan `multipart/form-data`.
 - **Tidak ada database test terpisah** — lihat §1 dan bagian Testing di `docs/developer-guide.md`; test jalan ke database dev asli lewat fixture bertanda & dibersihkan sendiri karena user DB tidak punya grant `CREATE DATABASE`.
 - Session cookie `secure: false` — set `true` untuk HTTPS
