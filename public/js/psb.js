@@ -162,6 +162,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           <div style="display:flex;gap:8px;margin-top:4px;align-items:center;flex-wrap:wrap;">
             ${p.onu_sn ? `<span class="psb-sn">SN: ${esc(p.onu_sn)}</span>` : ''}
             <span class="status-badge-psb" style="background:${sc};">${p.status}</span>
+            ${p.status === 'Terpasang' && !p.ftth_device_id ? '<span class="psb-incomplete-badge" title="Belum tertaut ke perangkat ONU resmi &amp; stok inventory — biasanya karena tiket instalasinya ditutup langsung"><i class="fas fa-triangle-exclamation"></i> Belum lengkap</span>' : ''}
             <span class="psb-sn">${p.created_by ? `oleh ${esc(p.created_by)}` : ''}</span>
           </div>
         </button>
@@ -367,6 +368,11 @@ document.addEventListener('DOMContentLoaded', async () => {
           <select id="epsbStatus" class="field">
             ${statusOptions.map(s => `<option value="${s}" ${s===p.status?'selected':''}>${s}</option>`).join('')}
           </select>
+          ${p.status === 'Terpasang' && !p.ftth_device_id ? `
+          <div class="psb-incomplete-notice">
+            <i class="fas fa-triangle-exclamation"></i>
+            <span>PSB ini sudah <strong>Terpasang</strong> (biasanya karena tiket instalasinya ditutup langsung) tapi belum tertaut ke perangkat ONU resmi di FTTH — stok inventory juga belum berkurang. Pilih item ONU di bawah untuk melengkapinya.</span>
+          </div>` : ''}
           <div id="epsbInventoryWrap" class="hidden">
             <label style="display:block;font-size:.85rem;color:var(--text-muted);margin-bottom:4px;">Item ONU dipakai (stok berkurang otomatis) *</label>
             <select id="epsbInventory" class="field">
@@ -391,12 +397,17 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
       if (p.odp_label) loadAvailablePorts(p.odp_label, 'edit', p.onu_port);
 
-      // Picker item ONU cuma muncul saat memilih Terpasang DAN PSB ini belum
-      // Terpasang sebelumnya (transisi sungguhan) — cocok dengan guard
-      // isNewlyTerpasang di backend (routes/psb.js).
+      // Picker item ONU muncul saat target statusnya Terpasang DAN PSB ini
+      // belum tertaut ke perangkat FTTH (ftth_device_id null) — cocok dengan
+      // guard needsInventoryLink di backend (routes/psb.js, cacat #1 Sprint
+      // 3). SENGAJA bukan "p.status !== 'Terpasang'" saja (versi lama) —
+      // itu membuat PSB yang sudah Terpasang lewat jalan pintas tiket
+      // (lihat notice di atas) tidak pernah bisa dilengkapi lagi, karena
+      // syaratnya ("status BERUBAH ke Terpasang") tidak akan pernah
+      // terpenuhi kalau statusnya sudah Terpasang sejak awal dibuka.
       const inventoryWrap = document.getElementById('epsbInventoryWrap');
       const toggleInventoryWrap = () => {
-        const wantsTerpasang = document.getElementById('epsbStatus').value === 'Terpasang' && p.status !== 'Terpasang';
+        const wantsTerpasang = document.getElementById('epsbStatus').value === 'Terpasang' && !p.ftth_device_id;
         inventoryWrap.classList.toggle('hidden', !wantsTerpasang);
       };
       document.getElementById('epsbStatus').addEventListener('change', toggleInventoryWrap);
