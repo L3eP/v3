@@ -6,7 +6,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   let items = [];
 
   // esc() — global from toast.js
-  const toast = (msg) => showToast(msg, 'info');
+  // Sebelumnya wrapper ini hardcode 'info' dan MEMBUANG argumen type kedua
+  // sama sekali — panggilan yang eksplisit mengirim 'error' (mis. validasi
+  // stok) tetap tampil sebagai notifikasi netral biru, bukan merah. Lihat
+  // CLAUDE.md cacat #9.
+  const toast = (msg, type = 'info') => showToast(msg, type);
 
   // ===== Konfigurasi Field Dinamis per Tipe =====
   const TYPE_FIELDS = {
@@ -107,9 +111,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch(e) { return ''; }
   }
 
-  // Button buka modal tambah item
+  // Button buka modal tambah item — POST /api/inventory Owner/Operator-only
+  // di server (routes/inventory.js), sementara GET-nya (baca daftar) memang
+  // sengaja terbuka utk semua role. Sembunyikan tombolnya utk Teknisi supaya
+  // tidak mengisi form lengkap baru ditolak 403 di akhir.
   const invAddBtn = document.getElementById('invAddBtn');
   const invAddModal = document.getElementById('addInvModal');
+  if (invAddBtn && !isPrivileged) invAddBtn.style.display = 'none';
   if (invAddBtn && invAddModal) {
     invAddBtn.addEventListener('click', () => { invAddModal.classList.add('show'); });
     invAddModal.addEventListener('click', (e) => { if (e.target === invAddModal) invAddModal.classList.remove('show'); });
@@ -188,7 +196,7 @@ document.getElementById('invSubmitBtn').addEventListener('click', async () => {
     const totalStock = parseInt(document.getElementById('invTotalStock').value) || 0;
     const location = document.getElementById('invLocation').value.trim();
     const notes = document.getElementById('invNotes').value.trim();
-    if (!deviceName) { toast('Nama perangkat wajib diisi'); return; }
+    if (!deviceName) { toast('Nama perangkat wajib diisi', 'error'); return; }
 
     const attributes = collectAttrs('invAddAttrs');
 
@@ -199,7 +207,7 @@ document.getElementById('invSubmitBtn').addEventListener('click', async () => {
       if (attributes) body.attributes = attributes;
       const r = await csrfFetch('/api/inventory', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
       if (r.ok) {
-        toast('Item ditambahkan');
+        toast('Item ditambahkan', 'success');
         invAddModal.classList.remove('show');
         document.getElementById('invDeviceName').value = '';
         document.getElementById('invTotalStock').value = '';
@@ -208,8 +216,8 @@ document.getElementById('invSubmitBtn').addEventListener('click', async () => {
         document.getElementById('invDeviceType').value = '';
         renderAttrFields('invAddAttrs', '');
         await loadItems();
-      } else { const d = await r.json(); toast(d.message || 'Gagal'); }
-    } catch(e) { toast('Error: '+e.message); }
+      } else { const d = await r.json(); toast(d.message || 'Gagal', 'error'); }
+    } catch(e) { toast('Error: '+e.message, 'error'); }
     finally { setLoading(btn, false); }
   });
 
@@ -245,7 +253,7 @@ document.getElementById('invSubmitBtn').addEventListener('click', async () => {
     const usedStock = parseInt(document.getElementById('editInvUsedStock').value) || 0;
     const location = document.getElementById('editInvLocation').value.trim();
     const notes = document.getElementById('editInvNotes').value.trim();
-    if (!deviceName) { toast('Nama perangkat wajib diisi'); return; }
+    if (!deviceName) { toast('Nama perangkat wajib diisi', 'error'); return; }
     if (usedStock > totalStock) { toast('Stok terpakai tidak boleh melebihi total stok', 'error'); return; }
 
     const attributes = collectAttrs('editInvAttrs');
@@ -256,9 +264,9 @@ document.getElementById('invSubmitBtn').addEventListener('click', async () => {
       const body = { deviceType, deviceName, totalStock, usedStock, location, notes };
       if (attributes !== null) body.attributes = attributes;
       const res = await csrfFetch(`/api/inventory/${id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
-      if (res.ok) { toast('Item diupdate'); editModal.classList.remove('show'); await loadItems(); }
-      else { const d = await res.json(); toast(d.message || 'Gagal'); }
-    } catch(e) { toast('Error: '+e.message); }
+      if (res.ok) { toast('Item diupdate', 'success'); editModal.classList.remove('show'); await loadItems(); }
+      else { const d = await res.json(); toast(d.message || 'Gagal', 'error'); }
+    } catch(e) { toast('Error: '+e.message, 'error'); }
     finally { setLoading(btn, false); }
   });
 
@@ -266,15 +274,15 @@ document.getElementById('invSubmitBtn').addEventListener('click', async () => {
     showConfirm('Yakin ingin menghapus item ini?', async () => {
       try {
         const r = await csrfFetch(`/api/inventory/${id}`, { method:'DELETE' });
-        if (r.ok) { toast('Item dihapus'); await loadItems(); }
-        else { const d = await r.json(); toast(d.message || 'Gagal'); }
-      } catch(e) { toast('Error: '+e.message); }
+        if (r.ok) { toast('Item dihapus', 'success'); await loadItems(); }
+        else { const d = await r.json(); toast(d.message || 'Gagal', 'error'); }
+      } catch(e) { toast('Error: '+e.message, 'error'); }
     });
   };
 
   // ===== Export CSV =====
   window.exportCsv = function() {
-    if (!items.length) { toast('Tidak ada data untuk diexport'); return; }
+    if (!items.length) { toast('Tidak ada data untuk diexport', 'info'); return; }
     const header = 'Tipe,Nama,Total Stok,Stok Terpakai,Sisa,Lokasi,Catatan';
     const rows = items.map(i => {
       const remaining = (i.total_stock || 0) - (i.used_stock || 0);
@@ -286,16 +294,16 @@ document.getElementById('invSubmitBtn').addEventListener('click', async () => {
     link.href = URL.createObjectURL(blob);
     link.download = 'inventory_export_' + new Date().toISOString().split('T')[0] + '.csv';
     link.click();
-    toast('CSV diunduh');
+    toast('CSV diunduh', 'success');
   };
 
   // ===== Export PDF — library dimuat lazy saat export diklik (lihat pdf-loader.js) =====
   window.exportPdf = async function() {
-    if (!items.length) { toast('Tidak ada data untuk diexport'); return; }
+    if (!items.length) { toast('Tidak ada data untuk diexport', 'info'); return; }
     try {
       await window.loadPdfLibs();
     } catch (e) {
-      toast(e.message || 'Gagal memuat library PDF');
+      toast(e.message || 'Gagal memuat library PDF', 'error');
       return;
     }
     const { jsPDF } = window.jspdf;
@@ -333,6 +341,6 @@ document.getElementById('invSubmitBtn').addEventListener('click', async () => {
     });
 
     doc.save(`inventory_export_${new Date().toISOString().split('T')[0]}.pdf`);
-    toast('PDF diunduh');
+    toast('PDF diunduh', 'success');
   };
 });

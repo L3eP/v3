@@ -15,6 +15,16 @@ const { mutationLimiter } = require('../middleware/rateLimits');
 // path yang sama, '/', lihat server.js).
 const inventoryMutationLimiter = mutationLimiter('inventory');
 
+// device_type sebelumnya tidak pernah dicek keberadaannya sama sekali — bisa
+// diisi apa saja lewat panggilan API langsung (dropdown di UI memang sudah
+// membatasi, tapi itu cuma pagar di sisi tampilan). Cermin dari validateRef()
+// di routes/tickets.js, untuk reference_options type='inventory_type'.
+async function validateDeviceType(type) {
+  if (!type) return true;
+  const [rows] = await db.query("SELECT id FROM reference_options WHERE type = 'inventory_type' AND label = ?", [type]);
+  return rows.length > 0;
+}
+
 // GET /api/inventory — List semua inventory
 router.get('/api/inventory', isAuthenticated, asyncHandler(async (req, res) => {
   const [rows] = await db.query(
@@ -25,9 +35,14 @@ router.get('/api/inventory', isAuthenticated, asyncHandler(async (req, res) => {
 
 // GET /api/inventory/log — Histori pemakaian
 router.get('/api/inventory/log', isAuthenticated, isOwnerOrOperator, asyncHandler(async (req, res) => {
+  // LEFT JOIN, bukan INNER — inventory_log.inventory_id di-SET NULL (bukan
+  // ikut terhapus) kalau item induknya dihapus (lihat scripts/fix_inventory_log_fk.sql),
+  // justru supaya riwayatnya tetap ada. INNER JOIN sebelumnya membuat baris
+  // itu tetap ADA di database tapi diam-diam hilang dari daftar ini begitu
+  // item-nya dihapus — perbaikan FK-nya jadi tidak sepenuhnya berguna.
   const [rows] = await db.query(
     `SELECT l.*, i.device_name FROM inventory_log l
-     JOIN inventory i ON l.inventory_id = i.id
+     LEFT JOIN inventory i ON l.inventory_id = i.id
      ORDER BY l.created_at DESC LIMIT 100`
   );
   res.json(rows);
@@ -38,6 +53,9 @@ router.post('/api/inventory', isAuthenticated, inventoryMutationLimiter, isOwner
   const { deviceType, deviceName, totalStock, location, notes, attributes } = req.body;
   if (!deviceType || !deviceName) {
     return res.status(400).json({ message: 'Device type dan name wajib diisi' });
+  }
+  if (!(await validateDeviceType(deviceType))) {
+    return res.status(400).json({ message: 'Device type tidak valid' });
   }
   const stock = parseInt(totalStock) || 0;
   const attrs = attributes ? JSON.stringify(attributes) : null;
@@ -70,6 +88,11 @@ router.put('/api/inventory/:id', isAuthenticated, inventoryMutationLimiter, isOw
       return res.status(404).json({ message: 'Item not found' });
     }
     const existing = existingRows[0];
+
+    if (deviceType !== undefined && deviceType && !(await validateDeviceType(deviceType))) {
+      await connection.rollback();
+      return res.status(400).json({ message: 'Device type tidak valid' });
+    }
 
     const updates = [], params = [];
     if (deviceType !== undefined) { updates.push('device_type = ?'); params.push(deviceType); }

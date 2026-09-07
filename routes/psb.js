@@ -21,6 +21,15 @@ const psbMutationLimiter = mutationLimiter('psb');
 
 const VALID_PSB_STATUS = ['Terdaftar', 'Terpasang', 'Aktif', 'Batal'];
 
+// psb.odp_label sebelumnya tidak pernah dicek keberadaannya sama sekali —
+// bisa diisi nama yang tidak pernah ada di ftth_devices. Cermin dari
+// validateRef('odp', ...) di routes/tickets.js, cuma untuk tabel ini.
+async function validateOdpLabel(label) {
+  if (!label) return true; // opsional
+  const [rows] = await db.query("SELECT id FROM ftth_devices WHERE type = 'odp' AND label = ?", [label]);
+  return rows.length > 0;
+}
+
 // GET /api/psb — List semua PSB (terbaru di atas)
 router.get('/api/psb', isAuthenticated, asyncHandler(async (req, res) => {
   const [rows] = await db.query(
@@ -45,6 +54,10 @@ router.post('/api/psb', isAuthenticated, psbMutationLimiter, upload.single('phot
   }
   if (!address || !address.trim()) {
     return res.status(400).json({ message: 'Alamat wajib diisi' });
+  }
+  if (odpLabel && !(await validateOdpLabel(odpLabel))) {
+    cleanupUploadOnError(req);
+    return res.status(400).json({ message: 'ODP tidak valid' });
   }
 
   const photo = req.file ? `/uploads/${req.file.filename}` : null;
@@ -119,7 +132,13 @@ router.put('/api/psb/:id', isAuthenticated, psbMutationLimiter, isOwnerOrOperato
       if (longitude !== '' && isNaN(lng)) { await connection.rollback(); return res.status(400).json({ message: 'Longitude tidak valid' }); }
       updates.push('longitude = ?'); params.push(lng);
     }
-    if (odpLabel !== undefined) { updates.push('odp_label = ?'); params.push(odpLabel || null); }
+    if (odpLabel !== undefined) {
+      if (odpLabel && !(await validateOdpLabel(odpLabel))) {
+        await connection.rollback();
+        return res.status(400).json({ message: 'ODP tidak valid' });
+      }
+      updates.push('odp_label = ?'); params.push(odpLabel || null);
+    }
     if (onuPort !== undefined) { updates.push('onu_port = ?'); params.push(onuPort || null); }
     if (notes !== undefined) { updates.push('notes = ?'); params.push(notes || null); }
     if (status !== undefined) {

@@ -93,6 +93,7 @@ router.post('/tickets', isAuthenticated, ticketsMutationLimiter, upload.single('
     body('aktifitas').trim().notEmpty(),
     body('subNode').trim(),
     body('odc').trim(),
+    body('odp').trim(),
     body('lokasi').trim().escape(),
     body('pic').trim().escape(),
     body('priority').trim(),
@@ -105,6 +106,9 @@ router.post('/tickets', isAuthenticated, ticketsMutationLimiter, upload.single('
     }),
     body('odc').custom(async (val) => {
       if (val && !(await validateRef('odc', val))) throw new Error('ODC tidak valid');
+    }),
+    body('odp').custom(async (val) => {
+      if (val && !(await validateRef('odp', val))) throw new Error('ODP tidak valid');
     }),
     body('priority').custom(async (val) => {
       if (val && !(await validateRef('priority', val))) throw new Error('Priority tidak valid');
@@ -357,6 +361,7 @@ router.post('/tickets/:id/update', isAuthenticated, ticketsMutationLimiter, uplo
     body('aktifitas').optional().trim(),
     body('subNode').optional().trim(),
     body('odc').optional().trim(),
+    body('odp').optional().trim(),
     body('lokasi').optional().trim().escape(),
     body('pic').optional().trim().escape(),
     body('priority').optional().trim(),
@@ -369,6 +374,9 @@ router.post('/tickets/:id/update', isAuthenticated, ticketsMutationLimiter, uplo
     }),
     body('odc').optional().custom(async (val) => {
       if (val && !(await validateRef('odc', val))) throw new Error('ODC tidak valid');
+    }),
+    body('odp').optional().custom(async (val) => {
+      if (val && !(await validateRef('odp', val))) throw new Error('ODP tidak valid');
     }),
     body('priority').optional().custom(async (val) => {
       if (val && !(await validateRef('priority', val))) throw new Error('Priority tidak valid');

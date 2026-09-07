@@ -256,7 +256,16 @@ router.post('/admin/users/update', isAuthenticated, usersMutationLimiter, isOwne
     body('fullName').optional().trim().escape(),
     body('role').optional().isIn(['Owner', 'Operator', 'Teknisi']).withMessage('Invalid role'),
     body('phone').optional().trim().escape(),
-    body('defaultSubNode').optional({ checkFalsy: true }).trim().escape(),
+    // TIDAK di-escape() — divalidasi via custom() di bawah terhadap label APA
+    // ADANYA di reference_options (yang tidak mem-escape saat insert, sama
+    // seperti catatan validateRef() di routes/tickets.js). Rendering aman
+    // tetap dilakukan di frontend (esc() sebelum masuk DOM).
+    body('defaultSubNode').optional({ checkFalsy: true }).trim(),
+    body('defaultSubNode').optional({ checkFalsy: true }).custom(async (val) => {
+      if (!val) return true;
+      const [rows] = await db.query("SELECT id FROM reference_options WHERE type = 'sub_node' AND label = ?", [val]);
+      if (rows.length === 0) throw new Error('Wilayah (sub-node) tidak valid');
+    }),
     // .trim() dulu sebelum validasi — spasi tak sengaja di awal/akhir (mis.
     // ke-autofill atau ke-paste) diabaikan, konsisten dengan /login supaya
     // password yang di-set di sini selalu bisa dipakai login (lihat komentar

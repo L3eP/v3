@@ -20,6 +20,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
+    // Operator tidak boleh menaikkan siapa pun ke Owner (routes/users.js:
+    // "Only Owner can assign Owner role") — sembunyikan opsinya di sini
+    // juga, bukan cuma ditolak server setelah form diisi lengkap.
+    if (currentUser.role !== ROLES.OWNER) {
+        document.querySelectorAll('#editRole option[value="Owner"], #auRole option[value="Owner"]')
+            .forEach(opt => opt.remove());
+        const addUserBtn = document.getElementById('addUserBtn');
+        // Tambah user (POST /register) Owner-only sepenuhnya di server —
+        // sembunyikan tombolnya utk Operator, bukan biarkan mereka mengisi
+        // form lengkap baru ditolak di akhir.
+        if (addUserBtn) addUserBtn.style.display = 'none';
+    }
+
     let allUsers = [];
 
     // Wilayah (sub_node) untuk auto-PIC — dropdown edit user, sumbernya sama
@@ -85,7 +98,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <span class="role-badge ${esc(String(user.role || '').toLowerCase())}">${esc(user.role)}</span>
                 </td>
                 <td data-label="Actions" class="table-actions-cell">
-                    ${currentUser.role === ROLES.OWNER || currentUser.role === ROLES.OPERATOR ? `<button class="btn-small btn-warning" onclick="openEditModal('${esc(user.username)}')"><i class="fas fa-edit"></i> Edit</button>` : ''}
+                    ${(currentUser.role === ROLES.OWNER || (currentUser.role === ROLES.OPERATOR && user.role !== ROLES.OWNER)) ? `<button class="btn-small btn-warning" onclick="openEditModal('${esc(user.username)}')"><i class="fas fa-edit"></i> Edit</button>` : ''}
                     ${currentUser.role === ROLES.OWNER ? `<button class="btn-small btn-danger" onclick="deleteUser('${esc(user.username)}')"><i class="fas fa-trash"></i> Hapus</button>` : ''}
                 </td>
             `;
@@ -137,7 +150,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             const username = document.getElementById('auUsername').value.trim();
             const password = document.getElementById('auPassword').value.trim();
             if (!fullName || !username || !password) { showToast('Nama, username, dan password wajib diisi', 'error'); return; }
-            if (password.length < 6) { showToast('Password minimal 6 karakter', 'error'); return; }
+            // Samakan dengan aturan server (routes/auth.js /register) — sebelumnya
+            // di sini cuma dicek panjang 6, jadi password yang "kelihatan cukup"
+            // di form baru ditolak 400 di akhir. Lihat CLAUDE.md cacat #10.
+            if (password.length < 8 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) {
+                showToast('Password minimal 8 karakter, kombinasi huruf & angka', 'error');
+                return;
+            }
 
             const formData = new FormData();
             formData.append('fullName', fullName);
@@ -231,6 +250,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         const role = document.getElementById('editRole').value;
         const defaultSubNode = document.getElementById('editDefaultSubNode').value;
         const password = document.getElementById('editPassword').value;
+        // Samakan dengan aturan server (routes/users.js /admin/users/update) —
+        // sebelumnya field ini tidak dicek sama sekali di sisi form. Lihat
+        // CLAUDE.md cacat #10.
+        if (password && (password.length < 8 || !/[A-Za-z]/.test(password) || !/\d/.test(password))) {
+            showToast('Password minimal 8 karakter, kombinasi huruf & angka', 'error');
+            return;
+        }
 
         const updateData = { originalUsername, fullName, phone, role, defaultSubNode };
         if (password) updateData.password = password;
