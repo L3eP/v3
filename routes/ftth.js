@@ -100,11 +100,18 @@ router.get('/api/ftth/available-ports', isAuthenticated, asyncHandler(async (req
   const usedSet = new Set(usedPorts.map(p => p.parent_port));
 
   // Port tersedia untuk child:
-  // - OLT: semua port (1..N) bisa dipakai child (tidak punya uplink internal)
-  // - ODC/ODP: port 1 DI-RESERVE sebagai uplink ke parent,
-  //   jadi child cuma bisa pakai Port 2..N.
+  // total_ports HANYA menghitung port OUT/downstream yang bisa dipakai child —
+  // koneksi uplink/IN device ke parent-nya sendiri adalah port fisik terpisah
+  // yang TIDAK PERNAH disimpan/ditrack di field manapun (bukan total_ports+1,
+  // bukan field lain) — sama sekali bukan bagian dari rentang port yang
+  // dimodelkan di sini. Karena itu TIDAK ADA port yang perlu direservasi,
+  // berlaku SAMA untuk OLT, ODC, maupun ODP: semua mulai dari Port 1.
+  // (Bug lama, dikonfirmasi pemilik produk 2026-09-09: ODC/ODP salah mengira
+  // Port 1 = uplink lalu direservasi, sehingga Port 1 hilang dari daftar
+  // available padahal sebenarnya usable — kehilangan satu slot per device.
+  // Perbaikan ini murni ke depan, tidak mengubah data total_ports lama.)
   // Port yang sudah terpakai child lain → TIDAK muncul.
-  const startPort = parentType === 'olt' ? 1 : 2;
+  const startPort = 1;
   const available = [];
   for (let i = startPort; i <= totalPorts; i++) {
     const portName = `Port ${i}`;
