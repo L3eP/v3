@@ -313,7 +313,163 @@ Index: created_by, status, created_at, priority, sub_node, lokasi, odp, deleted_
 #### `public_reports`
 Dibuat oleh `scripts/add_reports_table.sql` — **tidak ada route yang membaca atau menulisnya**.
 
-### 7.2 Migrasi & seed (`scripts/`)
+### 7.2 Model relasional
+
+Skema punya **9 foreign key yang dipaksakan** (semua di `schema.sql`). Selebihnya yang "berelasi" — `pic`, `created_by`, teks `aktifitas`/`odc`, hierarki FTTH, pointer audit — adalah **tautan level-aplikasi tanpa FK**, dijaga oleh validator (`validateRef`, `validateUsername`, `validateOdpLabel`) saat write.
+
+![ERD basis data MAYUNG — garis penuh = FK dipaksakan (berlabel aksi ON DELETE), garis putus-putus = tautan level-aplikasi tanpa FK](erd.svg)
+
+<details><summary>Sumber diagram (Mermaid)</summary>
+
+```mermaid
+erDiagram
+  users {
+    int id PK
+    varchar username UK
+    varchar role
+    varchar default_sub_node "bukan FK"
+    timestamp deleted_at "soft-delete"
+  }
+  tickets {
+    int id PK
+    varchar aktifitas "teks -> reference_options"
+    varchar odc "teks -> ftth_devices"
+    varchar odp "teks -> ftth_devices"
+    varchar pic "teks -> users.username"
+    varchar created_by "teks -> users.username"
+    varchar status
+    int psb_id FK
+    int ftth_odc_id FK
+    int ftth_odp_id FK
+    timestamp deleted_at "soft-delete"
+  }
+  ticket_status_history {
+    int id PK
+    int ticket_id FK
+    varchar old_status
+    varchar new_status
+    varchar changed_by FK
+  }
+  activities {
+    int id PK
+    varchar username "teks -> users.username"
+    int ticket_id FK "nullable"
+  }
+  psb {
+    int id PK
+    varchar customer_name
+    varchar onu_sn
+    varchar odp_label "teks -> ftth_devices"
+    varchar status
+    int ftth_device_id FK "ONU yang dipasang"
+    int ftth_odp_id FK "ODP induk"
+  }
+  ftth_devices {
+    int id PK
+    enum type "olt|odc|odp|onu"
+    varchar label
+    varchar group_name "teks = label induk, TANPA FK"
+    varchar parent_port
+    varchar serial_number
+    tinyint is_draft
+  }
+  reference_options {
+    int id PK
+    varchar type
+    varchar label
+    varchar group_name
+  }
+  inventory {
+    int id PK
+    varchar device_type "teks -> reference_options"
+    varchar device_name
+    int total_stock
+    int used_stock
+  }
+  inventory_log {
+    int id PK
+    int inventory_id FK "nullable"
+    enum change_type "in|out"
+    varchar reference_type "'psb' dll"
+    int reference_id "-> psb.id saat 'psb'"
+  }
+  audit_logs {
+    int id PK
+    varchar action
+    varchar target_type "polimorfik"
+    int target_id "-> berbagai tabel"
+    varchar username
+  }
+  settings {
+    varchar setting_key PK
+    text setting_value
+  }
+  sessions {
+    varchar session_id PK
+    int expires
+    mediumtext data "JSON termasuk user.username"
+  }
+
+  tickets           ||--o{ ticket_status_history : "ticket_id · CASCADE"
+  users             ||--o{ ticket_status_history : "changed_by · SET NULL"
+  tickets           ||--o{ activities            : "ticket_id · CASCADE"
+  psb               ||--o{ tickets               : "psb_id · SET NULL"
+  ftth_devices      ||--o{ tickets               : "ftth_odc_id · SET NULL"
+  ftth_devices      ||--o{ tickets               : "ftth_odp_id · SET NULL"
+  ftth_devices      ||--o| psb                   : "ftth_device_id · SET NULL"
+  ftth_devices      ||--o{ psb                   : "ftth_odp_id · SET NULL"
+  inventory         ||--o{ inventory_log         : "inventory_id · SET NULL"
+
+  ftth_devices      ||..o{ ftth_devices          : "group_name = label induk (TANPA FK)"
+  users             ||..o{ tickets               : "pic / created_by (TANPA FK)"
+  users             ||..o{ activities            : "username (TANPA FK)"
+  reference_options ||..o{ tickets               : "aktifitas/sub_node/priority (TANPA FK)"
+  reference_options ||..o{ inventory             : "device_type (TANPA FK)"
+  psb               ||..o{ inventory_log         : "reference_type='psb' + reference_id (TANPA FK)"
+```
+
+</details>
+
+Garis solid = FK yang dipaksakan. Garis putus-putus = tautan level-aplikasi (divalidasi saat write, bukan oleh DB).
+
+#### 7.2.1 Foreign key yang dipaksakan
+
+| # | Kolom anak | → Induk | Kardinalitas | ON DELETE | Alasan perilaku ini |
+|---|---|---|---|---|---|
+| 1 | `activities.ticket_id` | `tickets.id` | banyak → 1 (nullable) | **CASCADE** | Aktivitas melekat pada tiketnya; tiket yang di-*hard*-delete membawa baris aktivitasnya. (Tiket biasanya soft-delete, jadi jarang terpicu.) |
+| 2 | `ticket_status_history.ticket_id` | `tickets.id` | banyak → 1 | **CASCADE** | Sama — timeline tidak berarti tanpa tiketnya. |
+| 3 | `ticket_status_history.changed_by` | `users.username` | banyak → 1 (nullable) | **SET NULL** | Dulu CASCADE — menghapus satu user menghapus *seluruh* baris riwayat status yang pernah ia sentuh. `changed_by` itu snapshot historis pelaku; timeline harus bertahan walau user dihapus. Diperbaiki oleh `fix_fk_history.sql` / `fix_user_history_fk.sql`. |
+| 4 | `tickets.psb_id` | `psb.id` | banyak → 1 (nullable) | **SET NULL** | Menghapus PSB tidak boleh menghapus tiket yang dibuat darinya — riwayat tiket harus tetap ada. |
+| 5 | `tickets.ftth_odc_id` | `ftth_devices.id` | banyak → 1 (nullable) | **SET NULL** | Tautan tahan-rename yang *menemani* teks bebas `odc`. Kalau device benar-benar dihapus, teksnya tetap sebagai snapshot dan tautannya diputus. |
+| 6 | `tickets.ftth_odp_id` | `ftth_devices.id` | banyak → 1 (nullable) | **SET NULL** | Sama, untuk `odp`. |
+| 7 | `psb.ftth_device_id` | `ftth_devices.id` | 1 → 1 (nullable) | **SET NULL** | Tautan permanen ke ONU yang PSB ini pasang. Menghapus device ONU tidak boleh menghapus record PSB — cukup putus tautannya. Juga penjaga "sudah diproses" terhadap decrement stok kedua. |
+| 8 | `psb.ftth_odp_id` | `ftth_devices.id` | banyak → 1 (nullable) | **SET NULL** | Tautan tahan-rename untuk `odp_label` (ODP tempat PSB ini di-patch). |
+| 9 | `inventory_log.inventory_id` | `inventory.id` | banyak → 1 (nullable) | **SET NULL** | Dulu *tanpa FK sama sekali* — menghapus item menyisakan baris log yatim yang lalu di-drop diam-diam oleh `INNER JOIN` di `GET /api/inventory/log`. SET NULL + `LEFT JOIN` membuat histori pemakaian item yang dihapus tetap terlihat. Diperbaiki oleh `fix_inventory_log_fk.sql`. |
+
+FK 5, 6, 8 ditambah oleh `scripts/add_ftth_rename_links.sql`; FK 7 oleh `scripts/add_psb_ftth_link.sql`; FK 4 oleh `scripts/add_tickets_psb_id.sql`.
+
+#### 7.2.2 Tautan tanpa foreign key (level-aplikasi)
+
+| Tautan | Dipaksakan oleh | Catatan |
+|---|---|---|
+| `tickets.pic` / `tickets.created_by` → `users.username` | `validateUsername()` saat create/update; `created_by` harus sama dengan session user | Tanpa FK — username bisa diedit atau user di-soft-delete sementara tiket lama menyimpan string-nya. |
+| `activities.username` → `users.username` | route cek sama dengan session | Tanpa FK. |
+| `tickets.aktifitas` / `sub_node` / `priority` → `reference_options.label` | `validateRef()` (spesifik tipe) | Label disimpan **apa adanya** (tidak di-escape) jadi harus cocok persis — inilah kenapa field itu sengaja tidak di-`.escape()` (§8.4). |
+| `tickets.odc` / `odp`, `psb.odp_label` → `ftth_devices.label` | `validateRef('odc'/'odp')` / `validateOdpLabel()` | Nilai teks bebas **plus** tautan id (FK 5/6/8) — id-nya yang dipakai `PUT /api/ftth/:id` untuk meng-cascade rename ke baris lama (§9.7). |
+| `ftth_devices.group_name` → `ftth_devices.label` (self) | tidak ada di level DB; UI memilih induk yang valid | **Hierarki FTTH tanpa FK.** Anak menyimpan `label` induk sebagai teks. Konsekuensi: rename induk harus `UPDATE … WHERE group_name = <label lama>` di transaksi yang sama; delete ditolak kalau ada baris dengan `group_name = <label ini>`; uniqueness `UNIQUE (type, label, group_name)` jadi dua ODP boleh sama nama di bawah induk berbeda. |
+| `inventory.device_type` → `reference_options.label` (`type='inventory_type'`) | `validateDeviceType()` | Tanpa FK. |
+| `inventory_log` (`reference_type='psb'`, `reference_id`) → `psb.id` | ditulis oleh transaksi PSB → Terpasang | Pointer bergaya polimorfik, tanpa FK — supaya baris log bisa ditelusuri balik ke instalasi yang mengonsumsi stok. |
+| `audit_logs` (`target_type`, `target_id`) → berbagai tabel | call site `middleware/audit.js` | Pointer polimorfik, tanpa FK. `target_type` ∈ `ticket|user|inventory|ftth|reference|psb|activity|setting`. |
+| `audit_logs.username` → `users.username` | session saat call | Tanpa FK — entri audit hidup lebih lama dari user-nya. |
+| `sessions.data` (JSON `$.user.username`) → `users.username` | ditulis `express-mysql-session`; dibaca `revokeUserSessions()` via `JSON_UNQUOTE(JSON_EXTRACT(...))` | Bukan kolom, bukan FK — beginilah `DELETE /users/:username` dan `update-role` mematikan session user yang masih hidup. |
+| `settings` | — | Key/value standalone, tanpa relasi. Kunci: `company_name`, `company_logo`. |
+
+#### 7.2.3 Dua pasangan konseptual "hal yang sama, dua tabel"
+
+- **`ftth_devices` (salinan legacy) ↔ `reference_options`** — topologi FTTH dulu seluruhnya di `reference_options`; migrasi satu-kali menyalin baris `olt/odc/odp/onu` ke `ftth_devices`. `ftth.html` + `/api/ftth` otoritatif sekarang, tapi tree di `admin.html` masih membaca salinan lama di `reference_options` via `/api/references`. **Tidak ada sinkronisasi** antara keduanya — bisa drift.
+- **`psb` ↔ `ftth_devices` (baris `onu`)** — sebuah PSB dan "ONU di rumah pelanggan" adalah hal yang sama di dunia nyata, sengaja dua tabel (workflow pemasangan vs. topologi jaringan). `psb.ftth_device_id` menjoin-kannya; ditulis di dalam transaksi Terpasang, tidak pernah ditebak dari nama/alamat. `NULL` itu wajar & permanen untuk PSB yang belum Terpasang atau ONU yang dientri langsung di `ftth.html`.
+
+### 7.3 Migrasi & seed (`scripts/`)
 - **Instalasi baru:** `schema.sql` + `scripts/add_reference_table.sql` (yang terakhir juga men-seed data dropdown). Tidak ada yang lain.
 - **Upgrade DB lama:** jalankan `add_*.sql` / `fix_*.sql` yang relevan secara berurutan, lalu backfill Node-nya. Terbaru: `add_ftth_rename_links.sql` + `backfill_ftth_rename_links.js` (DB sebelum 2026-09-07); `add_psb_ftth_link.sql` + `backfill_psb_ftth_link.js` (sebelum 2026-09-04). Backfill hanya menautkan kecocokan *persis* (`serial_number == psb.onu_sn`, atau `(type, label)`), melaporkan baris ambigu alih-alih menebak, aman diulang, dan punya `--dry-run`.
 - **Seed:** `seed_ci_users.sql` (akun `pfizer`/`ijang1`, password `test123`, untuk DB CI sekali pakai), `seed_dummy_data.js` / `seed_dummy_august.js` (data dummy skala besar non-destruktif, nama Indonesia, dipetakan ke referensi riil).
