@@ -246,6 +246,87 @@ MySQL `login_app_db`. **`schema.sql` adalah source of truth tunggal untuk instal
 
 > **`public_reports`** hanya dibuat oleh `scripts/add_reports_table.sql`, belum disentuh route mana pun.
 
+### Model relasional
+
+Ada **9 foreign key yang dipaksakan** (semua di `schema.sql`). Sisanya yang "berelasi" (`pic`, `created_by`, teks `aktifitas`/`odc`, hierarki FTTH, pointer audit) adalah tautan level-aplikasi tanpa FK — dijaga validator saat write. Diagram lengkap + tabel per-FK di `docs/code_documentation_en.md` §7.2.
+
+![ERD skema database MAYUNG — garis penuh = FK dipaksakan (dengan aksi ON DELETE), garis putus-putus = tautan tanpa FK](docs/erd.svg)
+
+<details><summary>Sumber diagram (Mermaid)</summary>
+
+```mermaid
+erDiagram
+  users {
+    int id PK
+    varchar username UK
+  }
+  tickets {
+    int id PK
+    int psb_id FK
+    int ftth_odc_id FK
+    int ftth_odp_id FK
+    varchar pic "teks -> users"
+    varchar odc "teks -> ftth_devices"
+  }
+  ticket_status_history { int id PK
+    int ticket_id FK
+    varchar changed_by FK }
+  activities { int id PK
+    int ticket_id FK "nullable" }
+  psb { int id PK
+    int ftth_device_id FK
+    int ftth_odp_id FK
+    varchar status }
+  ftth_devices { int id PK
+    enum type
+    varchar label
+    varchar group_name "teks = label induk" }
+  reference_options { int id PK
+    varchar type
+    varchar label }
+  inventory { int id PK
+    int total_stock
+    int used_stock }
+  inventory_log { int id PK
+    int inventory_id FK "nullable"
+    varchar reference_type "'psb' -> psb.id" }
+  audit_logs { int id PK
+    varchar target_type "polimorfik" }
+  settings { varchar setting_key PK }
+  sessions { varchar session_id PK
+    mediumtext data "JSON incl. user.username" }
+
+  tickets      ||--o{ ticket_status_history : "ticket_id · CASCADE"
+  users        ||--o{ ticket_status_history : "changed_by · SET NULL"
+  tickets      ||--o{ activities            : "ticket_id · CASCADE"
+  psb          ||--o{ tickets               : "psb_id · SET NULL"
+  ftth_devices ||--o{ tickets               : "ftth_odc_id · SET NULL"
+  ftth_devices ||--o{ tickets               : "ftth_odp_id · SET NULL"
+  ftth_devices ||--o| psb                   : "ftth_device_id · SET NULL"
+  ftth_devices ||--o{ psb                   : "ftth_odp_id · SET NULL"
+  inventory    ||--o{ inventory_log         : "inventory_id · SET NULL"
+  ftth_devices ||..o{ ftth_devices          : "group_name → label (TANPA FK)"
+  users        ||..o{ tickets               : "pic / created_by (TANPA FK)"
+  reference_options ||..o{ tickets          : "aktifitas/sub_node/priority (TANPA FK)"
+  reference_options ||..o{ inventory        : "device_type (TANPA FK)"
+  psb          ||..o{ inventory_log         : "reference_type='psb' (TANPA FK)"
+```
+
+</details>
+
+| FK | ON DELETE | Alasan singkat |
+|---|---|---|
+| `activities.ticket_id` → tickets | CASCADE | Aktivitas melekat pada tiketnya. |
+| `ticket_status_history.ticket_id` → tickets | CASCADE | Timeline tak berarti tanpa tiketnya. |
+| `ticket_status_history.changed_by` → users.username | **SET NULL** | Riwayat status harus bertahan walau user dihapus (dulu CASCADE = hapus semua riwayatnya). |
+| `tickets.psb_id` → psb | SET NULL | Hapus PSB tidak boleh menghapus tiketnya. |
+| `tickets.ftth_odc_id` / `ftth_odp_id` → ftth_devices | SET NULL | Tautan tahan-rename yang menemani teks `odc`/`odp`. |
+| `psb.ftth_device_id` → ftth_devices | SET NULL | Tautan permanen ke ONU + penanda "sudah diproses" (anti dobel-decrement stok). |
+| `psb.ftth_odp_id` → ftth_devices | SET NULL | Tautan tahan-rename untuk `odp_label`. |
+| `inventory_log.inventory_id` → inventory | SET NULL | Histori pemakaian item yang dihapus tetap terlihat (dulu tanpa FK → baris yatim hilang di `INNER JOIN`). |
+
+**Hierarki FTTH tanpa FK:** anak `ftth_devices` menyimpan `group_name` = `label` induk sebagai teks. Rename induk ⇒ `UPDATE … WHERE group_name = <label lama>` + cascade ke `tickets.odc/odp` & `psb.odp_label` lewat FK `ftth_*_id`, semua dalam satu transaksi. Delete ditolak kalau masih ada anak.
+
 ---
 
 ## Environment variables

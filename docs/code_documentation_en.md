@@ -148,7 +148,7 @@ Helpers: `validateOdpLabel` (→ `ftth_devices`), `lookupOdpId` (fills `ftth_odp
 ### 4.6 `routes/ftth.js`
 Authoritative FTTH topology (`ftth_devices`, not `reference_options`). `VALID_TYPES = ['olt','odc','odp','onu']`.
 - **`GET /api/ftth`** — authenticated. `{ data: <grouped by type>, stats }` where `stats` includes `draftCount`.
-- **`GET /api/ftth/available-ports?type=&parent=`** — authenticated. **Must be declared before `/:id`.** Ports in use = children with `group_name = parent` **and matching `type`** (the type filter matters — without it, an ODC and an ODP sharing a `group_name` would lock each other's ports). For ODC/ODP parents, **Port 1 is reserved as the uplink**, so children start at Port 2; OLT children start at Port 1.
+- **`GET /api/ftth/available-ports?type=&parent=`** — authenticated. **Must be declared before `/:id`.** Ports in use = children with `group_name = parent` **and matching `type`** (the type filter matters — without it, an ODC and an ODP sharing a `group_name` would lock each other's ports). For all parent types (OLT, ODC, ODP), children start at Port 1 — `total_ports` counts only usable child-facing ports; a device's own uplink connection to its parent is a separate physical port that is never modeled or reserved here (fixed off-by-one, 2026-09-09 — ODC/ODP used to wrongly reserve Port 1, losing one usable slot per device).
 - **`POST /api/ftth`** — Owner/Operator. Type-specific validation (OLT: brand + `total_ports >= 1`). For ONU: `checkOnuConflicts()`. For ODC/ODP: inline `WHERE group_name=? AND type=? AND parent_port=?` collision check. Handles `ER_DUP_ENTRY` → friendly message.
 - **`PUT /api/ftth/:id`** — Owner/Operator. Also accepts `is_draft: false` to **confirm a draft** (draft→official only; `confirmingDraft` re-runs `checkOnuConflicts()` against *effective* values — the stored value if a field isn't resent — closing the gap where a conflicting draft could be confirmed by omitting the field). If `label` changes and the device has children, a **transaction** updates every child's `group_name` (label-based hierarchy) *and* cascades the new label to `tickets.odc`/`tickets.odp` (via `ftth_odc_id`/`ftth_odp_id`) and `psb.odp_label` (via `ftth_odp_id`) — cacat #5, Sprint 2.
 - **`DELETE /api/ftth/:id`** — **`isAdmin` (Owner only)**. Rejected if `SELECT … WHERE group_name = <label>` finds children (the error names them).
@@ -313,7 +313,163 @@ Indexes: created_by, status, created_at, priority, sub_node, lokasi, odp, delete
 #### `public_reports`
 Created by `scripts/add_reports_table.sql` — **no route reads or writes it**.
 
-### 7.2 Migrations & seeds (`scripts/`)
+### 7.2 Relational model
+
+The schema has **9 enforced foreign keys** (all in `schema.sql`). Everything else that "relates" — `pic`, `created_by`, the `aktifitas`/`odc` text, the FTTH hierarchy, the audit pointers — is an **application-level link with no FK**, held together by validators (`validateRef`, `validateUsername`, `validateOdpLabel`) at write time.
+
+![MAYUNG database ERD — solid lines are enforced FKs (labelled with their ON DELETE action), dashed lines are application-level links with no FK](erd.svg)
+
+<details><summary>Diagram source (Mermaid)</summary>
+
+```mermaid
+erDiagram
+  users {
+    int id PK
+    varchar username UK
+    varchar role
+    varchar default_sub_node "not a FK"
+    timestamp deleted_at "soft-delete"
+  }
+  tickets {
+    int id PK
+    varchar aktifitas "text -> reference_options"
+    varchar odc "text -> ftth_devices"
+    varchar odp "text -> ftth_devices"
+    varchar pic "text -> users.username"
+    varchar created_by "text -> users.username"
+    varchar status
+    int psb_id FK
+    int ftth_odc_id FK
+    int ftth_odp_id FK
+    timestamp deleted_at "soft-delete"
+  }
+  ticket_status_history {
+    int id PK
+    int ticket_id FK
+    varchar old_status
+    varchar new_status
+    varchar changed_by FK
+  }
+  activities {
+    int id PK
+    varchar username "text -> users.username"
+    int ticket_id FK "nullable"
+  }
+  psb {
+    int id PK
+    varchar customer_name
+    varchar onu_sn
+    varchar odp_label "text -> ftth_devices"
+    varchar status
+    int ftth_device_id FK "the installed ONU"
+    int ftth_odp_id FK "the parent ODP"
+  }
+  ftth_devices {
+    int id PK
+    enum type "olt|odc|odp|onu"
+    varchar label
+    varchar group_name "text = parent label, NO FK"
+    varchar parent_port
+    varchar serial_number
+    tinyint is_draft
+  }
+  reference_options {
+    int id PK
+    varchar type
+    varchar label
+    varchar group_name
+  }
+  inventory {
+    int id PK
+    varchar device_type "text -> reference_options"
+    varchar device_name
+    int total_stock
+    int used_stock
+  }
+  inventory_log {
+    int id PK
+    int inventory_id FK "nullable"
+    enum change_type "in|out"
+    varchar reference_type "'psb' etc"
+    int reference_id "-> psb.id when 'psb'"
+  }
+  audit_logs {
+    int id PK
+    varchar action
+    varchar target_type "polymorphic"
+    int target_id "-> various tables"
+    varchar username
+  }
+  settings {
+    varchar setting_key PK
+    text setting_value
+  }
+  sessions {
+    varchar session_id PK
+    int expires
+    mediumtext data "JSON incl. user.username"
+  }
+
+  tickets           ||--o{ ticket_status_history : "ticket_id · CASCADE"
+  users             ||--o{ ticket_status_history : "changed_by · SET NULL"
+  tickets           ||--o{ activities            : "ticket_id · CASCADE"
+  psb               ||--o{ tickets               : "psb_id · SET NULL"
+  ftth_devices      ||--o{ tickets               : "ftth_odc_id · SET NULL"
+  ftth_devices      ||--o{ tickets               : "ftth_odp_id · SET NULL"
+  ftth_devices      ||--o| psb                   : "ftth_device_id · SET NULL"
+  ftth_devices      ||--o{ psb                   : "ftth_odp_id · SET NULL"
+  inventory         ||--o{ inventory_log         : "inventory_id · SET NULL"
+
+  ftth_devices      ||..o{ ftth_devices          : "group_name = parent.label (NO FK)"
+  users             ||..o{ tickets               : "pic / created_by (NO FK)"
+  users             ||..o{ activities            : "username (NO FK)"
+  reference_options ||..o{ tickets               : "aktifitas/sub_node/priority (NO FK)"
+  reference_options ||..o{ inventory             : "device_type (NO FK)"
+  psb               ||..o{ inventory_log         : "reference_type='psb' + reference_id (NO FK)"
+```
+
+</details>
+
+Solid lines = enforced FK. Dashed lines = application-level link (validated on write, not by the DB).
+
+#### 7.2.1 Enforced foreign keys
+
+| # | Child column | → Parent | Cardinality | ON DELETE | Why this behavior |
+|---|---|---|---|---|---|
+| 1 | `activities.ticket_id` | `tickets.id` | many → 1 (nullable) | **CASCADE** | An activity belongs to its ticket; a hard-deleted ticket takes its activity rows with it. (Tickets are normally soft-deleted, so this rarely fires.) |
+| 2 | `ticket_status_history.ticket_id` | `tickets.id` | many → 1 | **CASCADE** | Same — the timeline has no meaning without its ticket. |
+| 3 | `ticket_status_history.changed_by` | `users.username` | many → 1 (nullable) | **SET NULL** | Was CASCADE — deleting one user wiped *every* status-history row they'd ever touched. `changed_by` is a historical snapshot of who acted; the timeline must survive user deletion. Fixed by `fix_fk_history.sql` / `fix_user_history_fk.sql`. |
+| 4 | `tickets.psb_id` | `psb.id` | many → 1 (nullable) | **SET NULL** | Deleting a PSB must not delete the ticket that was created from it — the ticket history must remain. |
+| 5 | `tickets.ftth_odc_id` | `ftth_devices.id` | many → 1 (nullable) | **SET NULL** | Rename-safe link that *accompanies* the free-text `odc`. If the device is actually deleted, the text stays as a snapshot and the link is severed. |
+| 6 | `tickets.ftth_odp_id` | `ftth_devices.id` | many → 1 (nullable) | **SET NULL** | Same, for `odp`. |
+| 7 | `psb.ftth_device_id` | `ftth_devices.id` | 1 → 1 (nullable) | **SET NULL** | The permanent link to the ONU this PSB installed. Deleting the ONU device must not delete the PSB record — just break the link. Also the "already processed" guard against a second stock decrement. |
+| 8 | `psb.ftth_odp_id` | `ftth_devices.id` | many → 1 (nullable) | **SET NULL** | Rename-safe link for `odp_label` (the ODP this PSB was patched into). |
+| 9 | `inventory_log.inventory_id` | `inventory.id` | many → 1 (nullable) | **SET NULL** | Was *no FK at all* — deleting an item left orphan log rows that an `INNER JOIN` in `GET /api/inventory/log` then dropped silently. SET NULL + `LEFT JOIN` keeps a deleted item's usage history visible. Fixed by `fix_inventory_log_fk.sql`. |
+
+FKs 5, 6, 8 are added by `scripts/add_ftth_rename_links.sql`; FK 7 by `scripts/add_psb_ftth_link.sql`; FK 4 by `scripts/add_tickets_psb_id.sql`.
+
+#### 7.2.2 Links without a foreign key (application-level)
+
+| Link | Enforced by | Notes |
+|---|---|---|
+| `tickets.pic` / `tickets.created_by` → `users.username` | `validateUsername()` on create/update; `created_by` must equal the session user | No FK — a username can be edited or the user soft-deleted while old tickets keep the string. |
+| `activities.username` → `users.username` | route checks it matches the session | No FK. |
+| `tickets.aktifitas` / `sub_node` / `priority` → `reference_options.label` | `validateRef()` (type-specific) | The label is stored **verbatim** (not escaped) so it must match exactly — this is why those fields are deliberately not `.escape()`d (§8.4). |
+| `tickets.odc` / `odp`, `psb.odp_label` → `ftth_devices.label` | `validateRef('odc'/'odp')` / `validateOdpLabel()` | The free-text value **plus** the id link (FK 5/6/8) — the id is what `PUT /api/ftth/:id` uses to cascade a rename onto old rows (§9.7). |
+| `ftth_devices.group_name` → `ftth_devices.label` (self) | nothing at the DB level; the UI picks a valid parent | **The FTTH hierarchy has no FK.** A child stores its parent's `label` as text. Consequences: renaming a parent must `UPDATE … WHERE group_name = <old label>` in the same transaction; deletion is rejected if any row has `group_name = <this label>`; uniqueness is `UNIQUE (type, label, group_name)` so two ODPs may share a name under different parents. |
+| `inventory.device_type` → `reference_options.label` where `type='inventory_type'` | `validateDeviceType()` | No FK. |
+| `inventory_log` (`reference_type='psb'`, `reference_id`) → `psb.id` | written by the PSB → Terpasang transaction | Polymorphic-style pointer, no FK — lets a log row trace back to the install that consumed the stock. |
+| `audit_logs` (`target_type`, `target_id`) → various tables | `middleware/audit.js` call sites | Polymorphic pointer, no FK. `target_type` ∈ `ticket|user|inventory|ftth|reference|psb|activity|setting`. |
+| `audit_logs.username` → `users.username` | the session at call time | No FK — an audit entry outlives its user. |
+| `sessions.data` (JSON `$.user.username`) → `users.username` | `express-mysql-session` writes it; `revokeUserSessions()` reads it via `JSON_UNQUOTE(JSON_EXTRACT(...))` | Not a column, not a FK — this is how `DELETE /users/:username` and `update-role` kill a user's live session. |
+| `settings` | — | Standalone key/value, no relations. Keys: `company_name`, `company_logo`. |
+
+#### 7.2.3 The two conceptual "same thing, two tables" pairs
+
+- **`ftth_devices` (legacy copy) ↔ `reference_options`** — FTTH topology used to live entirely in `reference_options`; a one-time migration copied `olt/odc/odp/onu` rows into `ftth_devices`. `ftth.html` + `/api/ftth` are authoritative now, but `admin.html`'s tree still reads the old `reference_options` copy via `/api/references`. **No sync** between the two — they drift.
+- **`psb` ↔ `ftth_devices` (an `onu` row)** — a PSB and "the ONU at the customer's house" are the same real-world thing, kept as two tables on purpose (install workflow vs. network topology). `psb.ftth_device_id` joins them; it's written inside the Terpasang transaction, never guessed from name/address. `NULL` is normal & permanent for a not-yet-Terpasang PSB or an ONU entered directly in `ftth.html`.
+
+### 7.3 Migrations & seeds (`scripts/`)
 - **Fresh install:** `schema.sql` + `scripts/add_reference_table.sql` (the latter also seeds the dropdown data). Nothing else.
 - **Upgrade an old DB:** run the relevant `add_*.sql` / `fix_*.sql` in order, then the Node backfills. Latest: `add_ftth_rename_links.sql` + `backfill_ftth_rename_links.js` (DBs before 2026-09-07); `add_psb_ftth_link.sql` + `backfill_psb_ftth_link.js` (before 2026-09-04). Backfills only link *exact* matches (`serial_number == psb.onu_sn`, or `(type, label)`), report ambiguous rows instead of guessing, are safe to re-run, and take `--dry-run`.
 - **Seeds:** `seed_ci_users.sql` (accounts `pfizer`/`ijang1`, password `test123`, for the throwaway CI DB), `seed_dummy_data.js` / `seed_dummy_august.js` (large non-destructive dummy data, Indonesian names, mapped to real references).
@@ -393,7 +549,7 @@ The densest side-effect in the system. `PUT /api/psb/:id`, inside one `FOR UPDAT
 `PUT /api/ftth/:id` when `label` changes and the device has children: a transaction updates every child's `group_name` (label-based hierarchy), then — via the `ftth_odc_id`/`ftth_odp_id` links — `UPDATE tickets SET odc = ? WHERE ftth_odc_id = ?` (or `odp`), and `UPDATE psb SET odp_label = ? WHERE ftth_odp_id = ?`. Without this, a rename fixed only the FTTH tree and left stale text in old tickets/PSB.
 
 ### 9.8 Port allocation
-`GET /api/ftth/available-ports` — ports in use = children with matching `group_name` **and `type`**; Port 1 reserved as uplink for ODC/ODP parents (children start at Port 2), OLT children start at Port 1. ONU conflicts via `checkOnuConflicts()`; ODC/ODP via an inline `WHERE group_name=? AND type=? AND parent_port=?`.
+`GET /api/ftth/available-ports` — ports in use = children with matching `group_name` **and `type`**; children of every parent type start at Port 1 — `total_ports` is purely an out-port count, the parent's own uplink port is never tracked in this range. ONU conflicts via `checkOnuConflicts()`; ODC/ODP via an inline `WHERE group_name=? AND type=? AND parent_port=?`.
 
 ---
 

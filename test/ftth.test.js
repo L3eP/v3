@@ -91,3 +91,98 @@ describe('FTTH — port tidak boleh dobel-pakai', function () {
     }
   });
 });
+
+describe('FTTH — available-ports tidak boleh mereservasi Port 1 untuk ODC/ODP (regresi off-by-one)', function () {
+  this.timeout(20000);
+
+  let ownerAgent;
+  // Urutan hapus di after(): anak dulu, baru induk (delete FTTH menolak kalau masih ada child).
+  const created = { odp: [], odc: [], olt: [] };
+
+  before(async () => {
+    ownerAgent = await getAgentFor(app, 'pfizer', 'test123');
+  });
+
+  after(async () => {
+    for (const id of created.odp) await ownerAgent.delete(`/api/ftth/${id}`);
+    for (const id of created.odc) await ownerAgent.delete(`/api/ftth/${id}`);
+    for (const id of created.olt) await ownerAgent.delete(`/api/ftth/${id}`);
+  });
+
+  it('ODC parent baru tanpa anak ODP — Port 1 HARUS muncul di available, total 8 slot', async () => {
+    const oltLabel = `${TEST_TAG}OLT_AP1_${Date.now()}`;
+    const oltRes = await ownerAgent.post('/api/ftth').send({
+      type: 'olt', label: oltLabel, brand: 'TestBrand', total_ports: 8,
+    });
+    if (oltRes.status !== 201) throw new Error(`Gagal buat OLT fixture: ${oltRes.status} ${JSON.stringify(oltRes.body)}`);
+    created.olt.push(oltRes.body.device.id);
+
+    const odcLabel = `${TEST_TAG}ODC_AP1_${Date.now()}`;
+    const odcRes = await ownerAgent.post('/api/ftth').send({
+      type: 'odc', label: odcLabel, group_name: oltLabel, parent_port: 'Port 1', total_ports: 8,
+    });
+    if (odcRes.status !== 201) throw new Error(`Gagal buat ODC fixture: ${odcRes.status} ${JSON.stringify(odcRes.body)}`);
+    created.odc.push(odcRes.body.device.id);
+
+    const res = await ownerAgent.get(`/api/ftth/available-ports?type=odp&parent=${encodeURIComponent(odcLabel)}`);
+    if (res.status !== 200) throw new Error(`Expected 200, got ${res.status}: ${JSON.stringify(res.body)}`);
+    if (res.body.used !== 0) throw new Error(`Expected used=0, got ${res.body.used}`);
+    if (res.body.available.length !== 8) {
+      throw new Error(`Expected 8 available slots untuk ODC dengan total_ports=8, got ${res.body.available.length}: ${JSON.stringify(res.body.available)}`);
+    }
+    if (!res.body.available.some(p => p.port === 'Port 1')) {
+      throw new Error(`Port 1 HARUS ada di available untuk parent ODC (regresi off-by-one): ${JSON.stringify(res.body.available)}`);
+    }
+  });
+
+  it('ODP parent baru tanpa anak ONU — Port 1 HARUS muncul di available, total 8 slot', async () => {
+    const oltLabel = `${TEST_TAG}OLT_AP2_${Date.now()}`;
+    const oltRes = await ownerAgent.post('/api/ftth').send({
+      type: 'olt', label: oltLabel, brand: 'TestBrand', total_ports: 8,
+    });
+    if (oltRes.status !== 201) throw new Error(`Gagal buat OLT fixture: ${oltRes.status} ${JSON.stringify(oltRes.body)}`);
+    created.olt.push(oltRes.body.device.id);
+
+    const odcLabel = `${TEST_TAG}ODC_AP2_${Date.now()}`;
+    const odcRes = await ownerAgent.post('/api/ftth').send({
+      type: 'odc', label: odcLabel, group_name: oltLabel, parent_port: 'Port 1', total_ports: 8,
+    });
+    if (odcRes.status !== 201) throw new Error(`Gagal buat ODC fixture: ${odcRes.status} ${JSON.stringify(odcRes.body)}`);
+    created.odc.push(odcRes.body.device.id);
+
+    const odpLabel = `${TEST_TAG}ODP_AP2_${Date.now()}`;
+    const odpRes = await ownerAgent.post('/api/ftth').send({
+      type: 'odp', label: odpLabel, group_name: odcLabel, parent_port: 'Port 1', total_ports: 8,
+    });
+    if (odpRes.status !== 201) throw new Error(`Gagal buat ODP fixture: ${odpRes.status} ${JSON.stringify(odpRes.body)}`);
+    created.odp.push(odpRes.body.device.id);
+
+    const res = await ownerAgent.get(`/api/ftth/available-ports?type=onu&parent=${encodeURIComponent(odpLabel)}`);
+    if (res.status !== 200) throw new Error(`Expected 200, got ${res.status}: ${JSON.stringify(res.body)}`);
+    if (res.body.used !== 0) throw new Error(`Expected used=0, got ${res.body.used}`);
+    if (res.body.available.length !== 8) {
+      throw new Error(`Expected 8 available slots untuk ODP dengan total_ports=8, got ${res.body.available.length}: ${JSON.stringify(res.body.available)}`);
+    }
+    if (!res.body.available.some(p => p.port === 'Port 1')) {
+      throw new Error(`Port 1 HARUS ada di available untuk parent ODP (regresi off-by-one): ${JSON.stringify(res.body.available)}`);
+    }
+  });
+
+  it('OLT parent tanpa anak ODC — perilaku TIDAK berubah, tetap mulai dari Port 1 (guard regresi arah sebaliknya)', async () => {
+    const oltLabel = `${TEST_TAG}OLT_AP3_${Date.now()}`;
+    const oltRes = await ownerAgent.post('/api/ftth').send({
+      type: 'olt', label: oltLabel, brand: 'TestBrand', total_ports: 4,
+    });
+    if (oltRes.status !== 201) throw new Error(`Gagal buat OLT fixture: ${oltRes.status} ${JSON.stringify(oltRes.body)}`);
+    created.olt.push(oltRes.body.device.id);
+
+    const res = await ownerAgent.get(`/api/ftth/available-ports?type=odc&parent=${encodeURIComponent(oltLabel)}`);
+    if (res.status !== 200) throw new Error(`Expected 200, got ${res.status}: ${JSON.stringify(res.body)}`);
+    if (res.body.available.length !== 4) {
+      throw new Error(`Expected 4 available slots untuk OLT dengan total_ports=4, got ${res.body.available.length}: ${JSON.stringify(res.body.available)}`);
+    }
+    if (!res.body.available.some(p => p.port === 'Port 1')) {
+      throw new Error(`Port 1 HARUS tetap ada di available untuk parent OLT: ${JSON.stringify(res.body.available)}`);
+    }
+  });
+});
